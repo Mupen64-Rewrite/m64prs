@@ -6,5 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dlopen2 = "0.6.1"
-
+m64prs-core = { path = "../m64prs-core" }

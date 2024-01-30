@@ -1,4 +1,7 @@
 [workspace]
+resolver = "2"
+
 members = [
-    "m64prs"
-, "m64prs-core-bindings"]
+    "m64prs", 
+    "m64prs-core",
+]
