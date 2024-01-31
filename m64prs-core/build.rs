@@ -1,4 +1,3 @@
-use regex::Regex;
 use reqwest::blocking as reqwest;
 use std::{
     env,
@@ -12,23 +11,6 @@ use zip::{result::{ZipError, ZipResult}, ZipArchive};
 const CORE_RR_URL: &str = "https://github.com/Mupen64-Rewrite/mupen64plus-core-rr/archive/8954d83624d7a3ae0f600b634055702032b9266d.zip";
 const CORE_RR_HEADERS: [&str; 1] = [
     "m64p_types.h"
-];
-const CORE_RR_ENUMS: [&str; 12] = [
-    "m64p_type",
-    "m64p_msg_level",
-    "m64p_plugin_type",
-    "m64p_emu_state",
-    "m64p_video_mode",
-    "m64p_core_param",
-    "m64p_command",
-    "m64p_error",
-    "m64p_rom_save_type",
-    "m64p_disk_region",
-    "m64p_GLattr",
-    "m64p_GLContextType"
-];
-const CORE_RR_FLAG_ENUMS: [&str; 1] = [
-    "m64p_core_caps"
 ];
 
 fn zip_extract_cut_root<R: Read + Seek, P: AsRef<Path>>(zip_archive: &mut ZipArchive<R>, directory: P) -> ZipResult<()> {
@@ -111,13 +93,6 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     // blocklist
     builder = builder.blocklist_type("m64p_dbg_.*");
 
-    // tag all enums
-    for r#enum in CORE_RR_ENUMS {
-        builder = builder.rustified_enum(r#enum);
-    }
-    for r#enum in CORE_RR_FLAG_ENUMS {
-        builder = builder.bitfield_enum(r#enum);
-    }
     // add headers
     for header in CORE_RR_HEADERS {
         let path = api_dir.join(header);

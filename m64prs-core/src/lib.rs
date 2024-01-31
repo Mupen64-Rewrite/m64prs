@@ -1,6 +1,8 @@
 
-pub mod types;
-pub mod core;
+mod ctypes;
+mod core;
+pub mod enums;
+pub mod error;
 
 pub use crate::core::*;
 

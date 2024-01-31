@@ -278,8 +278,7 @@ dependencies = [
 [[package]]
 name = "dlopen2"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bc2c7ed06fd72a8513ded8d0d2f6fd2655a85d6885c48cae8625d80faf28c03"
+source = "git+https://github.com/jgcodes2020/dlopen2.git#f1927c9f44db920e55c9fdba14d068b6948f73a5"
 dependencies = [
  "dlopen2_derive",
  "libc",
@@ -290,8 +289,7 @@ dependencies = [
 [[package]]
 name = "dlopen2_derive"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2b99bf03862d7f545ebc28ddd33a665b50865f4dfd84031a393823879bd4c54"
+source = "git+https://github.com/jgcodes2020/dlopen2.git#f1927c9f44db920e55c9fdba14d068b6948f73a5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -677,8 +675,8 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "dlopen2",
- "once_cell",
- "regex",
+ "num-derive",
+ "num-traits",
  "reqwest",
  "zip",
 ]
@@ -747,6 +745,26 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39e3200413f237f41ab11ad6d161bc7239c84dcb631773ccd7de3dfe4b5c267c"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]

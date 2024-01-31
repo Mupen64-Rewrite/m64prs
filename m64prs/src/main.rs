@@ -1,8 +1,12 @@
 use std::error::Error;
 
+use m64prs_core::Core;
+
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    Err(m64prs_core::types::m64p_error::M64ERR_SUCCESS)?;
+    Core::load("/usr/lib/libmupen64plus.so.2")?;
+    let core = Core::get();
+
     Ok(())
 }

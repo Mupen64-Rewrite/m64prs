@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dlopen2 = "0.6.1"
-once_cell = "1.19.0"
+dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
+num-traits = "0.2"
+num-derive = "0.4"
 
 [build-dependencies]
 reqwest = { version = "0.11.23", features = ["blocking"] }
 zip = "0.6.6"
 bindgen = "0.69.2"
-regex = "1.10.3"
