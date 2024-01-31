@@ -1,21 +1,27 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
-    ops::{Deref, DerefMut},
-    path::Path,
-    ptr::{null, null_mut},
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
+    ffi::{c_char, c_int, c_void, CStr}, fs, ops::{Deref, DerefMut}, path::Path, ptr::{null, null_mut}, sync::{RwLock, RwLockReadGuard, RwLockWriteGuard}
 };
 
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
     ctypes::{
-        m64p_core_param, m64p_dynlib_handle, m64p_error, m64p_msg_level, m64p_plugin_type,
-        M64ERR_SUCCESS,
+        m64p_command, m64p_core_param, m64p_dynlib_handle, m64p_error, m64p_msg_level, m64p_plugin_type, M64CMD_EXECUTE, M64CMD_ROM_CLOSE, M64CMD_ROM_OPEN, M64ERR_SUCCESS
     },
     enums::PluginType,
-    error::{CoreError, M64PError},
+    error::{CoreError, M64PError, Result},
 };
+
+macro_rules! try_core_error {
+    ($call:expr) => {
+        unsafe {
+            let retv = $call;
+            if retv != M64ERR_SUCCESS {
+                return Err(CoreError::M64P(retv.try_into().unwrap()));
+            }
+        }
+    };
+}
 
 pub struct Core {
     lib: Container<CoreApi>,
@@ -29,7 +35,7 @@ static CORE_SINGLETON: RwLock<Option<Core>> = RwLock::new(None);
 
 impl Core {
     /// Loads the Mupen64Plus core from a path.
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<(), dlopen2::Error> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<()> {
         {
             let mut core = CORE_SINGLETON.write().unwrap();
             if core.is_some() {
@@ -38,7 +44,7 @@ impl Core {
             }
 
             *core = Some(Core {
-                lib: unsafe { Container::load(path.as_ref())? },
+                lib: unsafe { Container::load(path.as_ref()).map_err(|err| CoreError::Library(err))? },
                 rsp_plugin: None,
                 video_plugin: None,
                 audio_plugin: None,
@@ -51,46 +57,36 @@ impl Core {
             level: c_int,
             message: *const c_char,
         ) {
-            let core: &Core = (ctx as *const Core).as_ref().unwrap();
-
-            core.debug_callback(
-                level as m64p_msg_level,
-                CStr::from_ptr(message).to_str().unwrap_or_default(),
-            );
+            println!("DEBUG: {} {}", level, CStr::from_ptr(message).to_str().unwrap());
         }
         unsafe extern "C" fn state_callback(
             ctx: *mut c_void,
             param: m64p_core_param,
             value: c_int,
         ) {
-            let core: &Core = (ctx as *const Core).as_ref().unwrap();
-
-            core.state_callback(param, value);
+            eprintln!("STATE: {} {}", param, value);
         }
 
         {
             let core = Self::get();
-            let core_ptr: *const Core = core.deref();
             unsafe {
-                core.lib.startup(
+                let retv = core.lib.startup(
                     0x02_01_00,
                     null(),
                     null(),
-                    core_ptr as *mut c_void,
+                    null_mut(),
                     debug_callback,
-                    core_ptr as *mut c_void,
+                    null_mut(),
                     state_callback,
                 );
+                if retv != M64ERR_SUCCESS {
+                    let msg = CStr::from_ptr(core.lib.error_message(retv)).to_str();
+                    panic!("Core failed to start up! ({})", msg.unwrap_or("Unknown error"));
+                }
             }
         }
 
         Ok(())
-    }
-    fn debug_callback(&self, level: m64p_msg_level, message: &str) {
-        println!("DEBUG: {} {}", level, message);
-    }
-    fn state_callback(&self, param: m64p_core_param, value: c_int) {
-        eprintln!("STATE: {} {}", param, value);
     }
 
     pub fn get() -> CoreReadLock {
@@ -118,11 +114,16 @@ impl Core {
         }
     }
 
+    /// Loads and attaches a plugin from a path. Checks that the plugin is actually the right type.
+    /// Mupen64Plus requires that plugins be loaded in the order: video, audio, input, RSP.
+    /// 
+    /// # Errors
+    /// TODO: document errors
     pub fn attach_plugin<P: AsRef<Path>>(
         &mut self,
         plugin_type: PluginType,
         path: P,
-    ) -> Result<(), CoreError> {
+    ) -> Result<()> {
         let cur_plugin: &mut Option<Container<BasePluginApi>> = match plugin_type {
             PluginType::RSP => &mut self.rsp_plugin,
             PluginType::Graphics => &mut self.video_plugin,
@@ -138,52 +139,45 @@ impl Core {
             level: c_int,
             message: *const c_char,
         ) {
-            let core: &Core = (ctx as *const Core).as_ref().unwrap();
-
-            core.debug_callback(
-                level as m64p_msg_level,
-                CStr::from_ptr(message).to_str().unwrap_or_default(),
-            );
+            println!("DEBUG: {} {}", level, CStr::from_ptr(message).to_str().unwrap());
         }
 
         let api = unsafe {
             Container::<BasePluginApi>::load(path.as_ref())
                 .map_err(|err| CoreError::Library(err))?
         };
-        unsafe {
+        {
             let mut reported_ptype: m64p_plugin_type = 0;
 
             // check the self-reported plugin type to verify
-            let retv1 = api.get_version(
+            try_core_error!(api.get_version(
                 &mut reported_ptype,
                 null_mut(),
                 null_mut(),
                 null_mut(),
                 null_mut(),
-            );
-            if retv1 != M64ERR_SUCCESS {
-                return Err(CoreError::M64P(retv1.try_into().unwrap()));
-            }
+            ));
 
             if reported_ptype != plugin_type as m64p_plugin_type {
                 return Err(CoreError::PluginTypeNotMatching);
             }
 
             // startup the plugin
-            let retv2 = api.startup(self.lib.into_raw(), null_mut(), debug_callback);
-            if retv2 != M64ERR_SUCCESS {
-                return Err(CoreError::M64P(retv2.try_into().unwrap()));
-            }
+            try_core_error!(api.startup(
+                self.lib.into_raw(), 
+                null_mut(), 
+                debug_callback
+            ));
 
             // attach the plugin
-            self.lib.attach_plugin(plugin_type as m64p_plugin_type, api.into_raw());
+            try_core_error!(self.lib.attach_plugin(plugin_type as m64p_plugin_type, api.into_raw()));
         }
         *cur_plugin = Some(api);
 
         Ok(())
     }
 
-    pub fn detach_plugin(&mut self, plugin_type: PluginType) -> Result<(), CoreError> {
+    pub fn detach_plugin(&mut self, plugin_type: PluginType) -> Result<()> {
         let cur_plugin: &mut Option<Container<BasePluginApi>> = match plugin_type {
             PluginType::RSP => &mut self.rsp_plugin,
             PluginType::Graphics => &mut self.video_plugin,
@@ -194,18 +188,36 @@ impl Core {
             panic!("No plugin attached for {}", plugin_type);
         }
 
-        unsafe {
-            let retv = self.lib.detach_plugin(plugin_type as m64p_plugin_type);
-            if retv != M64ERR_SUCCESS {
-                return Err(CoreError::M64P(retv.try_into().unwrap()));
-            }
-        }
+        try_core_error!(self.lib.detach_plugin(plugin_type as m64p_plugin_type));
 
         *cur_plugin = None;
         Ok(())
     }
 
+    /// Opens a ROM loaded as a byte array.
+    pub fn open_rom(&mut self, data: &[u8]) -> Result<()> {
+        try_core_error!(self.lib.do_command(M64CMD_ROM_OPEN, data.len() as c_int, data.as_ptr() as *mut c_void));
+        Ok(())
+    }
 
+    /// Loads a ROM from a file and opens it.
+    pub fn load_rom<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        let data = fs::read(path).map_err(|err| CoreError::IO(err))?;
+        try_core_error!(self.lib.do_command(M64CMD_ROM_OPEN, data.len() as c_int, data.as_ptr() as *mut c_void));
+        Ok(())
+    }
+
+    /// Closes a ROM.
+    pub fn close_rom(&mut self) -> Result<()> {
+        try_core_error!(self.lib.do_command(M64CMD_ROM_CLOSE, 0, null_mut()));
+        Ok(())
+    }
+
+    /// Executes the ROM on this thread.
+    pub fn execute_sync(&self) -> Result<()> {
+        try_core_error!(self.lib.do_command(M64CMD_EXECUTE, 0, null_mut()));
+        Ok(())
+    }
 }
 
 impl Drop for Core {
@@ -227,6 +239,7 @@ impl Deref for CoreReadLock {
     }
 }
 
+/// Read-write reference to the active Mupen64Plus library.
 pub struct CoreWriteLock {
     write_guard: RwLockWriteGuard<'static, Option<Core>>,
 }
@@ -288,7 +301,13 @@ struct CoreApi {
     #[dlopen2_name = "CoreDetachPlugin"]
     detach_plugin: unsafe extern "C" fn(
         plugin_type: m64p_plugin_type
-    ) -> m64p_error
+    ) -> m64p_error,
+    #[dlopen2_name = "CoreDoCommand"]
+    do_command: unsafe extern "C" fn(
+        command: m64p_command,
+        int_param: c_int,
+        ptr_param: *mut c_void
+    ) -> m64p_error,
 }
 
 #[derive(WrapperApi)]

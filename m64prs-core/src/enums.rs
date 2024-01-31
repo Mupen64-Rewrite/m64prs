@@ -23,7 +23,7 @@ impl Display for PluginType {
 impl TryFrom<m64p_plugin_type> for PluginType {
     type Error = InvalidEnumValue;
 
-    fn try_from(value: m64p_plugin_type) -> Result<Self, Self::Error> {
+    fn try_from(value: m64p_plugin_type) -> ::std::result::Result<Self, Self::Error> {
         Self::from_u32(value).ok_or(InvalidEnumValue)
     }
 }

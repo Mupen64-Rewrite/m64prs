@@ -48,7 +48,7 @@ impl Error for M64PError {}
 impl TryFrom<m64p_error> for M64PError {
     type Error = InvalidEnumValue;
 
-    fn try_from(value: m64p_error) -> Result<Self, Self::Error> {
+    fn try_from(value: m64p_error) -> ::std::result::Result<Self, Self::Error> {
         Self::from_u32(value).ok_or(InvalidEnumValue)
     }
 }
@@ -59,6 +59,7 @@ pub enum CoreError {
     Library(::dlopen2::Error),
     /// An error occurred within Mupen64Plus or a plugin.
     M64P(M64PError),
+    IO(::std::io::Error),
     /// Loaded plugin did not match the specified plugin type.
     PluginTypeNotMatching
 }
@@ -68,9 +69,12 @@ impl Display for CoreError {
         match self {
             CoreError::Library(lib_err) => lib_err.fmt(f),
             CoreError::M64P(m64p_err) => m64p_err.fmt(f),
+            CoreError::IO(io_err) => io_err.fmt(f),
             CoreError::PluginTypeNotMatching => f.write_str("Loaded plugin doesn't match type"),
         }
     }
 }
 
 impl Error for CoreError {}
+
+pub type Result<T> = ::std::result::Result<T, CoreError>;
