@@ -7,8 +7,7 @@ edition = "2021"
 
 [dependencies]
 dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
-num-traits = "0.2"
-num-derive = "0.4"
+thiserror = "1.0.56"
 
 [build-dependencies]
 reqwest = { version = "0.11.23", features = ["blocking"] }

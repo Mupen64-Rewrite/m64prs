@@ -675,9 +675,8 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "dlopen2",
- "num-derive",
- "num-traits",
  "reqwest",
+ "thiserror",
  "zip",
 ]
 
@@ -745,26 +744,6 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
-]
-
-[[package]]
-name = "num-derive"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "num-traits"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e3200413f237f41ab11ad6d161bc7239c84dcb631773ccd7de3dfe4b5c267c"
-dependencies = [
- "autocfg",
 ]
 
 [[package]]
@@ -1207,6 +1186,26 @@ dependencies = [
  "redox_syscall",
  "rustix",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d54378c645627613241d077a3a79db965db602882668f9136ac42af9ecb730ad"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa0faa943b50f3db30a20aa7e265dbc66076993efed8463e8de414e5d06d3471"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
