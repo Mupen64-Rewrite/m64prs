@@ -1,16 +1,31 @@
+use bindgen::callbacks::ParseCallbacks;
+use heck::ToPascalCase;
 use reqwest::blocking as reqwest;
 use std::{
-    env,
-    error::Error,
-    fs::{self, File},
-    io::{self, Read, Seek},
-    path::{Path, PathBuf},
+    env, error::Error, fs::{self, File}, io::{self, Read, Seek}, path::{Path, PathBuf}
 };
 use zip::{result::{ZipError, ZipResult}, ZipArchive};
 
 const CORE_RR_URL: &str = "https://github.com/Mupen64-Rewrite/mupen64plus-core-rr/archive/8954d83624d7a3ae0f600b634055702032b9266d.zip";
 const CORE_RR_HEADERS: [&str; 1] = [
     "m64p_types.h"
+];
+const CORE_RR_ENUMS: [&str; 11] = [
+    "m64p_type",
+    "m64p_msg_level",
+    "m64p_error",
+    "m64p_plugin_type",
+    "m64p_emu_state",
+    "m64p_video_mode",
+    "m64p_core_param",
+    "m64p_command",
+    "m64p_system_type",
+    "m64p_rom_save_type",
+    "m64p_disk_region"
+];
+const CORE_RR_BITFLAGS: [&str; 2] = [
+    "m64p_core_caps",
+    "m64p_video_flags"
 ];
 
 fn zip_extract_cut_root<R: Read + Seek, P: AsRef<Path>>(zip_archive: &mut ZipArchive<R>, directory: P) -> ZipResult<()> {
@@ -77,6 +92,42 @@ fn download_core_rr() -> Result<PathBuf, Box<dyn Error>> {
     Ok(core_dir)
 }
 
+#[derive(Debug)]
+struct M64PParseCallbacks;
+
+impl ParseCallbacks for M64PParseCallbacks {
+    fn enum_variant_name(
+            &self,
+            _enum_name: Option<&str>,
+            _original_variant_name: &str,
+            _variant_value: bindgen::callbacks::EnumVariantValue,
+        ) -> Option<String> {
+        if let Some(name) = _enum_name {
+            if CORE_RR_ENUMS.contains(&name) || CORE_RR_BITFLAGS.contains(&name) {
+                // mupen64plus prefixes all its enums because C, so we have to unprefix them
+                let underscore_pos = _original_variant_name.find('_').unwrap();
+                return Some(_original_variant_name[(underscore_pos + 1)..].to_owned())
+            }
+        }
+        None
+    }
+    fn item_name(&self, _original_item_name: &str) -> Option<String> {
+        match _original_item_name {
+            "m64p_2d_size" => Some("Size2D".to_owned()),
+            "m64p_GLattr" => Some("GLAttribute".to_owned()),
+            "m64p_GLContextType" => Some("GLContextType".to_owned()),
+            item => {
+                if item.starts_with("m64p_") {
+                    Some(_original_item_name[5..].to_pascal_case())
+                }
+                else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     // Paths
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
@@ -88,10 +139,21 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     let mut builder = bindgen::builder()
         .impl_debug(true)
         .clang_arg(format!("-I{}", src_dir.display()))
+        .parse_callbacks(Box::new(M64PParseCallbacks {}))
         .prepend_enum_name(false);
 
     // blocklist
-    builder = builder.blocklist_type("m64p_dbg_.*");
+    builder = builder
+        .blocklist_type("m64p_dbg_.*")
+        .blocklist_type("m64p_breakpoint");
+
+    // add enums
+    for name in CORE_RR_ENUMS {
+        builder = builder.newtype_enum(name);
+    }
+    for name in CORE_RR_BITFLAGS {
+        builder = builder.bitfield_enum(name);
+    }
 
     // add headers
     for header in CORE_RR_HEADERS {

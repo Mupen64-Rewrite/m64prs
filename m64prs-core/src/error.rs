@@ -1,63 +1,73 @@
-use std::{error::Error, fmt::Display};
+
+
+use std::ffi::c_uint;
 
 use thiserror::Error;
 
-use crate::ctypes::{self, m64p_error};
+use crate::ctypes;
 
 
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Error)]
 pub enum M64PError {
     #[error("A function was called before it's associated module was initialized")]
-    NotInit = ctypes::M64ERR_NOT_INIT,
+    NotInit = ctypes::Error::NOT_INIT.0,
     #[error("Initialization function called twice")]
-    AlreadyInit = ctypes::M64ERR_ALREADY_INIT,
+    AlreadyInit = ctypes::Error::ALREADY_INIT.0,
     #[error("API versions between components are incompatible")]
-    Incompatible = ctypes::M64ERR_INCOMPATIBLE,
+    Incompatible = ctypes::Error::INCOMPATIBLE.0,
     #[error("Invalid function parameters, such as a NULL pointer")]
-    InputAssert = ctypes::M64ERR_INPUT_ASSERT,
+    InputAssert = ctypes::Error::INPUT_ASSERT.0,
     #[error("An input function parameter is logically invalid")]
-    InputInvalid = ctypes::M64ERR_INPUT_INVALID,
+    InputInvalid = ctypes::Error::INPUT_INVALID.0,
     #[error("The input parameter(s) specified a particular item which was not found")]
-    InputNotFound = ctypes::M64ERR_INPUT_NOT_FOUND,
+    InputNotFound = ctypes::Error::INPUT_NOT_FOUND.0,
     #[error("Memory allocation failed")]
-    NoMemory = ctypes::M64ERR_NO_MEMORY,
+    NoMemory = ctypes::Error::NO_MEMORY.0,
     #[error("Error opening, creating, reading, or writing to a file")]
-    Files = ctypes::M64ERR_FILES,
+    Files = ctypes::Error::FILES.0,
     #[error("Logical inconsistency in program code. Probably a bug.")]
-    Internal = ctypes::M64ERR_INTERNAL,
+    Internal = ctypes::Error::INTERNAL.0,
     #[error("An operation was requested which is not allowed in the current state")]
-    InvalidState = ctypes::M64ERR_INVALID_STATE,
+    InvalidState = ctypes::Error::INVALID_STATE.0,
     #[error("A plugin function returned a fatal error")]
-    PluginFail = ctypes::M64ERR_PLUGIN_FAIL,
+    PluginFail = ctypes::Error::PLUGIN_FAIL.0,
     #[error("A system function call, such as an SDL or file operation, failed")]
-    SystemFail = ctypes::M64ERR_SYSTEM_FAIL,
+    SystemFail = ctypes::Error::SYSTEM_FAIL.0,
     #[error("Function call or argument is not supported (e.g. no debugger, invalid encoder format)")]
-    Unsupported = ctypes::M64ERR_UNSUPPORTED,
+    Unsupported = ctypes::Error::UNSUPPORTED.0,
     #[error("A given input type parameter cannot be used for desired operation")]
-    WrongType = ctypes::M64ERR_WRONG_TYPE
+    WrongType = ctypes::Error::WRONG_TYPE.0
 }
 
-impl From<m64p_error> for M64PError {
-    fn from(value: m64p_error) -> Self {
+impl TryFrom<ctypes::Error> for M64PError {
+    type Error = CoreError;
+
+    fn try_from(value: ctypes::Error) -> std::prelude::v1::Result<Self, Self::Error> {
         match value {
-            ctypes::M64ERR_SUCCESS => panic!("Refusing to convert M64ERR_SUCCESS to an error type"),
-            ctypes::M64ERR_NOT_INIT => M64PError::NotInit,
-            ctypes::M64ERR_ALREADY_INIT => M64PError::AlreadyInit,
-            ctypes::M64ERR_INCOMPATIBLE => M64PError::Incompatible,
-            ctypes::M64ERR_INPUT_ASSERT => M64PError::InputAssert,
-            ctypes::M64ERR_INPUT_INVALID => M64PError::InputInvalid,
-            ctypes::M64ERR_INPUT_NOT_FOUND => M64PError::InputNotFound,
-            ctypes::M64ERR_NO_MEMORY => M64PError::NoMemory,
-            ctypes::M64ERR_FILES => M64PError::Files,
-            ctypes::M64ERR_INTERNAL => M64PError::Internal,
-            ctypes::M64ERR_INVALID_STATE => M64PError::InvalidState,
-            ctypes::M64ERR_PLUGIN_FAIL => M64PError::PluginFail,
-            ctypes::M64ERR_SYSTEM_FAIL => M64PError::SystemFail,
-            ctypes::M64ERR_UNSUPPORTED => M64PError::Unsupported,
-            ctypes::M64ERR_WRONG_TYPE => M64PError::WrongType,
-            _ => panic!("Unknown Mupen64Plus error type.")
+            ctypes::Error::SUCCESS => Err(CoreError::InvalidEnumConversion),
+            ctypes::Error::NOT_INIT => Ok(M64PError::NotInit),
+            ctypes::Error::ALREADY_INIT => Ok(M64PError::AlreadyInit),
+            ctypes::Error::INCOMPATIBLE => Ok(M64PError::Incompatible),
+            ctypes::Error::INPUT_ASSERT => Ok(M64PError::InputAssert),
+            ctypes::Error::INPUT_INVALID => Ok(M64PError::InputInvalid),
+            ctypes::Error::INPUT_NOT_FOUND => Ok(M64PError::InputNotFound),
+            ctypes::Error::NO_MEMORY => Ok(M64PError::NoMemory),
+            ctypes::Error::FILES => Ok(M64PError::Files),
+            ctypes::Error::INTERNAL => Ok(M64PError::Internal),
+            ctypes::Error::INVALID_STATE => Ok(M64PError::InvalidState),
+            ctypes::Error::PLUGIN_FAIL => Ok(M64PError::PluginFail),
+            ctypes::Error::SYSTEM_FAIL => Ok(M64PError::SystemFail),
+            ctypes::Error::UNSUPPORTED => Ok(M64PError::Unsupported),
+            ctypes::Error::WRONG_TYPE => Ok(M64PError::WrongType),
+            _ => Err(CoreError::InvalidEnumConversion)
         }
+    }
+}
+
+impl Into<ctypes::Error> for M64PError {
+    fn into(self) -> ctypes::Error {
+        ctypes::Error(self as c_uint)
     }
 }
 
@@ -70,7 +80,7 @@ pub enum CoreError {
     #[error("Error occurred when performing I/O.")]
     IO(#[source] ::std::io::Error),
     #[error("Loaded plugin did not match the specified plugin type.")]
-    PluginTypeNotMatching,
+    MismatchedPluginType,
     #[error("INTERNAL: enum conversion failed.")]
     InvalidEnumConversion,
 
