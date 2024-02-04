@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
+    ffi::{c_char, c_int, c_void, CStr, CString},
     fs, mem,
     path::Path,
     ptr::{null, null_mut},
@@ -11,10 +11,11 @@ use crate::{
         self, Command, GLAttribute, PluginType, Size2D, VideoExtensionFunctions, VideoFlags,
         VideoMode,
     },
-    error::{CoreError, Result},
+    error::{CoreError, M64PError, Result},
     types::{APIVersion, VideoExtension},
 };
 use dlopen2::wrapper::{Container, WrapperApi};
+use normalize_path::NormalizePath;
 
 fn test_c_err(return_code: ctypes::Error) -> Result<()> {
     match return_code {
@@ -24,6 +25,7 @@ fn test_c_err(return_code: ctypes::Error) -> Result<()> {
 }
 
 /// Macro used to avoid some boilerplate for writing generic wrapper stubs for video extension.
+/// Syntax is similar to function syntax, except minus the "fn name" at the beginning.
 macro_rules! vidext_fn_wrapper {
     (( $($pname:ident : $ptype:ty),* ) -> $rtype:ty { $($code:tt)* }) => {
         {
@@ -44,6 +46,8 @@ macro_rules! vidext_fn_wrapper {
     };
 }
 
+/// Macro used to replace some FFI boilerplate (bridging the Rust video extension to C).
+/// This returns an error as a C error code if needed, returning the result.
 macro_rules! match_ffi_result {
     ($e:expr) => {
         match $e {
@@ -59,6 +63,8 @@ extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const
 #[allow(unused)]
 extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {}
 
+/// Holds a loaded instance of the Mupen64Plus core. Note that the core remains loaded and active for the lifetime of this
+/// struct. It is shut down and unloaded when the struct is dropped.
 pub struct Core {
     lib: Container<CoreApi>,
 
@@ -95,6 +101,7 @@ impl Core {
         Ok(core)
     }
 
+    /// Obtains version information about this core.
     pub fn get_version(&self) -> Result<APIVersion> {
         unsafe {
             let mut plugin_type: ctypes::PluginType = ctypes::PluginType::NULL;
@@ -176,7 +183,8 @@ impl Core {
         Ok(())
     }
 
-    pub fn override_vidext<V: VideoExtension>(&mut self) -> Result<()> {
+    /// Overrides the video extension
+    pub fn override_vidext<V: VideoExtension>(&self) -> Result<()> {
         // generate wrapper functions with a helper macro
         let mut vidext = ctypes::VideoExtensionFunctions {
             Functions: 14,
@@ -276,7 +284,8 @@ impl Core {
         Ok(())
     }
 
-    pub fn open_rom(&mut self, rom_data: &[u8]) -> Result<()> {
+    /// Opens a ROM that is pre-loaded into memory.
+    pub fn open_rom(&self, rom_data: &[u8]) -> Result<()> {
         test_c_err(unsafe {
             self.lib.do_command(
                 Command::ROM_OPEN,
@@ -288,20 +297,82 @@ impl Core {
         Ok(())
     }
 
-    pub fn load_rom<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+    /// Loads and opens a ROM from a given file path.
+    pub fn load_rom<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let rom_data = fs::read(path.as_ref()).map_err(|err| CoreError::IO(err))?;
         self.open_rom(&rom_data)
     }
 
-    pub fn close_rom(&mut self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::ROM_CLOSE, 0, null_mut()) })?;
-        Ok(())
+    /// Closes a currently open ROM.
+    pub fn close_rom(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::ROM_CLOSE, 0, null_mut()) })
     }
 
+    /// Executes the currently open ROM synchronously on this thread.
     pub fn execute_sync(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::EXECUTE, 0, null_mut()) })?;
-        Ok(())
+        test_c_err(unsafe { self.lib.do_command(Command::EXECUTE, 0, null_mut()) })
     }
+
+    /// Stops the emulator if it is running.    
+    pub fn stop(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::STOP, 0, null_mut()) })
+    }
+
+    /// Pauses the emulator if it is running.
+    pub fn pause(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::PAUSE, 0, null_mut()) })
+    }
+
+    /// Resumes the emulator if it is paused.
+    pub fn resume(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::RESUME, 0, null_mut()) })
+    }
+
+    /// Advances one frame. That is, the emulator will run the next frame, then pause.
+    pub fn advance_frame(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::ADVANCE_FRAME, 0, null_mut()) })
+    }
+
+    /// Resets the emulator. If the `hard` parameter is true, performs a hard reset as opposed to a soft reset.
+    pub fn reset(&self, hard: bool) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::RESUME, if hard {1} else {0}, null_mut()) })
+    }
+
+    /// Sets the current savestate slot. The savestate slot must be a value from 0 to 9.
+    pub fn set_state_slot(&self, index: u32) -> Result<()> {
+        if index >= 10 {
+            panic!("Invalid savestate index {} (savestate indices are between 0 and 9 inclusive)", index);
+        }
+        test_c_err(unsafe { self.lib.do_command(Command::STATE_SET_SLOT, index as c_int, null_mut()) })
+    }
+
+    /// Saves to the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
+    pub fn save_current_slot(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::STATE_SAVE, 0, null_mut()) })
+    }
+
+    /// Saves to a file. This function returns immediately, use (TODO: do this) to be notified when it's finished.
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let canon_path = path.as_ref().normalize();
+        let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
+
+        test_c_err(unsafe { self.lib.do_command(Command::STATE_SAVE, 0, path_cstr.as_ptr() as *mut c_void) })
+    }
+
+    /// Loads from the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
+    pub fn load_current_slot(&self) -> Result<()> {
+        test_c_err(unsafe { self.lib.do_command(Command::STATE_LOAD, 0, null_mut()) })
+    }
+
+    /// Loads from a file. This function returns immediately, use (TODO: do this) to be notified when it's finished.
+    pub fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let canon_path = path.as_ref().canonicalize().map_err(|err| CoreError::IO(err))?;
+        let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
+
+        test_c_err(unsafe { self.lib.do_command(Command::STATE_LOAD, 0, path_cstr.as_ptr() as *mut c_void) })
+    }
+
+
 }
 
 impl Drop for Core {
@@ -310,11 +381,14 @@ impl Drop for Core {
     }
 }
 
+/// Holds a loaded instance of a Mupen64Plus plugin. The core is responsible for startup/shutdown of
+/// plugins, so plugins will remain unstarted when you have access to them.
 pub struct Plugin {
     lib: Container<BasePluginApi>,
 }
 
 impl Plugin {
+    /// Loads a plugin from a path.
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let plugin = Plugin {
             lib: unsafe { Container::load(path.as_ref()) }
@@ -324,6 +398,7 @@ impl Plugin {
         Ok(plugin)
     }
 
+    /// Obtains version information about this plugin.
     pub fn get_version(&self) -> Result<APIVersion> {
         unsafe {
             let mut plugin_type: PluginType = PluginType::NULL;

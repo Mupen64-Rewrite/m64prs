@@ -46,6 +46,9 @@ fn zip_extract_cut_root<R: Read + Seek, P: AsRef<Path>>(zip_archive: &mut ZipArc
 
         let outpath = directory.as_ref().join(filepath);
 
+        if !filepath.starts_with("src/api") {
+            continue;
+        }
         if file.name().ends_with('/') {
             fs::create_dir_all(&outpath)?;
         } else {
