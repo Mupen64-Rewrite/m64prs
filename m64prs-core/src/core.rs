@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr, CString},
+    ffi::{c_char, c_int, c_uint, c_void, CStr, CString},
     fs, mem,
     path::Path,
     ptr::{null, null_mut},
@@ -9,12 +9,13 @@ use std::{
 use crate::{
     ctypes::{
         self, Command, GLAttribute, PluginType, Size2D, VideoExtensionFunctions, VideoFlags,
-        VideoMode,
+        VideoMode, MsgLevel
     },
     error::{CoreError, M64PError, Result},
     types::{APIVersion, VideoExtension},
 };
 use dlopen2::wrapper::{Container, WrapperApi};
+use log::{log, Level};
 use normalize_path::NormalizePath;
 
 fn test_c_err(return_code: ctypes::Error) -> Result<()> {
@@ -58,10 +59,23 @@ macro_rules! match_ffi_result {
 }
 
 #[allow(unused)]
-extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {}
+unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
+    let log_level = match MsgLevel(level as c_uint) {
+        MsgLevel::ERROR => Level::Error,
+        MsgLevel::WARNING => Level::Warn,
+        MsgLevel::INFO => Level::Info,
+        MsgLevel::STATUS => Level::Debug,
+        MsgLevel::VERBOSE => Level::Trace,
+        _ => panic!("Received invalid message level {}", level)
+    };
+    log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
+}
 
 #[allow(unused)]
-extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {}
+extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {
+    let core = unsafe{ &*(context as *const Core) };
+    core.notify_state_change(param, new_value);
+}
 
 /// Holds a loaded instance of the Mupen64Plus core. Note that the core remains loaded and active for the lifetime of this
 /// struct. It is shut down and unloaded when the struct is dropped.
@@ -71,7 +85,7 @@ pub struct Core {
     rsp_plugin: Option<Plugin>,
     video_plugin: Option<Plugin>,
     audio_plugin: Option<Plugin>,
-    input_plugin: Option<Plugin>,
+    input_plugin: Option<Plugin>
 }
 
 impl Core {
@@ -93,12 +107,18 @@ impl Core {
                 null(),
                 null_mut(),
                 debug_callback,
-                null_mut(),
+                (&core as *const Core) as *mut c_void,
                 state_callback,
             )
         })?;
 
         Ok(core)
+    }
+
+    /// Notifies state changes. Used by the state callback.
+    #[allow(unused)]
+    fn notify_state_change(&self, param: ctypes::CoreParam, new_value: c_int) {
+        // TODO: actually make a notification system
     }
 
     /// Obtains version information about this core.
@@ -478,7 +498,7 @@ struct CoreApi {
         int_param: c_int,
         ptr_param: *mut c_void,
     ) -> ctypes::Error,
-    #[dlopen2_name = "CoreOverrideVidext"]
+    #[dlopen2_name = "CoreOverrideVidExt"]
     override_vidext: unsafe extern "C" fn(
         video_function_struct: *mut ctypes::VideoExtensionFunctions,
     ) -> ctypes::Error,

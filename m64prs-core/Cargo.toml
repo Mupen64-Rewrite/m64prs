@@ -9,6 +9,7 @@ edition = "2021"
 dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
 thiserror = "1.0.56"
 normalize-path = "0.2.1"
+log = "0.4.20"
 
 [build-dependencies]
 reqwest = { version = "0.11.23", features = ["blocking"] }

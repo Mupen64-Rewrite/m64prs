@@ -4,9 +4,8 @@ use m64prs_core::{PluginType, Core, Plugin};
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    
-
-    Ok(())
+    env_logger::init();
+    encode_test()
 }
 
 #[allow(unused)]
