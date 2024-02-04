@@ -7,16 +7,17 @@ use std::{
 };
 
 use crate::{
-    ctypes::{
-        self, Command, GLAttribute, PluginType, Size2D, VideoExtensionFunctions, VideoFlags,
-        VideoMode, MsgLevel
-    },
-    error::{CoreError, M64PError, Result},
+    ctypes::{self, Command, GLAttribute, MsgLevel, PluginType, Size2D, VideoFlags, VideoMode},
+    error::{CoreError, Result},
     types::{APIVersion, VideoExtension},
 };
 use dlopen2::wrapper::{Container, WrapperApi};
+
+use futures::{Stream, StreamExt};
 use log::{log, Level};
 use normalize_path::NormalizePath;
+use tokio::sync::broadcast;
+use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream};
 
 fn test_c_err(return_code: ctypes::Error) -> Result<()> {
     match return_code {
@@ -66,14 +67,14 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
         MsgLevel::INFO => Level::Info,
         MsgLevel::STATUS => Level::Debug,
         MsgLevel::VERBOSE => Level::Trace,
-        _ => panic!("Received invalid message level {}", level)
+        _ => panic!("Received invalid message level {}", level),
     };
     log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
 }
 
 #[allow(unused)]
 extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {
-    let core = unsafe{ &*(context as *const Core) };
+    let core = unsafe { &*(context as *const Core) };
     core.notify_state_change(param, new_value);
 }
 
@@ -85,7 +86,9 @@ pub struct Core {
     rsp_plugin: Option<Plugin>,
     video_plugin: Option<Plugin>,
     audio_plugin: Option<Plugin>,
-    input_plugin: Option<Plugin>
+    input_plugin: Option<Plugin>,
+
+    state_channel: broadcast::Sender<(ctypes::CoreParam, c_int)>,
 }
 
 impl Core {
@@ -98,6 +101,10 @@ impl Core {
             video_plugin: None,
             audio_plugin: None,
             input_plugin: None,
+            state_channel: {
+                let (tx, _) = broadcast::channel::<(ctypes::CoreParam, c_int)>(16);
+                tx
+            },
         };
 
         test_c_err(unsafe {
@@ -116,9 +123,14 @@ impl Core {
     }
 
     /// Notifies state changes. Used by the state callback.
-    #[allow(unused)]
     fn notify_state_change(&self, param: ctypes::CoreParam, new_value: c_int) {
-        // TODO: actually make a notification system
+        let _ = self.state_channel.send((param, new_value));
+    }
+
+    /// Returns an asynchronous stream of state changes. Note that state changes must be handled
+    /// in a timely manner, else you risk a panic.
+    pub fn state_change_stream(&self) -> impl Stream<Item = (ctypes::CoreParam, c_int)> {
+        BroadcastStream::new(self.state_channel.subscribe()).map(|res| res.unwrap())
     }
 
     /// Obtains version information about this core.
@@ -355,15 +367,24 @@ impl Core {
 
     /// Resets the emulator. If the `hard` parameter is true, performs a hard reset as opposed to a soft reset.
     pub fn reset(&self, hard: bool) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::RESUME, if hard {1} else {0}, null_mut()) })
+        test_c_err(unsafe {
+            self.lib
+                .do_command(Command::RESUME, if hard { 1 } else { 0 }, null_mut())
+        })
     }
 
     /// Sets the current savestate slot. The savestate slot must be a value from 0 to 9.
     pub fn set_state_slot(&self, index: u32) -> Result<()> {
         if index >= 10 {
-            panic!("Invalid savestate index {} (savestate indices are between 0 and 9 inclusive)", index);
+            panic!(
+                "Invalid savestate index {} (savestate indices are between 0 and 9 inclusive)",
+                index
+            );
         }
-        test_c_err(unsafe { self.lib.do_command(Command::STATE_SET_SLOT, index as c_int, null_mut()) })
+        test_c_err(unsafe {
+            self.lib
+                .do_command(Command::STATE_SET_SLOT, index as c_int, null_mut())
+        })
     }
 
     /// Saves to the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
@@ -376,7 +397,10 @@ impl Core {
         let canon_path = path.as_ref().normalize();
         let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
 
-        test_c_err(unsafe { self.lib.do_command(Command::STATE_SAVE, 0, path_cstr.as_ptr() as *mut c_void) })
+        test_c_err(unsafe {
+            self.lib
+                .do_command(Command::STATE_SAVE, 0, path_cstr.as_ptr() as *mut c_void)
+        })
     }
 
     /// Loads from the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
@@ -386,13 +410,17 @@ impl Core {
 
     /// Loads from a file. This function returns immediately, use (TODO: do this) to be notified when it's finished.
     pub fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let canon_path = path.as_ref().canonicalize().map_err(|err| CoreError::IO(err))?;
+        let canon_path = path
+            .as_ref()
+            .canonicalize()
+            .map_err(|err| CoreError::IO(err))?;
         let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
 
-        test_c_err(unsafe { self.lib.do_command(Command::STATE_LOAD, 0, path_cstr.as_ptr() as *mut c_void) })
+        test_c_err(unsafe {
+            self.lib
+                .do_command(Command::STATE_LOAD, 0, path_cstr.as_ptr() as *mut c_void)
+        })
     }
-
-
 }
 
 impl Drop for Core {

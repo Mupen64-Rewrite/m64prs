@@ -1,15 +1,9 @@
-
-mod ctypes;
 mod core;
-pub mod types;
+pub mod ctypes;
 pub mod error;
+pub mod types;
 
 pub use crate::core::{Core, Plugin};
-pub use crate::ctypes::{
-    PluginType,
-    Command
-};
-
 
 #[cfg(test)]
 mod tests {
