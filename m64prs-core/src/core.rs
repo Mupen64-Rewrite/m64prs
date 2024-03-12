@@ -11,13 +11,11 @@ use crate::{
     error::{CoreError, Result},
     types::{APIVersion, VideoExtension},
 };
+use ash::vk::{self, Handle};
 use dlopen2::wrapper::{Container, WrapperApi};
 
-use futures::{Stream, StreamExt};
 use log::{log, Level};
 use normalize_path::NormalizePath;
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream};
 
 fn test_c_err(return_code: ctypes::Error) -> Result<()> {
     match return_code {
@@ -78,6 +76,12 @@ extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new
     core.notify_state_change(param, new_value);
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct StateEvent {
+    pub param: ctypes::CoreParam,
+    pub new_value: c_int,
+}
+
 /// Holds a loaded instance of the Mupen64Plus core. Note that the core remains loaded and active for the lifetime of this
 /// struct. It is shut down and unloaded when the struct is dropped.
 pub struct Core {
@@ -87,8 +91,6 @@ pub struct Core {
     video_plugin: Option<Plugin>,
     audio_plugin: Option<Plugin>,
     input_plugin: Option<Plugin>,
-
-    state_channel: broadcast::Sender<(ctypes::CoreParam, c_int)>,
 }
 
 impl Core {
@@ -101,10 +103,6 @@ impl Core {
             video_plugin: None,
             audio_plugin: None,
             input_plugin: None,
-            state_channel: {
-                let (tx, _) = broadcast::channel::<(ctypes::CoreParam, c_int)>(16);
-                tx
-            },
         };
 
         test_c_err(unsafe {
@@ -122,15 +120,8 @@ impl Core {
         Ok(core)
     }
 
-    /// Notifies state changes. Used by the state callback.
-    fn notify_state_change(&self, param: ctypes::CoreParam, new_value: c_int) {
-        let _ = self.state_channel.send((param, new_value));
-    }
-
-    /// Returns an asynchronous stream of state changes. Note that state changes must be handled
-    /// in a timely manner, else you risk a panic.
-    pub fn state_change_stream(&self) -> impl Stream<Item = (ctypes::CoreParam, c_int)> {
-        BroadcastStream::new(self.state_channel.subscribe()).map(|res| res.unwrap())
+    fn notify_state_change(&self, param: ctypes::CoreParam, value: c_int) {
+        let _ = (param, value);
     }
 
     /// Obtains version information about this core.
@@ -229,28 +220,34 @@ impl Core {
                 ctypes::Error::SUCCESS
             }),
             VidExtFuncListModes: vidext_fn_wrapper!((size_array: *mut Size2D, num_sizes: *mut c_int) -> ctypes::Error {
-                let iter = match_ffi_result!(V::list_fullscreen_modes());
-                let slice = slice::from_raw_parts_mut(size_array, *num_sizes as usize);
+                let size_in_src = match_ffi_result!(V::list_fullscreen_modes());
+                let size_in = size_in_src.as_ref();
+                let size_out = slice::from_raw_parts_mut(size_array, (*num_sizes).try_into().unwrap());
 
-                let mut count: c_int = 0;
-                for (dst, src) in slice.iter_mut().zip(iter) {
-                    count += 1;
-                    *dst = src;
+                if size_in.len() < size_out.len() {
+                    size_out[..size_in.len()].copy_from_slice(size_in);
+                    *num_sizes = size_in.len().try_into().unwrap();
                 }
-                *num_sizes = count;
+                else {
+                    size_out.copy_from_slice(&size_in[..size_out.len()]);
+                    *num_sizes = size_out.len().try_into().unwrap();
+                }
 
                 ctypes::Error::SUCCESS
             }),
             VidExtFuncListRates: vidext_fn_wrapper!((size: Size2D, num_rates: *mut c_int, rates: *mut c_int) -> ctypes::Error {
-                let iter = match_ffi_result!(V::list_fullscreen_rates(size));
-                let slice = slice::from_raw_parts_mut(rates, *num_rates as usize);
+                let rate_in_src = match_ffi_result!(V::list_fullscreen_rates(size));
+                let rate_in = rate_in_src.as_ref();
+                let rate_out = slice::from_raw_parts_mut(rates, *num_rates as usize);
 
-                let mut count: c_int = 0;
-                for (dst, src) in slice.iter_mut().zip(iter) {
-                    count += 1;
-                    *dst = src;
+                if rate_in.len() < rate_out.len() {
+                    rate_out[..rate_in.len()].copy_from_slice(rate_in);
+                    *num_rates = rate_in.len().try_into().unwrap();
                 }
-                *num_rates = count;
+                else {
+                    rate_out.copy_from_slice(&rate_in[..rate_out.len()]);
+                    *num_rates = rate_out.len().try_into().unwrap();
+                }
 
                 ctypes::Error::SUCCESS
             }),
@@ -309,6 +306,26 @@ impl Core {
             }),
             VidExtFuncGLGetDefaultFramebuffer: vidext_fn_wrapper!(() -> u32 {
                 V::gl_get_default_framebuffer()
+            }),
+            VidExtFuncInitWithRenderMode: vidext_fn_wrapper!((mode: ctypes::RenderMode) -> ctypes::Error {
+                match_ffi_result!(V::init_with_render_mode(mode));
+                ctypes::Error::SUCCESS
+            }),
+            VidExtFuncVKGetSurface: vidext_fn_wrapper!((surface: *mut *mut c_void, instance: *mut c_void) -> ctypes::Error {
+                *surface = match_ffi_result!(
+                    V::vk_get_surface(vk::Instance::from_raw(instance as isize as u64))
+                ).as_raw() as *mut c_void;
+
+                ctypes::Error::SUCCESS
+            }),
+            VidExtFuncVKGetInstanceExtensions: vidext_fn_wrapper!((extensions: *mut *mut *const c_char, count: *mut u32) -> ctypes::Error {
+                let data = match_ffi_result!(V::vk_get_instance_extensions());
+                
+                // This is unsafe, though Mupen shouldn't be mutating it, so we're fine.
+                *extensions = data.as_ptr() as *mut *const i8;
+                *count = data.len().try_into().unwrap();
+
+                ctypes::Error::SUCCESS
             }),
         };
         // pass wrapper functions to Mupen

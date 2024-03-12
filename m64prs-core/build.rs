@@ -6,22 +6,9 @@ use std::{
 };
 use zip::{result::{ZipError, ZipResult}, ZipArchive};
 
-const CORE_RR_URL: &str = "https://github.com/Mupen64-Rewrite/mupen64plus-core-rr/archive/8954d83624d7a3ae0f600b634055702032b9266d.zip";
+const CORE_RR_URL: &str = "https://github.com/Mupen64-Rewrite/mupen64plus-core-rr/archive/master.zip";
 const CORE_RR_HEADERS: [&str; 1] = [
     "m64p_types.h"
-];
-const CORE_RR_ENUMS: [&str; 11] = [
-    "m64p_type",
-    "m64p_msg_level",
-    "m64p_error",
-    "m64p_plugin_type",
-    "m64p_emu_state",
-    "m64p_video_mode",
-    "m64p_core_param",
-    "m64p_command",
-    "m64p_system_type",
-    "m64p_rom_save_type",
-    "m64p_disk_region"
 ];
 const CORE_RR_BITFLAGS: [&str; 2] = [
     "m64p_core_caps",
@@ -105,12 +92,9 @@ impl ParseCallbacks for M64PParseCallbacks {
             _original_variant_name: &str,
             _variant_value: bindgen::callbacks::EnumVariantValue,
         ) -> Option<String> {
-        if let Some(name) = _enum_name {
-            if CORE_RR_ENUMS.contains(&name) || CORE_RR_BITFLAGS.contains(&name) {
-                // mupen64plus prefixes all its enums because C, so we have to unprefix them
-                let underscore_pos = _original_variant_name.find('_').unwrap();
-                return Some(_original_variant_name[(underscore_pos + 1)..].to_owned())
-            }
+        if _enum_name.is_some() {
+            let underscore_pos = _original_variant_name.find('_').unwrap();
+            return Some(_original_variant_name[(underscore_pos + 1)..].to_owned())
         }
         None
     }
@@ -143,6 +127,7 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         .impl_debug(true)
         .clang_arg(format!("-I{}", src_dir.display()))
         .parse_callbacks(Box::new(M64PParseCallbacks {}))
+        .default_enum_style(bindgen::EnumVariation::NewType { is_bitfield: false, is_global: false })
         .prepend_enum_name(false);
 
     // blocklist
@@ -150,10 +135,7 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         .blocklist_type("m64p_dbg_.*")
         .blocklist_type("m64p_breakpoint");
 
-    // add enums
-    for name in CORE_RR_ENUMS {
-        builder = builder.newtype_enum(name);
-    }
+    // add bitflag enums
     for name in CORE_RR_BITFLAGS {
         builder = builder.bitfield_enum(name);
     }

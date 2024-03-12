@@ -7,14 +7,12 @@ edition = "2021"
 
 [dependencies]
 dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
+ash = "0.37.3"
 
 futures = "0.3.30"
 log = "0.4.20"
 normalize-path = "0.2.1"
 thiserror = "1.0.56"
-
-tokio = { version = "1.36", features = ["full"] }
-tokio-stream = { version = "0.1.14", features = ["sync"] }
 
 [build-dependencies]
 reqwest = { version = "0.11.23", features = ["blocking"] }

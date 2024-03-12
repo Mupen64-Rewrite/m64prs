@@ -43,7 +43,7 @@ pub enum M64PError {
 impl TryFrom<ctypes::Error> for M64PError {
     type Error = CoreError;
 
-    fn try_from(value: ctypes::Error) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(value: ctypes::Error) -> std::result::Result<Self, Self::Error> {
         match value {
             ctypes::Error::SUCCESS => Err(CoreError::InvalidEnumConversion),
             ctypes::Error::NOT_INIT => Ok(M64PError::NotInit),
