@@ -22,6 +22,8 @@ use winit::{dpi::PhysicalSize, window::WindowBuilder};
 
 use super::{GraphicsState, VidextState};
 
+use cstr::cstr;
+
 pub fn setup_window(
     state: &mut VidextState,
     width: c_int,
@@ -64,18 +66,32 @@ pub fn setup_window(
 
         // create the context
         let context_attrs = gen_context_builder(attr_map).build(Some(window_handle));
-        let context = unsafe { gl_display.create_context(&gl_config, &context_attrs) }.map_err(|_| M64PError::SystemFail)?;
+        let context = unsafe { gl_display.create_context(&gl_config, &context_attrs) }
+            .map_err(|_| M64PError::SystemFail)?;
 
         let surface_attrs = gen_surface_builder(attr_map).build(window_handle, width_nz, height_nz);
-        let surface = unsafe { gl_display.create_window_surface(&gl_config, &surface_attrs) }.map_err(|_| M64PError::SystemFail)?;
+        let surface = unsafe { gl_display.create_window_surface(&gl_config, &surface_attrs) }
+            .map_err(|_| M64PError::SystemFail)?;
 
-        let current_context = context.make_current(&surface).map_err(|_| M64PError::SystemFail)?;
+        let current_context = context
+            .make_current(&surface)
+            .map_err(|_| M64PError::SystemFail)?;
+        
+        // We could use an OpenGL loading library, but that's too much overhead
+        // This is needed to distinguish core from compatiblity on OpenGL (not ES).
+        let gl_get_integer_v = unsafe {
+            mem::transmute::<
+                _,
+                unsafe extern "C" fn(pname: gl::types::GLenum, data: *mut gl::types::GLint),
+            >(gl_display.get_proc_address(cstr!("glGetIntegerv")) as *const ())
+        };
 
         state.graphics = GraphicsState::OpenGL {
             window: window,
             display: gl_display,
             context: current_context,
-            surface: surface
+            surface: surface,
+            gl_get_integer_v: gl_get_integer_v,
         };
         Ok(())
     } else {

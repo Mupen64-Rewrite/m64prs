@@ -1,13 +1,14 @@
 use std::{collections::HashMap, ffi::c_int, os::raw::c_void};
 
 use glutin::{
-    context::PossiblyCurrentContext,
+    config::{ColorBufferType, GetGlConfig, GlConfig},
+    context::{GlContext, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, GlDisplay},
     surface::{GlSurface, Surface, WindowSurface},
 };
 
 use m64prs_core::{
-    ctypes::{self, Size2D},
+    ctypes::{self, GLAttribute, GLContextType, Size2D},
     error::M64PError,
     types::{FFIResult, VideoExtension},
 };
@@ -31,6 +32,8 @@ enum GraphicsState {
         display: Display,
         context: PossiblyCurrentContext,
         surface: Surface<WindowSurface>,
+        gl_get_integer_v:
+            unsafe extern "C" fn(pname: gl::types::GLenum, data: *mut gl::types::GLint),
     },
 }
 
@@ -148,8 +151,108 @@ impl VideoExtension for VidextState {
         }
     }
 
-    unsafe fn gl_get_attribute(_attr: ctypes::GLAttribute) -> FFIResult<c_int> {
-        todo!()
+    unsafe fn gl_get_attribute(attr: ctypes::GLAttribute) -> FFIResult<c_int> {
+        let state = check_state_init!();
+
+        if let GraphicsState::OpenGL {
+            context,
+            surface,
+            gl_get_integer_v,
+            ..
+        } = &mut state.graphics
+        {
+            match attr {
+                GLAttribute::DOUBLEBUFFER => Ok({
+                    if surface.is_single_buffered() {
+                        0
+                    } else {
+                        1
+                    }
+                }),
+                GLAttribute::BUFFER_SIZE => Ok({
+                    let config = context.config();
+
+                    let color_size = match config.color_buffer_type() {
+                        Some(ColorBufferType::Rgb {
+                            r_size,
+                            g_size,
+                            b_size,
+                        }) => r_size + g_size + b_size,
+                        Some(ColorBufferType::Luminance(y_size)) => y_size,
+                        None => 0,
+                    };
+                    let alpha_size = config.alpha_size();
+
+                    (color_size as c_int) + (alpha_size as c_int)
+                }),
+                GLAttribute::DEPTH_SIZE => Ok({ context.config().depth_size() as c_int }),
+                GLAttribute::RED_SIZE => match context.config().color_buffer_type() {
+                    Some(ColorBufferType::Rgb { r_size, .. }) => Ok(r_size as c_int),
+                    _ => Err(M64PError::SystemFail),
+                },
+                GLAttribute::GREEN_SIZE => match context.config().color_buffer_type() {
+                    Some(ColorBufferType::Rgb { g_size, .. }) => Ok(g_size as c_int),
+                    _ => Err(M64PError::SystemFail),
+                },
+                GLAttribute::BLUE_SIZE => match context.config().color_buffer_type() {
+                    Some(ColorBufferType::Rgb { b_size, .. }) => Ok(b_size as c_int),
+                    _ => Err(M64PError::SystemFail),
+                },
+                GLAttribute::ALPHA_SIZE => Ok(context.config().alpha_size() as c_int),
+                GLAttribute::SWAP_CONTROL => Err(M64PError::Unsupported),
+                GLAttribute::MULTISAMPLESAMPLES => Ok(context.config().num_samples() as c_int),
+                GLAttribute::MULTISAMPLEBUFFERS => Ok({
+                    if context.config().num_samples() > 0 {
+                        1
+                    } else {
+                        0
+                    }
+                }),
+                GLAttribute::CONTEXT_MAJOR_VERSION => match context.context_api() {
+                    glutin::context::ContextApi::OpenGl(Some(Version { major, .. })) => {
+                        Ok(major as c_int)
+                    }
+                    glutin::context::ContextApi::Gles(Some(Version { major, .. })) => {
+                        Ok(major as c_int)
+                    }
+                    _ => Err(M64PError::SystemFail),
+                },
+                GLAttribute::CONTEXT_MINOR_VERSION => match context.context_api() {
+                    glutin::context::ContextApi::OpenGl(Some(Version { minor, .. })) => {
+                        Ok(minor as c_int)
+                    }
+                    glutin::context::ContextApi::Gles(Some(Version { minor, .. })) => {
+                        Ok(minor as c_int)
+                    }
+                    _ => Err(M64PError::SystemFail),
+                },
+                GLAttribute::CONTEXT_PROFILE_MASK => match context.context_api() {
+                    glutin::context::ContextApi::OpenGl(Some(Version { major, minor })) => {
+                        if major > 3 || (major == 3 && minor >= 2) {
+                            // OpenGL >= 3.2: query OpenGL for compatibility bit.
+                            let mut profile_mask: gl::types::GLint = 0;
+                            gl_get_integer_v(gl::CONTEXT_PROFILE_MASK, &mut profile_mask);
+                            if ((profile_mask as gl::types::GLenum)
+                                & gl::CONTEXT_COMPATIBILITY_PROFILE_BIT)
+                                != 0
+                            {
+                                Ok(GLContextType::COMPATIBILITY.0 as c_int)
+                            } else {
+                                Ok(GLContextType::CORE.0 as c_int)
+                            }
+                        } else {
+                            // OpenGL < 3.2 always supports legacy functions.
+                            Ok(GLContextType::COMPATIBILITY.0 as c_int)
+                        }
+                    }
+                    glutin::context::ContextApi::Gles(Some(_)) => Ok(GLContextType::ES.0 as c_int),
+                    _ => Err(M64PError::SystemFail),
+                },
+                _ => Err(M64PError::InputAssert),
+            }
+        } else {
+            Err(M64PError::InvalidState)
+        }
     }
 
     unsafe fn gl_swap_buffers() -> FFIResult<()> {
