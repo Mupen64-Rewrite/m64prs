@@ -10,7 +10,7 @@ dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
 ash = "0.37.3"
 
 futures = "0.3.30"
-log = "0.4.20"
+log = "0.4"
 normalize-path = "0.2.1"
 thiserror = "1.0.56"
 

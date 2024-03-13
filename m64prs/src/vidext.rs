@@ -1,25 +1,37 @@
-use std::{collections::HashMap, ffi::c_int, os::raw::c_void};
+use std::{
+    collections::HashMap,
+    ffi::c_int,
+    os::raw::c_void,
+    sync::{Arc, OnceLock, RwLock},
+    time::Duration,
+};
 
 use glutin::{
-    config::{ColorBufferType, GetGlConfig, GlConfig},
-    context::{GlContext, GlProfile, PossiblyCurrentContext, Version},
+    context::PossiblyCurrentContext,
     display::{Display, GlDisplay},
     surface::{GlSurface, Surface, WindowSurface},
 };
 
+use log::{debug, trace};
 use m64prs_core::{
-    ctypes::{self, GLAttribute, GLContextType, Size2D},
+    ctypes::{self, Size2D},
     error::M64PError,
     types::{FFIResult, VideoExtension},
 };
 
 use ash::vk;
-use winit::{event_loop::EventLoop, window::Window};
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::{EventLoop, EventLoopProxy},
+    platform::pump_events::EventLoopExtPumpEvents,
+    window::Window,
+};
 
 mod opengl;
 
 pub struct VidextState {
     event_loop: EventLoop<()>,
+    el_proxy: EventLoopProxy<()>,
     graphics: GraphicsState,
 }
 
@@ -32,11 +44,11 @@ enum GraphicsState {
         display: Display,
         context: PossiblyCurrentContext,
         surface: Surface<WindowSurface>,
-        gl_get_integer_v:
-            unsafe extern "C" fn(pname: gl::types::GLenum, data: *mut gl::types::GLint),
     },
 }
 
+static STATE_CORE: OnceLock<Arc<RwLock<crate::Core>>> = OnceLock::new();
+// The core is expected to call vidext functions from a single thread.
 static mut STATE: Option<VidextState> = None;
 
 macro_rules! check_state_init {
@@ -49,22 +61,29 @@ macro_rules! check_state_init {
 }
 
 impl VideoExtension for VidextState {
+    fn on_bind_core(core: Arc<RwLock<m64prs_core::Core>>) -> FFIResult<()> {
+        STATE_CORE.get_or_init(move || core);
+        Ok(())
+    }
+
     unsafe fn init_with_render_mode(mode: ctypes::RenderMode) -> FFIResult<()> {
+        debug!("Initializing video extension");
         if STATE.is_some() {
             return Err(M64PError::AlreadyInit);
         }
         if mode == ctypes::RenderMode::VULKAN {
             return Err(M64PError::Unsupported);
         }
-
-        let event_loop = EventLoop::new().unwrap();
-
+        let event_loop = EventLoop::new().map_err(|_| M64PError::SystemFail)?;
+        let el_proxy = event_loop.create_proxy();
         STATE = Some(VidextState {
-            event_loop,
+            event_loop: event_loop,
+            el_proxy: el_proxy,
             graphics: GraphicsState::BuildOpenGL {
                 attrs: HashMap::new(),
             },
         });
+        trace!("Video extension ready");
 
         Ok(())
     }
@@ -79,11 +98,14 @@ impl VideoExtension for VidextState {
 
     #[allow(refining_impl_trait)]
     unsafe fn list_fullscreen_modes() -> FFIResult<&'static [Size2D]> {
+        debug!("Listing fullscreen modes");
+
         Err(M64PError::Unsupported)
     }
 
     #[allow(refining_impl_trait)]
     unsafe fn list_fullscreen_rates(_size: ctypes::Size2D) -> FFIResult<&'static [c_int]> {
+        debug!("Listing fullscreen rates");
         Err(M64PError::Unsupported)
     }
 
@@ -96,9 +118,7 @@ impl VideoExtension for VidextState {
     ) -> FFIResult<()> {
         let state = check_state_init!();
 
-        if screen_mode == ctypes::VideoMode::FULLSCREEN
-            || (flags & ctypes::VideoFlags::SUPPORT_RESIZING) != ctypes::VideoFlags(0)
-        {
+        if screen_mode == ctypes::VideoMode::FULLSCREEN {
             return Err(M64PError::Unsupported);
         }
 
@@ -153,121 +173,12 @@ impl VideoExtension for VidextState {
 
     unsafe fn gl_get_attribute(attr: ctypes::GLAttribute) -> FFIResult<c_int> {
         let state = check_state_init!();
-
-        if let GraphicsState::OpenGL {
-            context,
-            surface,
-            gl_get_integer_v,
-            ..
-        } = &mut state.graphics
-        {
-            match attr {
-                GLAttribute::DOUBLEBUFFER => Ok({
-                    if surface.is_single_buffered() {
-                        0
-                    } else {
-                        1
-                    }
-                }),
-                GLAttribute::BUFFER_SIZE => Ok({
-                    let config = context.config();
-
-                    let color_size = match config.color_buffer_type() {
-                        Some(ColorBufferType::Rgb {
-                            r_size,
-                            g_size,
-                            b_size,
-                        }) => r_size + g_size + b_size,
-                        Some(ColorBufferType::Luminance(y_size)) => y_size,
-                        None => 0,
-                    };
-                    let alpha_size = config.alpha_size();
-
-                    (color_size as c_int) + (alpha_size as c_int)
-                }),
-                GLAttribute::DEPTH_SIZE => Ok({ context.config().depth_size() as c_int }),
-                GLAttribute::RED_SIZE => match context.config().color_buffer_type() {
-                    Some(ColorBufferType::Rgb { r_size, .. }) => Ok(r_size as c_int),
-                    _ => Err(M64PError::SystemFail),
-                },
-                GLAttribute::GREEN_SIZE => match context.config().color_buffer_type() {
-                    Some(ColorBufferType::Rgb { g_size, .. }) => Ok(g_size as c_int),
-                    _ => Err(M64PError::SystemFail),
-                },
-                GLAttribute::BLUE_SIZE => match context.config().color_buffer_type() {
-                    Some(ColorBufferType::Rgb { b_size, .. }) => Ok(b_size as c_int),
-                    _ => Err(M64PError::SystemFail),
-                },
-                GLAttribute::ALPHA_SIZE => Ok(context.config().alpha_size() as c_int),
-                GLAttribute::SWAP_CONTROL => Err(M64PError::Unsupported),
-                GLAttribute::MULTISAMPLESAMPLES => Ok(context.config().num_samples() as c_int),
-                GLAttribute::MULTISAMPLEBUFFERS => Ok({
-                    if context.config().num_samples() > 0 {
-                        1
-                    } else {
-                        0
-                    }
-                }),
-                GLAttribute::CONTEXT_MAJOR_VERSION => match context.context_api() {
-                    glutin::context::ContextApi::OpenGl(Some(Version { major, .. })) => {
-                        Ok(major as c_int)
-                    }
-                    glutin::context::ContextApi::Gles(Some(Version { major, .. })) => {
-                        Ok(major as c_int)
-                    }
-                    _ => Err(M64PError::SystemFail),
-                },
-                GLAttribute::CONTEXT_MINOR_VERSION => match context.context_api() {
-                    glutin::context::ContextApi::OpenGl(Some(Version { minor, .. })) => {
-                        Ok(minor as c_int)
-                    }
-                    glutin::context::ContextApi::Gles(Some(Version { minor, .. })) => {
-                        Ok(minor as c_int)
-                    }
-                    _ => Err(M64PError::SystemFail),
-                },
-                GLAttribute::CONTEXT_PROFILE_MASK => match context.context_api() {
-                    glutin::context::ContextApi::OpenGl(Some(Version { major, minor })) => {
-                        if major > 3 || (major == 3 && minor >= 2) {
-                            // OpenGL >= 3.2: query OpenGL for compatibility bit.
-                            let mut profile_mask: gl::types::GLint = 0;
-                            gl_get_integer_v(gl::CONTEXT_PROFILE_MASK, &mut profile_mask);
-                            if ((profile_mask as gl::types::GLenum)
-                                & gl::CONTEXT_COMPATIBILITY_PROFILE_BIT)
-                                != 0
-                            {
-                                Ok(GLContextType::COMPATIBILITY.0 as c_int)
-                            } else {
-                                Ok(GLContextType::CORE.0 as c_int)
-                            }
-                        } else {
-                            // OpenGL < 3.2 always supports legacy functions.
-                            Ok(GLContextType::COMPATIBILITY.0 as c_int)
-                        }
-                    }
-                    glutin::context::ContextApi::Gles(Some(_)) => Ok(GLContextType::ES.0 as c_int),
-                    _ => Err(M64PError::SystemFail),
-                },
-                _ => Err(M64PError::InputAssert),
-            }
-        } else {
-            Err(M64PError::InvalidState)
-        }
+        opengl::get_attribute(state, attr)
     }
 
     unsafe fn gl_swap_buffers() -> FFIResult<()> {
         let state = check_state_init!();
-
-        if let GraphicsState::OpenGL {
-            context, surface, ..
-        } = &mut state.graphics
-        {
-            surface
-                .swap_buffers(context)
-                .map_err(|_| M64PError::SystemFail)
-        } else {
-            Err(M64PError::InvalidState)
-        }
+        opengl::swap_buffers(state, STATE_CORE.get().unwrap())
     }
 
     unsafe fn gl_get_default_framebuffer() -> u32 {

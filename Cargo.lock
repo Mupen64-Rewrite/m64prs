@@ -876,6 +876,7 @@ dependencies = [
  "gl",
  "glutin",
  "glutin-winit",
+ "log",
  "m64prs-core",
  "raw-window-handle 0.5.2",
  "winit",

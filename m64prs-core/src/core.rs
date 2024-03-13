@@ -3,7 +3,7 @@ use std::{
     fs, mem,
     path::Path,
     ptr::{null, null_mut},
-    slice,
+    slice, sync::{Arc, RwLock},
 };
 
 use crate::{
@@ -96,7 +96,7 @@ pub struct Core {
 //
 impl Core {
     /// Loads the core from a path.
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Arc<RwLock<Self>>> {
         let core = Core {
             lib: unsafe { Container::load(path.as_ref()) }
                 .map_err(|err| CoreError::Library(err))?,
@@ -118,7 +118,7 @@ impl Core {
             )
         })?;
 
-        Ok(core)
+        Ok(Arc::new(RwLock::new(core)))
     }
 
     fn notify_state_change(&self, param: ctypes::CoreParam, value: c_int) {
@@ -206,9 +206,7 @@ impl Core {
 
         Ok(())
     }
-
-    /// Overrides the video extension
-    pub fn override_vidext<V: VideoExtension>(&self) -> Result<()> {
+    fn override_vidext_inner<V: VideoExtension>(&mut self) -> Result<()> {
         // generate wrapper functions with a helper macro
         let mut vidext = ctypes::VideoExtensionFunctions {
             Functions: 17,
@@ -331,6 +329,14 @@ impl Core {
         };
         // pass wrapper functions to Mupen
         test_c_err(unsafe { self.lib.core.override_vidext(&mut vidext) })?;
+        Ok(())
+    }
+
+    /// Overrides the video extension.
+    pub fn override_vidext<V: VideoExtension>(this: &Arc<RwLock<Self>>) -> Result<()> {
+        V::on_bind_core(this.clone()).map_err(|err| CoreError::M64P(err))?;
+        this.write().unwrap().override_vidext_inner::<V>()?;
+
         Ok(())
     }
 }

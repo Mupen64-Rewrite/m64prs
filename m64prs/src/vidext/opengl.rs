@@ -1,28 +1,24 @@
 use std::{
-    collections::HashMap,
-    ffi::{c_int, c_uint},
-    mem,
-    num::NonZeroU32,
+    collections::HashMap, ffi::{c_int, c_uint, CString}, num::NonZeroU32, os::raw::c_void, sync::RwLock, time::Duration
 };
 
 use glutin::{
-    config::{Api, ColorBufferType, ConfigTemplateBuilder},
-    context::{ContextApi, ContextAttributesBuilder, GlProfile, NotCurrentGlContext, Version},
+    config::{Api, ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
+    context::{ContextApi, ContextAttributesBuilder, GlContext, GlProfile, NotCurrentGlContext, Version},
     display::{GetGlDisplay, GlDisplay},
-    surface::{SurfaceAttributesBuilder, WindowSurface},
+    surface::{GlSurface, SurfaceAttributesBuilder, WindowSurface},
 };
 use glutin_winit::DisplayBuilder;
+use log::error;
 use m64prs_core::{
-    ctypes::{GLAttribute, GLContextType},
+    ctypes::{self, GLAttribute, GLContextType},
     error::M64PError,
     types::FFIResult,
 };
 use rwh_05::HasRawWindowHandle;
-use winit::{dpi::PhysicalSize, window::WindowBuilder};
+use winit::{dpi::PhysicalSize, event::{Event, WindowEvent}, platform::pump_events::EventLoopExtPumpEvents, window::WindowBuilder};
 
 use super::{GraphicsState, VidextState};
-
-use cstr::cstr;
 
 pub fn setup_window(
     state: &mut VidextState,
@@ -31,6 +27,7 @@ pub fn setup_window(
     bits_per_pixel: c_int,
 ) -> FFIResult<()> {
     if let GraphicsState::BuildOpenGL { attrs: attr_map } = &mut state.graphics {
+        log::debug!("Setting {}-bpp video mode @ {}x{}", bits_per_pixel, width, height);
         // error checking for width and height
         let width_nz = if width <= 0 {
             return Err(M64PError::InputInvalid);
@@ -42,13 +39,14 @@ pub fn setup_window(
         } else {
             unsafe { NonZeroU32::new_unchecked(height as u32) }
         };
+        log::debug!("Got resolution {}x{}", width_nz, height_nz);
 
         // Setup the window and framebuffer config, we can't create a context without both
         let window_builder = WindowBuilder::new()
             .with_inner_size(PhysicalSize::new(width, height))
             .with_resizable(false)
             .with_title("winit/vidext");
-        let config_builder = gen_config_builder(bits_per_pixel, attr_map);
+        let config_builder = gen_config_builder(bits_per_pixel, attr_map)?;
 
         // create the window and framebuffer config
         let (window, gl_config) = DisplayBuilder::new()
@@ -60,6 +58,8 @@ pub fn setup_window(
             .unwrap();
         let window = window.ok_or(M64PError::SystemFail)?;
 
+        log::debug!("Constructed window and OpenGL config");
+
         // acquire the needed handles to create a context
         let window_handle = window.raw_window_handle();
         let gl_display = gl_config.display();
@@ -69,30 +69,172 @@ pub fn setup_window(
         let context = unsafe { gl_display.create_context(&gl_config, &context_attrs) }
             .map_err(|_| M64PError::SystemFail)?;
 
+        log::debug!("Constructed OpenGL context");
+
         let surface_attrs = gen_surface_builder(attr_map).build(window_handle, width_nz, height_nz);
         let surface = unsafe { gl_display.create_window_surface(&gl_config, &surface_attrs) }
             .map_err(|_| M64PError::SystemFail)?;
 
+        log::debug!("Constructed OpenGL surface");
+
         let current_context = context
             .make_current(&surface)
             .map_err(|_| M64PError::SystemFail)?;
-        
-        // We could use an OpenGL loading library, but that's too much overhead
-        // This is needed to distinguish core from compatiblity on OpenGL (not ES).
-        let gl_get_integer_v = unsafe {
-            mem::transmute::<
-                _,
-                unsafe extern "C" fn(pname: gl::types::GLenum, data: *mut gl::types::GLint),
-            >(gl_display.get_proc_address(cstr!("glGetIntegerv")) as *const ())
+
+        log::debug!("Context is current");
+
+        let gl_load_fn = |str: &str| -> *const c_void {
+            let cstr = CString::new(str).unwrap();
+            gl_display.get_proc_address(&cstr)
         };
+        // load only GL functions that we need
+        gl::GetIntegerv::load_with(gl_load_fn);
+        gl::ClearColor::load_with(gl_load_fn);
+        gl::Clear::load_with(gl_load_fn);
+
+        // clear to black
+        unsafe {
+            gl::ClearColor(0.0f32, 0.0f32, 0.0f32, 0.0f32);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
 
         state.graphics = GraphicsState::OpenGL {
             window: window,
             display: gl_display,
             context: current_context,
             surface: surface,
-            gl_get_integer_v: gl_get_integer_v,
         };
+        Ok(())
+    } else {
+        Err(M64PError::InvalidState)
+    }
+}
+
+pub fn get_attribute(
+    state: &mut VidextState,
+    attr: ctypes::GLAttribute
+) -> FFIResult<c_int> {
+    if let GraphicsState::OpenGL {
+        context,
+        surface,
+        ..
+    } = &mut state.graphics
+    {
+        match attr {
+            GLAttribute::DOUBLEBUFFER => Ok({
+                if surface.is_single_buffered() {
+                    0
+                } else {
+                    1
+                }
+            }),
+            GLAttribute::BUFFER_SIZE => Ok({
+                let config = context.config();
+
+                let color_size = match config.color_buffer_type() {
+                    Some(ColorBufferType::Rgb {
+                        r_size,
+                        g_size,
+                        b_size,
+                    }) => r_size + g_size + b_size,
+                    Some(ColorBufferType::Luminance(y_size)) => y_size,
+                    None => 0,
+                };
+                let alpha_size = config.alpha_size();
+
+                (color_size as c_int) + (alpha_size as c_int)
+            }),
+            GLAttribute::DEPTH_SIZE => Ok(context.config().depth_size() as c_int),
+            GLAttribute::RED_SIZE => match context.config().color_buffer_type() {
+                Some(ColorBufferType::Rgb { r_size, .. }) => Ok(r_size as c_int),
+                _ => Err(M64PError::SystemFail),
+            },
+            GLAttribute::GREEN_SIZE => match context.config().color_buffer_type() {
+                Some(ColorBufferType::Rgb { g_size, .. }) => Ok(g_size as c_int),
+                _ => Err(M64PError::SystemFail),
+            },
+            GLAttribute::BLUE_SIZE => match context.config().color_buffer_type() {
+                Some(ColorBufferType::Rgb { b_size, .. }) => Ok(b_size as c_int),
+                _ => Err(M64PError::SystemFail),
+            },
+            GLAttribute::ALPHA_SIZE => Ok(context.config().alpha_size() as c_int),
+            GLAttribute::SWAP_CONTROL => Err(M64PError::Unsupported),
+            GLAttribute::MULTISAMPLESAMPLES => Ok(context.config().num_samples() as c_int),
+            GLAttribute::MULTISAMPLEBUFFERS => Ok({
+                if context.config().num_samples() > 0 {
+                    1
+                } else {
+                    0
+                }
+            }),
+            GLAttribute::CONTEXT_MAJOR_VERSION => match context.context_api() {
+                glutin::context::ContextApi::OpenGl(Some(Version { major, .. })) => {
+                    Ok(major as c_int)
+                }
+                glutin::context::ContextApi::Gles(Some(Version { major, .. })) => {
+                    Ok(major as c_int)
+                }
+                _ => Err(M64PError::SystemFail),
+            },
+            GLAttribute::CONTEXT_MINOR_VERSION => match context.context_api() {
+                glutin::context::ContextApi::OpenGl(Some(Version { minor, .. })) => {
+                    Ok(minor as c_int)
+                }
+                glutin::context::ContextApi::Gles(Some(Version { minor, .. })) => {
+                    Ok(minor as c_int)
+                }
+                _ => Err(M64PError::SystemFail),
+            },
+            GLAttribute::CONTEXT_PROFILE_MASK => match context.context_api() {
+                glutin::context::ContextApi::OpenGl(Some(Version { major, minor })) => {
+                    if major > 3 || (major == 3 && minor >= 2) {
+                        // OpenGL >= 3.2: query OpenGL for compatibility bit.
+                        let mut profile_mask: gl::types::GLint = 0;
+                        unsafe { gl::GetIntegerv(gl::CONTEXT_PROFILE_MASK, &mut profile_mask) };
+                        if ((profile_mask as gl::types::GLenum)
+                            & gl::CONTEXT_COMPATIBILITY_PROFILE_BIT)
+                            != 0
+                        {
+                            Ok(GLContextType::COMPATIBILITY.0 as c_int)
+                        } else {
+                            Ok(GLContextType::CORE.0 as c_int)
+                        }
+                    } else {
+                        // OpenGL < 3.2 always supports legacy functions.
+                        Ok(GLContextType::COMPATIBILITY.0 as c_int)
+                    }
+                }
+                glutin::context::ContextApi::Gles(Some(_)) => Ok(GLContextType::ES.0 as c_int),
+                _ => Err(M64PError::SystemFail),
+            },
+            _ => Err(M64PError::InputAssert),
+        }
+    } else {
+        Err(M64PError::InvalidState)
+    }
+}
+
+pub fn swap_buffers(state: &mut VidextState, core: &RwLock<crate::Core>) -> FFIResult<()> {
+    if let GraphicsState::OpenGL {
+        context, surface, ..
+    } = &mut state.graphics
+    {
+        surface
+            .swap_buffers(context)
+            .map_err(|_| M64PError::SystemFail)?;
+
+        // try to wake the event loop
+        let _ = state.el_proxy.send_event(());
+        // handle input
+        state.event_loop.pump_events(Some(Duration::ZERO), |event, elwt| match event {
+            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                print!("CLOSE RQ");
+                let _ = core.read().unwrap().close_rom();
+                elwt.exit();
+            },
+            _ => (),
+        });
+
         Ok(())
     } else {
         Err(M64PError::InvalidState)
@@ -102,7 +244,7 @@ pub fn setup_window(
 fn gen_config_builder(
     bits_per_pixel: c_int,
     attr_map: &mut HashMap<GLAttribute, c_int>,
-) -> ConfigTemplateBuilder {
+) -> FFIResult<ConfigTemplateBuilder> {
     let mut builder = ConfigTemplateBuilder::new();
     match bits_per_pixel {
         32 => {
@@ -180,7 +322,12 @@ fn gen_config_builder(
     // other config-dependent attributes
     if let Some(double_buffer) = attr_map.get(&GLAttribute::DOUBLEBUFFER) {
         let is_single_buffer = *double_buffer == 0;
-        builder = builder.with_single_buffering(is_single_buffer);
+        if is_single_buffer {
+            // if the plugin expects single buffering it might not call
+            // swap_buffers, so it's going to fuck things up for us
+            error!("Single buffering is not supported");
+            return Err(M64PError::Unsupported);
+        }
     }
     if let Some(depth_size) = attr_map.get(&GLAttribute::DEPTH_SIZE) {
         builder = builder.with_depth_size((*depth_size).try_into().unwrap());
@@ -195,7 +342,7 @@ fn gen_config_builder(
         builder = builder.with_multisampling((*samples).try_into().unwrap());
     }
 
-    builder
+    Ok(builder)
 }
 
 fn gen_context_builder(attr_map: &mut HashMap<GLAttribute, c_int>) -> ContextAttributesBuilder {
