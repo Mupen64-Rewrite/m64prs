@@ -7,12 +7,12 @@ use std::{
 };
 
 use crate::{
-    ctypes::{self, Command, GLAttribute, MsgLevel, PluginType, Size2D, VideoFlags, VideoMode},
+    ctypes::{self, Command, GLAttribute, MsgLevel, PluginType, Size2D, VcrParam, VideoFlags, VideoMode},
     error::{CoreError, Result},
     types::{APIVersion, VideoExtension},
 };
 use ash::vk::{self, Handle};
-use dlopen2::wrapper::{Container, WrapperApi};
+use dlopen2::wrapper::{Container, WrapperApi, WrapperMultiApi};
 
 use log::{log, Level};
 use normalize_path::NormalizePath;
@@ -85,7 +85,7 @@ pub struct StateEvent {
 /// Holds a loaded instance of the Mupen64Plus core. Note that the core remains loaded and active for the lifetime of this
 /// struct. It is shut down and unloaded when the struct is dropped.
 pub struct Core {
-    lib: Container<CoreApi>,
+    lib: Container<FullCoreApi>,
 
     rsp_plugin: Option<Plugin>,
     video_plugin: Option<Plugin>,
@@ -93,6 +93,7 @@ pub struct Core {
     input_plugin: Option<Plugin>,
 }
 
+//
 impl Core {
     /// Loads the core from a path.
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
@@ -106,7 +107,7 @@ impl Core {
         };
 
         test_c_err(unsafe {
-            core.lib.startup(
+            core.lib.core.startup(
                 0x02_01_00,
                 null(),
                 null(),
@@ -133,7 +134,7 @@ impl Core {
             let mut plugin_name: *const c_char = null();
             let mut caps: c_int = 0;
 
-            test_c_err(self.lib.get_version(
+            test_c_err(self.lib.core.get_version(
                 &mut plugin_type,
                 &mut plugin_version,
                 &mut api_version,
@@ -179,7 +180,7 @@ impl Core {
                 .lib
                 .startup(self.lib.into_raw(), null_mut(), debug_callback)
         })?;
-        test_c_err(unsafe { self.lib.attach_plugin(ptype.into(), plugin.lib.into_raw()) })?;
+        test_c_err(unsafe { self.lib.core.attach_plugin(ptype.into(), plugin.lib.into_raw()) })?;
 
         // register the plugin with the struct
         *cur_plugin = Some(plugin);
@@ -198,7 +199,7 @@ impl Core {
         };
 
         // detach the plugin.
-        test_c_err(unsafe { self.lib.detach_plugin(ptype.into()) })?;
+        test_c_err(unsafe { self.lib.core.detach_plugin(ptype.into()) })?;
 
         // assign the plugin to none, this should drop it.
         *cur_plugin = None;
@@ -210,7 +211,7 @@ impl Core {
     pub fn override_vidext<V: VideoExtension>(&self) -> Result<()> {
         // generate wrapper functions with a helper macro
         let mut vidext = ctypes::VideoExtensionFunctions {
-            Functions: 14,
+            Functions: 17,
             VidExtFuncInit: vidext_fn_wrapper!(() -> ctypes::Error {
                 match_ffi_result!(V::init());
                 ctypes::Error::SUCCESS
@@ -329,14 +330,17 @@ impl Core {
             }),
         };
         // pass wrapper functions to Mupen
-        test_c_err(unsafe { self.lib.override_vidext(&mut vidext) })?;
+        test_c_err(unsafe { self.lib.core.override_vidext(&mut vidext) })?;
         Ok(())
     }
+}
 
+// Core commands and state
+impl Core {
     /// Opens a ROM that is pre-loaded into memory.
     pub fn open_rom(&self, rom_data: &[u8]) -> Result<()> {
         test_c_err(unsafe {
-            self.lib.do_command(
+            self.lib.core.do_command(
                 Command::ROM_OPEN,
                 rom_data.len() as c_int,
                 rom_data.as_ptr() as *mut c_void,
@@ -354,38 +358,38 @@ impl Core {
 
     /// Closes a currently open ROM.
     pub fn close_rom(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::ROM_CLOSE, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::ROM_CLOSE, 0, null_mut()) })
     }
 
     /// Executes the currently open ROM synchronously on this thread.
     pub fn execute_sync(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::EXECUTE, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::EXECUTE, 0, null_mut()) })
     }
 
     /// Stops the emulator if it is running.    
     pub fn stop(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::STOP, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::STOP, 0, null_mut()) })
     }
 
     /// Pauses the emulator if it is running.
     pub fn pause(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::PAUSE, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::PAUSE, 0, null_mut()) })
     }
 
     /// Resumes the emulator if it is paused.
     pub fn resume(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::RESUME, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::RESUME, 0, null_mut()) })
     }
 
     /// Advances one frame. That is, the emulator will run the next frame, then pause.
     pub fn advance_frame(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::ADVANCE_FRAME, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::ADVANCE_FRAME, 0, null_mut()) })
     }
 
     /// Resets the emulator. If the `hard` parameter is true, performs a hard reset as opposed to a soft reset.
     pub fn reset(&self, hard: bool) -> Result<()> {
         test_c_err(unsafe {
-            self.lib
+            self.lib.core
                 .do_command(Command::RESUME, if hard { 1 } else { 0 }, null_mut())
         })
     }
@@ -399,14 +403,14 @@ impl Core {
             );
         }
         test_c_err(unsafe {
-            self.lib
+            self.lib.core
                 .do_command(Command::STATE_SET_SLOT, index as c_int, null_mut())
         })
     }
 
     /// Saves to the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
     pub fn save_current_slot(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::STATE_SAVE, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::STATE_SAVE, 0, null_mut()) })
     }
 
     /// Saves to a file. This function returns immediately, use (TODO: do this) to be notified when it's finished.
@@ -415,14 +419,14 @@ impl Core {
         let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
 
         test_c_err(unsafe {
-            self.lib
+            self.lib.core
                 .do_command(Command::STATE_SAVE, 0, path_cstr.as_ptr() as *mut c_void)
         })
     }
 
     /// Loads from the current savestate slot. This function returns immediately, use (TODO: do this) to be notified when it's finished.
     pub fn load_current_slot(&self) -> Result<()> {
-        test_c_err(unsafe { self.lib.do_command(Command::STATE_LOAD, 0, null_mut()) })
+        test_c_err(unsafe { self.lib.core.do_command(Command::STATE_LOAD, 0, null_mut()) })
     }
 
     /// Loads from a file. This function returns immediately, use (TODO: do this) to be notified when it's finished.
@@ -434,15 +438,20 @@ impl Core {
         let path_cstr = CString::new(canon_path.to_string_lossy().as_bytes()).unwrap();
 
         test_c_err(unsafe {
-            self.lib
+            self.lib.core
                 .do_command(Command::STATE_LOAD, 0, path_cstr.as_ptr() as *mut c_void)
         })
     }
 }
 
+// VCR functions
+impl Core {
+
+}
+
 impl Drop for Core {
     fn drop(&mut self) {
-        unsafe { self.lib.shutdown() };
+        unsafe { self.lib.core.shutdown() };
     }
 }
 
@@ -498,8 +507,14 @@ impl Drop for Plugin {
     }
 }
 
+#[derive(WrapperMultiApi)]
+struct FullCoreApi {
+    core: CoreBaseApi,
+    vcr: CoreVcrApi
+}
+
 #[derive(WrapperApi)]
-struct CoreApi {
+struct CoreBaseApi {
     #[dlopen2_name = "PluginGetVersion"]
     get_version: unsafe extern "C" fn(
         plugin_type: *mut PluginType,
@@ -547,6 +562,62 @@ struct CoreApi {
     override_vidext: unsafe extern "C" fn(
         video_function_struct: *mut ctypes::VideoExtensionFunctions,
     ) -> ctypes::Error,
+}
+#[derive(WrapperApi)]
+struct CoreVcrApi {
+    #[dlopen2_name = "VCR_SetErrorCallback"]
+    set_error_callback: unsafe extern "C" fn(
+        callb: unsafe extern "C" fn(
+            lvl: MsgLevel,
+            msg: *const c_char
+        )
+    ),
+    #[dlopen2_name = "VCR_SetStateCallback"]
+    set_state_callback: unsafe extern "C" fn(
+        callb: unsafe extern "C" fn(
+            param: VcrParam,
+            value: c_int
+        )
+    ),
+    #[dlopen2_name = "VCR_GetCurFrame"]
+    get_cur_frame: unsafe extern "C" fn() -> c_uint,
+
+    #[dlopen2_name = "VCR_StopMovie"]
+    stop_movie: unsafe extern "C" fn(restart: c_int),
+
+    #[dlopen2_name = "VCR_SetOverlay"]
+    set_overlay: unsafe extern "C" fn(keys: ctypes::Buttons, channel: c_uint),
+
+    #[dlopen2_name = "VCR_GetKeys"]
+    get_keys: unsafe extern "C" fn(keys: *mut ctypes::Buttons, channel: c_uint) -> c_int,
+
+    #[dlopen2_name = "VCR_IsPlaying"]
+    is_playing: unsafe extern "C" fn() -> c_int,
+
+    #[dlopen2_name = "VCR_AdvanceFrame"]
+    advance_frame: unsafe extern "C" fn() -> c_int,
+
+    #[dlopen2_name = "VCR_ResetOverlay"]
+    reset_overlay: unsafe extern "C" fn(),
+
+    #[dlopen2_name = "VCR_IsReadOnly"]
+    is_read_only: unsafe extern "C" fn() -> c_int,
+
+    #[dlopen2_name = "VCR_SetReadOnly"]
+    set_read_only: unsafe extern "C" fn(read_only: c_int) -> c_int,
+
+    #[dlopen2_name = "VCR_StartRecording"]
+    start_recording: unsafe extern "C" fn(
+        path: *const c_char,
+        author: *const c_char,
+        description: *const c_char,
+        start_type: ctypes::VcrStartType
+    ) -> ctypes::Error,
+
+    #[dlopen2_name = "VCR_StartMovie"]
+    start_movie: unsafe extern "C" fn(
+        path: *const c_char,
+    ) -> ctypes::Error
 }
 
 #[derive(WrapperApi)]

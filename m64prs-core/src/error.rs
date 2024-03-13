@@ -83,7 +83,6 @@ pub enum CoreError {
     MismatchedPluginType,
     #[error("INTERNAL: enum conversion failed.")]
     InvalidEnumConversion,
-
 }
 
 pub type Result<T> = ::std::result::Result<T, CoreError>;

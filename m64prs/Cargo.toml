@@ -8,3 +8,9 @@ edition = "2021"
 [dependencies]
 m64prs-core = { path = "../m64prs-core" }
 env_logger = "0.11.1"
+
+winit = "0.29"
+glutin-winit = "0.4.2"
+rwh_05 = { package = "raw-window-handle", version = "0.5.2" }
+glutin = "0.31"
+ash = "0.37"
