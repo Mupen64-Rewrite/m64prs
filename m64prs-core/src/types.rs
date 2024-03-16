@@ -2,7 +2,7 @@ use std::{ffi::{c_char, c_int, c_void, CStr}, sync::{Arc, RwLock}};
 
 use crate::{
     ctypes::{self, GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode},
-    error::M64PError, Core,
+    error::M64PError, CoreInner,
 };
 
 use ash::vk;
@@ -24,7 +24,7 @@ pub type FFIResult<T> = Result<T, M64PError>;
 pub trait VideoExtension {
 
     /// Called by the core to attach the video extension.
-    fn on_bind_core(_core: Arc<RwLock<Core>>) -> FFIResult<()> {
+    fn on_bind_core(_core: Arc<RwLock<CoreInner>>) -> FFIResult<()> {
         Ok(())
     }
 

@@ -4,7 +4,7 @@ use std::ffi::c_uint;
 
 use thiserror::Error;
 
-use crate::ctypes;
+use crate::ctypes::{self, PluginType};
 
 
 #[repr(u32)]
@@ -79,8 +79,12 @@ pub enum CoreError {
     M64P(#[source] M64PError),
     #[error("Error occurred when performing I/O.")]
     IO(#[source] ::std::io::Error),
-    #[error("Loaded plugin did not match the specified plugin type.")]
-    MismatchedPluginType,
+    #[error("This plugin is invalid")]
+    InvalidPlugin,
+    #[error("A {0} plugin was already attached.")]
+    PluginAlreadyAttached(PluginType),
+    #[error("There is no {0} plugin attached.")]
+    NoPluginAttached(PluginType),
     #[error("INTERNAL: enum conversion failed.")]
     InvalidEnumConversion,
 }

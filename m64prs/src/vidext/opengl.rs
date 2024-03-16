@@ -214,7 +214,7 @@ pub fn get_attribute(
     }
 }
 
-pub fn swap_buffers(state: &mut VidextState, core: &RwLock<crate::Core>) -> FFIResult<()> {
+pub fn swap_buffers(state: &mut VidextState, core: &RwLock<crate::CoreInner>) -> FFIResult<()> {
     if let GraphicsState::OpenGL {
         context, surface, ..
     } = &mut state.graphics

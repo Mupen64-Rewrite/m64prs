@@ -1,5 +1,5 @@
 use log::info;
-use m64prs_core::{ctypes::PluginType, types::VideoExtension, Core, Plugin};
+use m64prs_core::{ctypes::PluginType, types::VideoExtension, CoreInner, Plugin};
 use std::{env::args, error::Error};
 
 mod vidext;
@@ -7,18 +7,19 @@ mod vidext;
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
-    encode_test()?;
+    // encode_test()?;
 
     Ok(())
 }
 
 /// quick test function showcasing the rough workflow when using core.
 #[allow(dead_code)]
+#[cfg(any())]
 fn encode_test() -> Result<(), Box<dyn Error>> {
     let _args: Vec<String> = args().skip(1).collect();
 
-    let core_arc = Core::load(&_args[0])?;
-    Core::override_vidext::<vidext::VidextState>(&core_arc)?;
+    let core_arc = CoreInner::load(&_args[0])?;
+    CoreInner::override_vidext::<vidext::VidextState>(&core_arc)?;
 
     {
         let mut core = core_arc.write().unwrap();

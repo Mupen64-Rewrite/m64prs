@@ -47,7 +47,7 @@ enum GraphicsState {
     },
 }
 
-static STATE_CORE: OnceLock<Arc<RwLock<crate::Core>>> = OnceLock::new();
+static STATE_CORE: OnceLock<Arc<RwLock<crate::CoreInner>>> = OnceLock::new();
 // The core is expected to call vidext functions from a single thread.
 static mut STATE: Option<VidextState> = None;
 
@@ -61,7 +61,7 @@ macro_rules! check_state_init {
 }
 
 impl VideoExtension for VidextState {
-    fn on_bind_core(core: Arc<RwLock<m64prs_core::Core>>) -> FFIResult<()> {
+    fn on_bind_core(core: Arc<RwLock<m64prs_core::CoreInner>>) -> FFIResult<()> {
         STATE_CORE.get_or_init(move || core);
         Ok(())
     }
