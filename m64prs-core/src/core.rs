@@ -3,7 +3,7 @@ use std::{
     fs,
     path::Path,
     ptr::{null, null_mut},
-    sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{atomic::AtomicBool, Mutex, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use dlopen2::wrapper::Container;
@@ -19,15 +19,7 @@ use crate::error::Result as CoreResult;
 
 mod api;
 
-macro_rules! try_core_api {
-    ($e:expr) => {
-        match ($e) {
-            crate::ctypes::Error::SUCCESS => (),
-            err => Err(err.into()),
-        }
-    };
-}
-
+#[must_use]
 fn core_fn(err: ctypes::Error) -> CoreResult<()> {
     if err == ctypes::Error::SUCCESS {
         Ok(())
@@ -52,68 +44,62 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
 #[allow(unused)]
 extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {}
 
-struct CoreInner {
-    pub api: Container<api::FullCoreApi>,
+static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
-    pub rsp_plugin: Option<Plugin>,
-    pub video_plugin: Option<Plugin>,
-    pub audio_plugin: Option<Plugin>,
-    pub input_plugin: Option<Plugin>,
+pub struct Core {
+    api: Container<api::FullCoreApi>,
+
+    video_plugin: Option<Plugin>,
+    audio_plugin: Option<Plugin>,
+    input_plugin: Option<Plugin>,
+    rsp_plugin: Option<Plugin>,
 }
-
-impl Drop for CoreInner {
-    fn drop(&mut self) {
-        // TODO: warn on error during this function
-        let _ = core_fn(unsafe { self.api.core.detach_plugin(PluginType::GFX) });
-        let _ = core_fn(unsafe { self.api.core.detach_plugin(PluginType::AUDIO) });
-        let _ = core_fn(unsafe { self.api.core.detach_plugin(PluginType::INPUT) });
-        let _ = core_fn(unsafe { self.api.core.detach_plugin(PluginType::RSP) });
-        let _ = core_fn(unsafe { self.api.core.shutdown() });
-    }
-}
-
-/// A loaded instance of Mupen64Plus.
-/// 
-/// All calls to the core are internally synchronized to keep this API thread-safe.
-pub struct Core(RwLock<CoreInner>);
-
-static CORE_INSTANCE: OnceLock<Core> = OnceLock::new();
 
 impl Core {
-    /// Initializes Mupen64Plus if it isn't already initialized, or returns the core
-    /// if it is already initialized.
-    pub fn init(path: impl AsRef<Path>) -> &'static Core {
-        CORE_INSTANCE.get_or_init(|| {
-            let inner = CoreInner {
-                api: unsafe { Container::load(path.as_ref()).unwrap() },
-                rsp_plugin: None,
-                video_plugin: None,
-                audio_plugin: None,
-                input_plugin: None,
-            };
-
-            core_fn(unsafe {
-                inner.api.core.startup(
-                    0x02_01_00,
-                    null(),
-                    null(),
-                    null_mut(),
-                    debug_callback,
-                    null_mut(),
-                    state_callback,
-                )
-            }).unwrap();
-
-            RwLock::new(inner);
-        })
-    }
-
-    /// Gets the loadded Mupen64Plus instance.
+    /// Loads and starts up the core from a given path.
     /// 
     /// # Panics
-    /// Panics if the core is not initialized.
-    pub fn get() -> &'static Core {
-        CORE_INSTANCE.get().expect("Call Core::init() to initialize the core first!")
+    /// Only one active instance of `Core` can exist at any given time. Attempting to create a 
+    /// second one will cause a panic.
+    /// 
+    /// # Errors
+    /// This function may error if:
+    /// - Library loading fails ([`CoreError::Library`])
+    /// - Initialization of Mupen64Plus fails ([`CoreError::M64P`])
+    fn init(path: impl AsRef<Path>) -> CoreResult<Self> {
+        let guard = CORE_GUARD.get_mut().unwrap();
+        if *guard {
+            drop(guard);
+            panic!("Only one instance of Core may be created");
+        }
+
+        let api = unsafe { Container::<api::FullCoreApi>::load(path.as_ref()) }
+            .map_err(CoreError::Library)?;
+
+        core_fn(unsafe {
+            api.core.startup(0x02_01_00, null(), null(), null_mut(), debug_callback, null_mut(), state_callback)
+        }).map_err(CoreError::M64P)?;
+
+        *guard = true;
+        Ok(Core {
+            api,
+            video_plugin: None,
+            audio_plugin: None,
+            input_plugin: None,
+            rsp_plugin: None,
+        })
+    }
+}
+impl Drop for Core {
+    fn drop(&mut self) {
+        unsafe {
+            self.api.core.shutdown()
+        }
+        // drop the guard so that another core can be constructed
+        {
+            let guard = CORE_GUARD.get_mut().unwrap();
+            *guard = false;
+        }
     }
 }
 
