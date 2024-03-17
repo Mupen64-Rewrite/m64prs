@@ -277,24 +277,30 @@ impl Core {
 }
 
 impl Core {
+    /// Stops the currently-running ROM.
     pub fn stop(&self) -> CoreResult<()> {
         core_fn(unsafe { self.api.core.do_command(Command::STOP, 0, null_mut()) })
     }
 
+    /// Saves game state to the current slot.
     pub fn save_state(&self) -> CoreResult<SavestateFuture> {
+        // create transmission channel for savestate result
         let (tx, rx) = oneshot::channel::<bool>();
         let future = SavestateFuture::new(rx);
 
+        // send waiter to state callback
         self.sender.send(SavestateWaiter {
             param: CoreParam::STATE_SAVECOMPLETE,
             tx,
         }).unwrap();
 
+        // initiate the save operation. This is guaranteed to trip the waiter at some point.
         core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) })?;
 
         Ok(future)
     }
 
+    /// Loads game state from the current slot.
     pub fn load_state(&self) -> CoreResult<SavestateFuture> {
         let (tx, rx) = oneshot::channel::<bool>();
         let future = SavestateFuture::new(rx);

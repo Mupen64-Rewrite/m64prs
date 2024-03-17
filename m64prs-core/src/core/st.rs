@@ -9,6 +9,7 @@ use futures::{channel::oneshot, Future, FutureExt};
 
 use crate::ctypes;
 
+/// Future implementation for savestates operations.
 pub struct SavestateFuture {
     rx: oneshot::Receiver<bool>,
 }
@@ -30,6 +31,7 @@ impl SavestateFuture {
     }
 }
 
+/// Class that waits for a state change and resolves a savestate future.
 pub(super) struct SavestateWaiter {
     pub param: ctypes::CoreParam,
     pub tx: oneshot::Sender<bool>,
@@ -48,10 +50,12 @@ impl SavestateWaitManager {
     }
 
     pub fn on_state_change(&mut self, param: ctypes::CoreParam, value: c_int) {
+        // add any new waiters that may need to be processed
         while let Ok(next) = self.rx.try_recv() {
             self.waiters.push(next);
         }
 
+        // if any waiters need to be tripped, trip them now and remove them.
         let mut i = 0;
         while i < self.waiters.len() {
             if self.waiters[i].param == param {
