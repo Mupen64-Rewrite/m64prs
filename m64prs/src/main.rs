@@ -1,64 +1,47 @@
-use log::info;
-use m64prs_core::{ctypes::PluginType, types::VideoExtension, Core, Plugin};
-use std::{env::args, error::Error};
+use std::{error::Error, path::PathBuf, sync::Arc, thread, time::Duration};
 
-mod vidext;
+use async_std::task;
+use m64prs_core::{Core, Plugin};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    env_logger::init();
+    ::env_logger::init();
 
-    encode_test()?;
+    let args: Vec<_> = std::env::args().collect();
 
-    Ok(())
-}
+    let mut core = Core::init(PathBuf::from(&args[1])).unwrap();
 
-/// quick test function showcasing the rough workflow when using core.
-#[allow(dead_code)]
-fn encode_test() -> Result<(), Box<dyn Error>> {
-    let _args: Vec<String> = args().skip(1).collect();
+    core.load_rom(PathBuf::from(&args[2])).unwrap();
 
-    let core_arc = Core::load(&_args[0])?;
-    Core::override_vidext::<vidext::VidextState>(&core_arc)?;
+    core.attach_plugins(
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so")?,
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so")?,
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so")?,
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")?,
+    ).unwrap();
 
-    {
-        let mut core = core_arc.write().unwrap();
+    let core = Arc::new(core);
 
-        core.load_rom(&_args[1])?;
-        info!("Loaded ROM");
+    let exec_thread = {
+        let core = Arc::clone(&core);
+        thread::spawn(move || {
+            core.execute().unwrap();
+        })
+    };
 
-        core.attach_plugin(
-            PluginType::GFX,
-            Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so")?,
-        )?;
-        core.attach_plugin(
-            PluginType::AUDIO,
-            Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so")?,
-        )?;
-        core.attach_plugin(
-            PluginType::INPUT,
-            Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so")?,
-        )?;
-        core.attach_plugin(
-            PluginType::RSP,
-            Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")?,
-        )?;
-        info!("Loaded plugins");
-    }
+    thread::sleep(Duration::from_secs(2));
+    println!("Saving state");
+    task::block_on(core.save_state()?);
+    println!("State saved");
+    thread::sleep(Duration::from_secs(5));
+    println!("Loading state");
+    task::block_on(core.load_state()?);
+    println!("State loaded");
+    thread::sleep(Duration::from_secs(5));
+    core.stop()?;
 
-    {
-        let core = core_arc.read().unwrap();
-        core.execute_sync()?;
-    }
 
-    {
-        let mut core = core_arc.write().unwrap();
-        core.detach_plugin(PluginType::GFX)?;
-        core.detach_plugin(PluginType::AUDIO)?;
-        core.detach_plugin(PluginType::INPUT)?;
-        core.detach_plugin(PluginType::RSP)?;
+    exec_thread.join().unwrap();
 
-        core.close_rom()?;
-    }
 
     Ok(())
 }

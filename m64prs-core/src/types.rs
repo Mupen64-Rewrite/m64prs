@@ -2,7 +2,7 @@ use std::{ffi::{c_char, c_int, c_void, CStr}, sync::{Arc, RwLock}};
 
 use crate::{
     ctypes::{self, GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode},
-    error::M64PError, Core,
+    error::M64PError,
 };
 
 use ash::vk;
@@ -22,12 +22,6 @@ pub type FFIResult<T> = Result<T, M64PError>;
 /// Trait for implementing the video extension. The function APIs have been Rustified for convenience.
 /// The functions in this trait are unsafe, as there are some thread-safety guarantees that need to be upheld from Mupen's side.
 pub trait VideoExtension {
-
-    /// Called by the core to attach the video extension.
-    fn on_bind_core(_core: Arc<RwLock<Core>>) -> FFIResult<()> {
-        Ok(())
-    }
-
     /// Initializes the video extension with the specified graphics API.
     unsafe fn init_with_render_mode(mode: RenderMode) -> FFIResult<()>;
     /// Initializes the video extension using OpenGL. This forwards to [`VideoExtension::init_with_render_mode`].
