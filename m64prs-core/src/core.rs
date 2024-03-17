@@ -2,22 +2,27 @@ use std::{
     ffi::{c_char, c_int, c_uint, c_void, CStr},
     fs,
     path::Path,
+    pin::Pin,
     ptr::{null, null_mut},
-    sync::{atomic::AtomicBool, Mutex, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{mpsc, Mutex},
 };
 
 use dlopen2::wrapper::Container;
+use futures::channel::oneshot;
 use log::{log, Level};
 
 use crate::{
-    ctypes::{self, Command, MsgLevel, PluginType, VideoExtensionFunctions},
+    ctypes::{self, Command, CoreParam, MsgLevel, PluginType},
     error::CoreError,
     types::APIVersion,
 };
 
 use crate::error::Result as CoreResult;
 
+use self::st::SavestateWaitManager;
+
 mod api;
+mod st;
 
 #[must_use]
 fn core_fn(err: ctypes::Error) -> CoreResult<()> {
@@ -42,32 +47,48 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
 }
 
 #[allow(unused)]
-extern "C" fn state_callback(context: *mut c_void, param: ctypes::CoreParam, new_value: c_int) {}
+extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_int) {
+    let pinned_state = unsafe { &mut *(context as *mut PinnedCoreState) };
+
+    match param {
+        CoreParam::STATE_SAVECOMPLETE | CoreParam::STATE_LOADCOMPLETE => {
+            pinned_state.st_wait_mgr.on_state_change(param, value);
+        }
+        _ => (),
+    }
+}
+
+struct PinnedCoreState {
+    pub st_wait_mgr: SavestateWaitManager,
+}
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
     api: Container<api::FullCoreApi>,
+    pinned_state: Pin<Box<PinnedCoreState>>,
 
     video_plugin: Option<Plugin>,
     audio_plugin: Option<Plugin>,
     input_plugin: Option<Plugin>,
     rsp_plugin: Option<Plugin>,
+
+    st_wait_sender: mpsc::Sender<st::SavestateWaiter>,
 }
 
 impl Core {
     /// Loads and starts up the core from a given path.
-    /// 
+    ///
     /// # Panics
-    /// Only one active instance of `Core` can exist at any given time. Attempting to create a 
+    /// Only one active instance of `Core` can exist at any given time. Attempting to create a
     /// second one will cause a panic.
-    /// 
+    ///
     /// # Errors
     /// This function may error if:
     /// - Library loading fails ([`CoreError::Library`])
     /// - Initialization of Mupen64Plus fails ([`CoreError::M64P`])
-    fn init(path: impl AsRef<Path>) -> CoreResult<Self> {
-        let guard = CORE_GUARD.get_mut().unwrap();
+    pub fn init(path: impl AsRef<Path>) -> CoreResult<Self> {
+        let mut guard = CORE_GUARD.lock().unwrap();
         if *guard {
             drop(guard);
             panic!("Only one instance of Core may be created");
@@ -76,30 +97,77 @@ impl Core {
         let api = unsafe { Container::<api::FullCoreApi>::load(path.as_ref()) }
             .map_err(CoreError::Library)?;
 
-        core_fn(unsafe {
-            api.core.startup(0x02_01_00, null(), null(), null_mut(), debug_callback, null_mut(), state_callback)
-        }).map_err(CoreError::M64P)?;
+        let (st_wait_sender, st_wait_receiver) = mpsc::channel();
 
-        *guard = true;
-        Ok(Core {
+        let mut core = Self {
             api,
+            pinned_state: Box::pin(PinnedCoreState {
+                st_wait_mgr: SavestateWaitManager::new(st_wait_receiver),
+            }),
+            // plugins
             video_plugin: None,
             audio_plugin: None,
             input_plugin: None,
             rsp_plugin: None,
-        })
+            // async state
+            st_wait_sender,
+        };
+
+        core_fn(unsafe {
+            core.api.core.startup(
+                0x02_01_00,
+                null(),
+                null(),
+                null_mut(),
+                debug_callback,
+                // the pinned state has a stable memory address, so we use it
+                &mut *core.pinned_state as *mut PinnedCoreState as *mut c_void,
+                state_callback,
+            )
+        })?;
+
+        *guard = true;
+        Ok(core)
     }
 }
 impl Drop for Core {
     fn drop(&mut self) {
-        unsafe {
-            self.api.core.shutdown()
-        }
+        // shutdown the core before it's freed
+        unsafe { self.api.core.shutdown() };
         // drop the guard so that another core can be constructed
         {
-            let guard = CORE_GUARD.get_mut().unwrap();
+            let mut guard = CORE_GUARD.lock().unwrap();
             *guard = false;
         }
+    }
+}
+// Synchronous core commands
+impl Core {
+    /// Opens a ROM that is pre-loaded into memory.
+    pub fn open_rom(&mut self, rom_data: &[u8]) -> CoreResult<()> {
+        core_fn(unsafe {
+            self.api.core.do_command(
+                Command::ROM_OPEN,
+                rom_data.len() as c_int,
+                rom_data.as_ptr() as *mut c_void,
+            )
+        })
+    }
+
+    /// Loads and opens a ROM from a given file path.
+    pub fn load_rom(&mut self, path: impl AsRef<Path>) -> CoreResult<()> {
+        let rom_data = fs::read(path.as_ref()).map_err(|err| CoreError::IO(err))?;
+        self.open_rom(&rom_data)
+    }
+
+    /// Closes a currently open ROM.
+    pub fn close_rom(&mut self) -> CoreResult<()> {
+        core_fn(unsafe { self.api.core.do_command(Command::ROM_CLOSE, 0, null_mut()) })
+    }
+
+    /// Executes the currently-open ROM.
+    pub fn execute(&self) -> CoreResult<()> {
+        core_fn(unsafe { self.api.core.do_command(Command::EXECUTE, 0, null_mut()) })
     }
 }
 
