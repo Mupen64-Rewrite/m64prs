@@ -3,6 +3,8 @@
 use std::{ffi::c_int, fmt::Display};
 include!(concat!(env!("OUT_DIR"), "/types.gen.rs"));
 
+// Miscellaneous extra trait implementations for the generated C bindings.
+
 impl Display for PluginType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
@@ -11,7 +13,32 @@ impl Display for PluginType {
             PluginType::AUDIO => f.write_str("audio"),
             PluginType::INPUT => f.write_str("input"),
             PluginType::RSP => f.write_str("RSP"),
-            _ => f.write_str("(unknown)")
+            _ => f.write_str("(unknown)"),
+        }
+    }
+}
+
+impl Default for VideoExtensionFunctions {
+    fn default() -> Self {
+        Self {
+            Functions: 17,
+            VidExtFuncInit: None,
+            VidExtFuncQuit: None,
+            VidExtFuncListModes: None,
+            VidExtFuncListRates: None,
+            VidExtFuncSetMode: None,
+            VidExtFuncSetModeWithRate: None,
+            VidExtFuncGLGetProc: None,
+            VidExtFuncGLSetAttr: None,
+            VidExtFuncGLGetAttr: None,
+            VidExtFuncGLSwapBuf: None,
+            VidExtFuncSetCaption: None,
+            VidExtFuncToggleFS: None,
+            VidExtFuncResizeWindow: None,
+            VidExtFuncGLGetDefaultFramebuffer: None,
+            VidExtFuncInitWithRenderMode: None,
+            VidExtFuncVKGetSurface: None,
+            VidExtFuncVKGetInstanceExtensions: None,
         }
     }
 }

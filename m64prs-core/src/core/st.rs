@@ -9,7 +9,7 @@ use futures::{channel::oneshot, Future, FutureExt};
 
 use crate::ctypes;
 
-pub(super) struct SavestateFuture {
+pub struct SavestateFuture {
     rx: oneshot::Receiver<bool>,
 }
 
@@ -25,7 +25,7 @@ impl Future for SavestateFuture {
 }
 
 impl SavestateFuture {
-    fn new(rx: oneshot::Receiver<bool>) -> Self {
+    pub(super) fn new(rx: oneshot::Receiver<bool>) -> Self {
         Self { rx }
     }
 }

@@ -10,6 +10,11 @@ m64prs-core = { path = "../m64prs-core" }
 log = "0.4"
 env_logger = "0.11.1"
 
+
+async-std = "1.12.0"
+futures = "0.3.30"
+
+
 cstr = "0.2.11"
 
 winit = "0.29"

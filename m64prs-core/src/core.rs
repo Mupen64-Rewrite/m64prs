@@ -8,7 +8,7 @@ use std::{
 };
 
 use dlopen2::wrapper::Container;
-use futures::channel::oneshot;
+use futures::{channel::oneshot, Future};
 use log::{log, Level};
 
 use crate::{
@@ -19,17 +19,16 @@ use crate::{
 
 use crate::error::Result as CoreResult;
 
-use self::st::SavestateWaitManager;
+use self::st::{SavestateFuture, SavestateWaitManager, SavestateWaiter};
 
 mod api;
 mod st;
 
-#[must_use]
+#[inline]
 fn core_fn(err: ctypes::Error) -> CoreResult<()> {
-    if err == ctypes::Error::SUCCESS {
-        Ok(())
-    } else {
-        Err(CoreError::M64P(err.try_into().unwrap()))
+    match err {
+        ctypes::Error::SUCCESS => Ok(()),
+        err => Err(CoreError::M64P(err.try_into().unwrap())),
     }
 }
 
@@ -66,16 +65,14 @@ static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
     api: Container<api::FullCoreApi>,
-    pinned_state: Pin<Box<PinnedCoreState>>,
-
-    video_plugin: Option<Plugin>,
-    audio_plugin: Option<Plugin>,
-    input_plugin: Option<Plugin>,
-    rsp_plugin: Option<Plugin>,
-
-    st_wait_sender: mpsc::Sender<st::SavestateWaiter>,
+    plugins: Option<[Plugin; 4]>,
+    sender: mpsc::Sender<SavestateWaiter>,
+    pin_state: Pin<Box<PinnedCoreState>>,
 }
 
+unsafe impl Sync for Core {}
+
+// initialization and cleanup
 impl Core {
     /// Loads and starts up the core from a given path.
     ///
@@ -97,20 +94,15 @@ impl Core {
         let api = unsafe { Container::<api::FullCoreApi>::load(path.as_ref()) }
             .map_err(CoreError::Library)?;
 
-        let (st_wait_sender, st_wait_receiver) = mpsc::channel();
+        let (tx, rx) = mpsc::channel();
 
         let mut core = Self {
             api,
-            pinned_state: Box::pin(PinnedCoreState {
-                st_wait_mgr: SavestateWaitManager::new(st_wait_receiver),
+            plugins: None,
+            sender: tx,
+            pin_state: Box::pin(PinnedCoreState {
+                st_wait_mgr: SavestateWaitManager::new(rx),
             }),
-            // plugins
-            video_plugin: None,
-            audio_plugin: None,
-            input_plugin: None,
-            rsp_plugin: None,
-            // async state
-            st_wait_sender,
         };
 
         core_fn(unsafe {
@@ -120,8 +112,7 @@ impl Core {
                 null(),
                 null_mut(),
                 debug_callback,
-                // the pinned state has a stable memory address, so we use it
-                &mut *core.pinned_state as *mut PinnedCoreState as *mut c_void,
+                &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
                 state_callback,
             )
         })?;
@@ -141,6 +132,120 @@ impl Drop for Core {
         }
     }
 }
+
+// Extension points (plugins and vidext)
+impl Core {
+    /// Attaches the four plugins to the core.
+    ///
+    /// # Errors
+    /// This function can error if:
+    /// - The plugins passed in do not match their supposed type (e.g. `gfx_plugin` expects a graphics plugin)
+    /// - Starting up any of the four plugins fails
+    /// - Attaching any of the four plugins fails
+    pub fn attach_plugins(
+        &mut self,
+        mut gfx_plugin: Plugin,
+        mut audio_plugin: Plugin,
+        mut input_plugin: Plugin,
+        mut rsp_plugin: Plugin,
+    ) -> CoreResult<()> {
+        if self.plugins.is_some() {
+            panic!("Plugins have already been attached")
+        }
+        // check all plugin types
+        if !gfx_plugin
+            .get_type()
+            .is_ok_and(|ptype| ptype == PluginType::GFX)
+        {
+            return Err(CoreError::PluginInvalid(PluginType::GFX));
+        }
+        if !audio_plugin
+            .get_type()
+            .is_ok_and(|ptype| ptype == PluginType::AUDIO)
+        {
+            return Err(CoreError::PluginInvalid(PluginType::AUDIO));
+        }
+        if !input_plugin
+            .get_type()
+            .is_ok_and(|ptype| ptype == PluginType::INPUT)
+        {
+            return Err(CoreError::PluginInvalid(PluginType::INPUT));
+        }
+        if !rsp_plugin
+            .get_type()
+            .is_ok_and(|ptype| ptype == PluginType::RSP)
+        {
+            return Err(CoreError::PluginInvalid(PluginType::RSP));
+        }
+
+        // startup the four plugins
+        let core_ptr = unsafe { self.api.into_raw() };
+        gfx_plugin.startup(core_ptr)?;
+        audio_plugin.startup(core_ptr)?;
+        input_plugin.startup(core_ptr)?;
+        rsp_plugin.startup(core_ptr)?;
+
+        // attach all plugins. If one fails, detach everything.
+        if let Err(err) = core_fn(unsafe {
+            self.api
+                .core
+                .attach_plugin(PluginType::GFX, gfx_plugin.api.into_raw())
+        }) {
+            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+            return Err(err);
+        }
+        if let Err(err) = core_fn(unsafe {
+            self.api
+                .core
+                .attach_plugin(PluginType::AUDIO, audio_plugin.api.into_raw())
+        }) {
+            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
+            return Err(err);
+        }
+        if let Err(err) = core_fn(unsafe {
+            self.api
+                .core
+                .attach_plugin(PluginType::INPUT, input_plugin.api.into_raw())
+        }) {
+            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
+            unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
+            return Err(err);
+        }
+        if let Err(err) = core_fn(unsafe {
+            self.api
+                .core
+                .attach_plugin(PluginType::RSP, rsp_plugin.api.into_raw())
+        }) {
+            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
+            unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
+            unsafe { self.api.core.detach_plugin(PluginType::RSP) };
+            return Err(err);
+        }
+
+        self.plugins = Some([gfx_plugin, audio_plugin, input_plugin, rsp_plugin]);
+
+        Ok(())
+    }
+
+    /// Detaches all plugins.
+    pub fn detach_plugins(&mut self) {
+        if self.plugins.is_none() {
+            panic!("Plugins are not attached")
+        }
+
+        // detach plugins from core.
+        unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+        unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
+        unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
+        unsafe { self.api.core.detach_plugin(PluginType::RSP) };
+        // drop the plugins. this shuts them down.
+        self.plugins = None;
+    }
+}
+
 // Synchronous core commands
 impl Core {
     /// Opens a ROM that is pre-loaded into memory.
@@ -171,8 +276,43 @@ impl Core {
     }
 }
 
-/// Holds a loaded instance of a Mupen64Plus plugin. The core is responsible for startup/shutdown of
-/// plugins, so plugins will remain unstarted when you have access to them.
+impl Core {
+    pub fn stop(&self) -> CoreResult<()> {
+        core_fn(unsafe { self.api.core.do_command(Command::STOP, 0, null_mut()) })
+    }
+
+    pub fn save_state(&self) -> CoreResult<SavestateFuture> {
+        let (tx, rx) = oneshot::channel::<bool>();
+        let future = SavestateFuture::new(rx);
+
+        self.sender.send(SavestateWaiter {
+            param: CoreParam::STATE_SAVECOMPLETE,
+            tx,
+        }).unwrap();
+
+        core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) })?;
+
+        Ok(future)
+    }
+
+    pub fn load_state(&self) -> CoreResult<SavestateFuture> {
+        let (tx, rx) = oneshot::channel::<bool>();
+        let future = SavestateFuture::new(rx);
+
+        self.sender.send(SavestateWaiter {
+            param: CoreParam::STATE_LOADCOMPLETE,
+            tx,
+        }).unwrap();
+
+        core_fn(unsafe { self.api.core.do_command(Command::STATE_LOAD, 0, null_mut()) })?;
+
+        Ok(future)
+    }
+}
+
+/// Holds a loaded instance of a Mupen64Plus plugin.
+///
+/// The core is responsible for startup/shutdown of plugins; they are never started while you own them.
 pub struct Plugin {
     api: Container<api::BasePluginApi>,
 }
@@ -188,6 +328,22 @@ impl Plugin {
         Ok(plugin)
     }
 
+    /// Gets the type of this plugin.
+    pub fn get_type(&self) -> CoreResult<PluginType> {
+        let mut plugin_type: PluginType = PluginType::NULL;
+        core_fn(unsafe {
+            self.api.get_version(
+                &mut plugin_type,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(plugin_type)
+    }
+
     /// Obtains version information about this plugin.
     pub fn get_version(&self) -> CoreResult<APIVersion> {
         unsafe {
@@ -196,15 +352,13 @@ impl Plugin {
             let mut api_version: c_int = 0;
             let mut plugin_name: *const c_char = null();
 
-            core_fn(unsafe {
-                self.api.get_version(
-                    &mut plugin_type,
-                    &mut plugin_version,
-                    &mut api_version,
-                    &mut plugin_name,
-                    null_mut(),
-                )
-            })?;
+            core_fn(self.api.get_version(
+                &mut plugin_type,
+                &mut plugin_version,
+                &mut api_version,
+                &mut plugin_name,
+                null_mut(),
+            ))?;
 
             Ok(APIVersion {
                 api_type: plugin_type.try_into().unwrap(),
