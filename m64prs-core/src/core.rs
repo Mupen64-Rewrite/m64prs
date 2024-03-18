@@ -65,9 +65,11 @@ static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
     api: Container<api::FullCoreApi>,
-    plugins: Option<[Plugin; 4]>,
-    sender: mpsc::Sender<SavestateWaiter>,
     pin_state: Pin<Box<PinnedCoreState>>,
+    plugins: Option<[Plugin; 4]>,
+
+    save_sender: mpsc::Sender<SavestateWaiter>,
+    save_mutex: async_std::sync::Mutex<()>,
 }
 
 unsafe impl Sync for Core {}
@@ -94,15 +96,16 @@ impl Core {
         let api = unsafe { Container::<api::FullCoreApi>::load(path.as_ref()) }
             .map_err(CoreError::Library)?;
 
-        let (tx, rx) = mpsc::channel();
+        let (save_tx, save_rx) = mpsc::channel();
 
         let mut core = Self {
             api,
             plugins: None,
-            sender: tx,
             pin_state: Box::pin(PinnedCoreState {
-                st_wait_mgr: SavestateWaitManager::new(rx),
+                st_wait_mgr: SavestateWaitManager::new(save_rx),
             }),
+            save_sender: save_tx,
+            save_mutex: async_std::sync::Mutex::new(())
         };
 
         core_fn(unsafe {
@@ -282,11 +285,17 @@ impl Core {
         core_fn(unsafe { self.api.core.do_command(Command::STOP, 0, null_mut()) })
     }
 
+    pub async fn save_state(&self) -> CoreResult<()> {
+        let _lock = self.save_mutex.lock().await;
+        let res = self.save_state_inner().await;
+        res
+    }
+
     /// Saves game state to the current slot.
-    pub fn save_state(&self) -> impl Future<Output = CoreResult<()>> {
+    fn save_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
         let (mut future, waiter) = save::save_pair(CoreParam::STATE_SAVECOMPLETE);
-        self.sender.send(waiter).expect("Waiter queue disconnected!");
+        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
         if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) }) {
             future.fail_early(error);
@@ -295,10 +304,16 @@ impl Core {
         future
     }
 
+    pub async fn load_state(&self) -> CoreResult<()> {
+        let _lock = self.save_mutex.lock().await;
+        let res = self.load_state_inner().await;
+        res
+    }
+
     /// Loads game state from the current slot.
-    pub fn load_state(&self) -> impl Future<Output = CoreResult<()>> {
+    fn load_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         let (mut future, waiter) = save::save_pair(CoreParam::STATE_LOADCOMPLETE);
-        self.sender.send(waiter).expect("Waiter queue disconnected!");
+        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
 
         if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_LOAD, 0, null_mut()) }) {
             future.fail_early(error);

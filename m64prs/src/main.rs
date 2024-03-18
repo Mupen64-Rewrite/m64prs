@@ -28,16 +28,16 @@ fn main() {
         })
     };
 
-    thread::sleep(Duration::from_secs(2));
-    println!("Saving state");
-    task::block_on(core.save_state()).unwrap();
-    println!("State saved");
-    thread::sleep(Duration::from_secs(5));
-    println!("Loading state");
-    task::block_on(core.load_state()).unwrap();
-    println!("State loaded");
-    thread::sleep(Duration::from_secs(5));
-    core.stop().unwrap();
+    task::block_on(async {
+        task::sleep(Duration::from_secs(2)).await;
+
+        let fut1 = core.save_state();
+        let fut2 = core.load_state();
+
+        let (res1, res2) = futures::join!(fut1, fut2);
+        res1.unwrap();
+        res2.unwrap();
+    });
 
     exec_thread.join().unwrap();
 }
