@@ -8,7 +8,7 @@ use std::{
 };
 
 use dlopen2::wrapper::Container;
-use futures::{channel::oneshot, Future};
+use futures::Future;
 use log::{log, Level};
 
 use crate::{
@@ -19,10 +19,10 @@ use crate::{
 
 use crate::error::Result as CoreResult;
 
-use self::st::{SavestateFuture, SavestateWaitManager, SavestateWaiter};
+use self::save::{SavestateWaitManager, SavestateWaiter};
 
 mod api;
-mod st;
+mod save;
 
 #[inline]
 fn core_fn(err: ctypes::Error) -> CoreResult<()> {
@@ -283,36 +283,28 @@ impl Core {
     }
 
     /// Saves game state to the current slot.
-    pub fn save_state(&self) -> CoreResult<SavestateFuture> {
+    pub fn save_state(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
-        let (tx, rx) = oneshot::channel::<bool>();
-        let future = SavestateFuture::new(rx);
-
-        // send waiter to state callback
-        self.sender.send(SavestateWaiter {
-            param: CoreParam::STATE_SAVECOMPLETE,
-            tx,
-        }).unwrap();
-
+        let (mut future, waiter) = save::save_pair(CoreParam::STATE_SAVECOMPLETE);
+        self.sender.send(waiter).expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
-        core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) })?;
+        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) }) {
+            future.fail_early(error);
+        }
 
-        Ok(future)
+        future
     }
 
     /// Loads game state from the current slot.
-    pub fn load_state(&self) -> CoreResult<SavestateFuture> {
-        let (tx, rx) = oneshot::channel::<bool>();
-        let future = SavestateFuture::new(rx);
+    pub fn load_state(&self) -> impl Future<Output = CoreResult<()>> {
+        let (mut future, waiter) = save::save_pair(CoreParam::STATE_LOADCOMPLETE);
+        self.sender.send(waiter).expect("Waiter queue disconnected!");
 
-        self.sender.send(SavestateWaiter {
-            param: CoreParam::STATE_LOADCOMPLETE,
-            tx,
-        }).unwrap();
+        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_LOAD, 0, null_mut()) }) {
+            future.fail_early(error);
+        }
 
-        core_fn(unsafe { self.api.core.do_command(Command::STATE_LOAD, 0, null_mut()) })?;
-
-        Ok(future)
+        future
     }
 }
 

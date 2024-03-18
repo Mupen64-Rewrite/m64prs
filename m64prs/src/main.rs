@@ -3,7 +3,7 @@ use std::{error::Error, path::PathBuf, sync::Arc, thread, time::Duration};
 use async_std::task;
 use m64prs_core::{Core, Plugin};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     ::env_logger::init();
 
     let args: Vec<_> = std::env::args().collect();
@@ -13,10 +13,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     core.load_rom(PathBuf::from(&args[2])).unwrap();
 
     core.attach_plugins(
-        Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so")?,
-        Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so")?,
-        Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so")?,
-        Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")?,
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so").unwrap(),
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so").unwrap(),
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so").unwrap(),
+        Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so").unwrap(),
     ).unwrap();
 
     let core = Arc::new(core);
@@ -30,18 +30,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     thread::sleep(Duration::from_secs(2));
     println!("Saving state");
-    task::block_on(core.save_state()?);
+    task::block_on(core.save_state()).unwrap();
     println!("State saved");
     thread::sleep(Duration::from_secs(5));
     println!("Loading state");
-    task::block_on(core.load_state()?);
+    task::block_on(core.load_state()).unwrap();
     println!("State loaded");
     thread::sleep(Duration::from_secs(5));
-    core.stop()?;
-
+    core.stop().unwrap();
 
     exec_thread.join().unwrap();
-
-
-    Ok(())
 }

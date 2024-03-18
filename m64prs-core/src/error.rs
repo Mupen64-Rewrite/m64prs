@@ -45,7 +45,6 @@ impl TryFrom<ctypes::Error> for M64PError {
 
     fn try_from(value: ctypes::Error) -> std::result::Result<Self, Self::Error> {
         match value {
-            ctypes::Error::SUCCESS => Err(CoreError::InvalidEnumConversion),
             ctypes::Error::NOT_INIT => Ok(M64PError::NotInit),
             ctypes::Error::ALREADY_INIT => Ok(M64PError::AlreadyInit),
             ctypes::Error::INCOMPATIBLE => Ok(M64PError::Incompatible),
@@ -60,7 +59,7 @@ impl TryFrom<ctypes::Error> for M64PError {
             ctypes::Error::SYSTEM_FAIL => Ok(M64PError::SystemFail),
             ctypes::Error::UNSUPPORTED => Ok(M64PError::Unsupported),
             ctypes::Error::WRONG_TYPE => Ok(M64PError::WrongType),
-            _ => Err(CoreError::InvalidEnumConversion)
+            _ => Err(CoreError::ErrorConversionFailed(value.0))
         }
     }
 }
@@ -81,8 +80,12 @@ pub enum CoreError {
     IO(#[source] ::std::io::Error),
     #[error("The {0} plugin is not valid for its type.")]
     PluginInvalid(crate::ctypes::PluginType),
-    #[error("INTERNAL: enum conversion failed.")]
-    InvalidEnumConversion,
+    #[error("Could not convert {0} to a valid Mupen64Plus error")]
+    ErrorConversionFailed(c_uint),
+    #[error("Savestate loading failed, see logs for details")]
+    LoadStateFailed,
+    #[error("Savestate saving failed, see logs for details")]
+    SaveStateFailed,
 }
 
 pub type Result<T> = ::std::result::Result<T, CoreError>;
