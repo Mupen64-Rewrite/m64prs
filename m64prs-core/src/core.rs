@@ -145,6 +145,7 @@ impl Core {
     /// - The plugins passed in do not match their supposed type (e.g. `gfx_plugin` expects a graphics plugin)
     /// - Starting up any of the four plugins fails
     /// - Attaching any of the four plugins fails
+    /// - A ROM is not open (yes, this may seem stupid, but it is what it is)
     pub fn attach_plugins(
         &mut self,
         mut gfx_plugin: Plugin,
@@ -247,6 +248,17 @@ impl Core {
         // drop the plugins. this shuts them down.
         self.plugins = None;
     }
+
+    /// Overrides the functions used by graphics plugins to setup a window and OpenGL/Vulkan context.
+    /// 
+    /// The typical way of acquiring a [`ctypes::VideoExtensionFunctions`] is to generate it
+    /// via the [`vidext_table!()`][`crate::vidext_table!`] macro and [`VideoExtension`][`crate::types::VideoExtension`] trait.
+    pub fn override_vidext(&mut self, vidext: &ctypes::VideoExtensionFunctions) -> CoreResult<()> {
+        // This is actually safe, since Mupen copies the table.
+        core_fn(unsafe {
+            self.api.core.override_vidext(vidext as *const ctypes::VideoExtensionFunctions as *mut ctypes::VideoExtensionFunctions)
+        })
+    }
 }
 
 // Synchronous core commands
@@ -279,19 +291,41 @@ impl Core {
     }
 }
 
+// Asynchronous core commands
 impl Core {
     /// Stops the currently-running ROM.
     pub fn stop(&self) -> CoreResult<()> {
+        // TODO: add async waiter that waits on emulator state
         core_fn(unsafe { self.api.core.do_command(Command::STOP, 0, null_mut()) })
     }
+    /// Pauses the currently-running ROM.
+    pub fn pause(&self) -> CoreResult<()> {
+        // TODO: add async waiter that waits on emulator state
+        core_fn(unsafe { self.api.core.do_command(Command::PAUSE, 0, null_mut()) })
+    }
+    pub fn resume(&self) -> CoreResult<()> {
+        // TODO: add async waiter that waits on emulator state
+        core_fn(unsafe { self.api.core.do_command(Command::RESUME, 0, null_mut()) })
+    }
+    pub fn advance_frame(&self) -> CoreResult<()> {
+        // TODO: add async waiter that waits on emulator state
+        core_fn(unsafe { self.api.core.do_command(Command::ADVANCE_FRAME, 0, null_mut()) })
+    }
 
+    /// Saves game state to the current slot.
     pub async fn save_state(&self) -> CoreResult<()> {
         let _lock = self.save_mutex.lock().await;
         let res = self.save_state_inner().await;
         res
     }
+    
+    /// Loads game state from the current slot.
+    pub async fn load_state(&self) -> CoreResult<()> {
+        let _lock = self.save_mutex.lock().await;
+        let res = self.load_state_inner().await;
+        res
+    }
 
-    /// Saves game state to the current slot.
     fn save_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
         let (mut future, waiter) = save::save_pair(CoreParam::STATE_SAVECOMPLETE);
@@ -304,13 +338,6 @@ impl Core {
         future
     }
 
-    pub async fn load_state(&self) -> CoreResult<()> {
-        let _lock = self.save_mutex.lock().await;
-        let res = self.load_state_inner().await;
-        res
-    }
-
-    /// Loads game state from the current slot.
     fn load_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         let (mut future, waiter) = save::save_pair(CoreParam::STATE_LOADCOMPLETE);
         self.save_sender.send(waiter).expect("Waiter queue disconnected!");

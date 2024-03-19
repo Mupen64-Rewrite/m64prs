@@ -3,6 +3,8 @@ use std::{error::Error, path::PathBuf, sync::Arc, thread, time::Duration};
 use async_std::task;
 use m64prs_core::{Core, Plugin};
 
+mod vidext;
+
 fn main() {
     ::env_logger::init();
 
