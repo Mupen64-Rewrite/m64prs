@@ -1,0 +1,14 @@
+[package]
+name = "m64prs-sys"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
+
+[build-dependencies]
+
+bindgen = "0.69.2"
+heck = "0.4.1"
