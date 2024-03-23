@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{path::PathBuf, sync::Arc, thread, time::Duration};
 
 use async_std::task;
 use m64prs_core::{Core, Plugin};
@@ -19,7 +19,8 @@ fn main() {
         Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so").unwrap(),
         Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so").unwrap(),
         Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so").unwrap(),
-    ).unwrap();
+    )
+    .unwrap();
 
     let core = Arc::new(core);
 

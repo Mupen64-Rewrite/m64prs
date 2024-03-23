@@ -37,26 +37,25 @@ macro_rules! __try_ffi_result {
     };
 }
 
-
 /// Utility macro for generating a function table from a static object implementing [`VideoExtension`][crate::types::VideoExtension].
-/// 
-/// To use it, first create a static variable (here called `INSTANCE_NAME`) of type `Mutex<T>` where `T: VideoExtension`. Then invoke 
+///
+/// To use it, first create a static variable (here called `INSTANCE_NAME`) of type `Mutex<T>` where `T: VideoExtension`. Then invoke
 /// the macro with the following syntax:
-/// 
+///
 /// ```ignore
 /// vidext_table!([INSTANCE_NAME] TABLE_NAME)
 /// ```
-/// 
+///
 /// You may also add a visibility qualifer before the table name; this gives the resulting table that visibility.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```no_run
 /// # use std::{ffi::{c_char, c_int, c_void, CStr}, sync::Mutex};
 /// # use m64prs_core::{ctypes::{RenderMode, Size2D, VideoFlags, VideoMode}, types::{FFIResult, VideoExtension}};
-/// 
+///
 /// struct VidextState {}
-/// 
+///
 /// impl VideoExtension for VidextState {
 ///     // ...
 /// #    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()> {
@@ -148,31 +147,31 @@ macro_rules! __try_ffi_result {
 /// #        todo!()
 /// #    }
 /// }
-/// 
+///
 /// static VIDEXT_INSTANCE: Mutex<VidextState> = Mutex::new(VidextState {});
 /// m64prs_core::vidext_table!([VIDEXT_INSTANCE] pub VIDEXT_TABLE);
 /// ```
 #[macro_export]
 macro_rules! vidext_table {
     ([$inst:ident] $pub:vis $name:ident) => {
-        $pub static $name: ::m64prs_core::ctypes::VideoExtensionFunctions = ::m64prs_core::ctypes::VideoExtensionFunctions {
+        $pub static $name: ::m64prs_sys::VideoExtensionFunctions = ::m64prs_sys::VideoExtensionFunctions {
             Functions: 17,
-            VidExtFuncInit: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncInit: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::init_with_render_mode(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
-                    ::m64prs_core::ctypes::RenderMode::OPENGL,
+                    ::m64prs_sys::RenderMode::OpenGl,
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncQuit: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncQuit: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::quit(::std::ops::DerefMut::deref_mut(
                     &mut $inst.lock().unwrap()
                 ),));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncListModes: ::m64prs_core::__vidext_closure!(|size_array: *mut ::m64prs_core::ctypes::Size2D,
+            VidExtFuncListModes: ::m64prs_core::__vidext_closure!(|size_array: *mut ::m64prs_sys::Size2D,
                                                 num_sizes: *mut ::std::ffi::c_int|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 let size_in_src = ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::list_fullscreen_modes(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap())
                 ));
@@ -188,12 +187,12 @@ macro_rules! vidext_table {
                     *num_sizes = size_out.len().try_into().unwrap();
                 }
 
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncListRates: ::m64prs_core::__vidext_closure!(|size: ::m64prs_core::ctypes::Size2D,
+            VidExtFuncListRates: ::m64prs_core::__vidext_closure!(|size: ::m64prs_sys::Size2D,
                                                 num_rates: *mut ::std::ffi::c_int,
                                                 rates: *mut ::std::ffi::c_int|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 let rate_in_src = ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::list_fullscreen_rates(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     size
@@ -209,23 +208,26 @@ macro_rules! vidext_table {
                     *num_rates = rate_out.len().try_into().unwrap();
                 }
 
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
             VidExtFuncSetMode: ::m64prs_core::__vidext_closure!(|width: ::std::ffi::c_int,
                                                 height: ::std::ffi::c_int,
                                                 bits_per_pixel: ::std::ffi::c_int,
                                                 screen_mode: ::std::ffi::c_int,
                                                 flags: ::std::ffi::c_int|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::set_video_mode(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     width,
                     height,
                     bits_per_pixel,
-                    ::m64prs_core::ctypes::VideoMode(screen_mode as u32),
-                    ::m64prs_core::ctypes::VideoFlags(flags as u32)
+                    match ::m64prs_sys::VideoMode::try_from(screen_mode as u32) {
+                        Ok(val) => val,
+                        Err(_) => return ::m64prs_sys::Error::InputAssert
+                    },
+                    ::m64prs_sys::VideoFlags(flags as u32)
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
             VidExtFuncSetModeWithRate: ::m64prs_core::__vidext_closure!(|width: ::std::ffi::c_int,
                                                         height: ::std::ffi::c_int,
@@ -233,17 +235,20 @@ macro_rules! vidext_table {
                                                         bits_per_pixel: ::std::ffi::c_int,
                                                         screen_mode: ::std::ffi::c_int,
                                                         flags: ::std::ffi::c_int|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::set_video_mode_with_rate(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     width,
                     height,
                     rate,
                     bits_per_pixel,
-                    ::m64prs_core::ctypes::VideoMode(screen_mode as u32),
-                    ::m64prs_core::ctypes::VideoFlags(flags as u32)
+                    match ::m64prs_sys::VideoMode::try_from(screen_mode as u32) {
+                        Ok(val) => val,
+                        Err(_) => return ::m64prs_sys::Error::InputAssert
+                    },
+                    ::m64prs_sys::VideoFlags(flags as u32)
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
             VidExtFuncGLGetProc: ::m64prs_core::__vidext_closure!(
                 |symbol: *const ::std::ffi::c_char| -> Option<unsafe extern "C" fn()> {
@@ -254,49 +259,49 @@ macro_rules! vidext_table {
                     Some(::std::mem::transmute(ptr))
                 }
             ),
-            VidExtFuncGLSetAttr: ::m64prs_core::__vidext_closure!(|attr: ::m64prs_core::ctypes::GLAttribute, value: ::std::ffi::c_int| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncGLSetAttr: ::m64prs_core::__vidext_closure!(|attr: ::m64prs_sys::GLAttribute, value: ::std::ffi::c_int| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::gl_set_attribute(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     attr,
                     value,
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncGLGetAttr: ::m64prs_core::__vidext_closure!(|attr: ::m64prs_core::ctypes::GLAttribute,
+            VidExtFuncGLGetAttr: ::m64prs_core::__vidext_closure!(|attr: ::m64prs_sys::GLAttribute,
                                                 value_out: *mut ::std::ffi::c_int|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 *value_out = ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::gl_get_attribute(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     attr
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncGLSwapBuf: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncGLSwapBuf: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::gl_swap_buffers(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncSetCaption: ::m64prs_core::__vidext_closure!(|title: *const ::std::ffi::c_char| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncSetCaption: ::m64prs_core::__vidext_closure!(|title: *const ::std::ffi::c_char| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(VideoExtension::set_caption(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     ::std::ffi::CStr::from_ptr(title)
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncToggleFS: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncToggleFS: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::toggle_full_screen(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
-            VidExtFuncResizeWindow: ::m64prs_core::__vidext_closure!(|width: ::std::ffi::c_int, height: ::std::ffi::c_int| -> ::m64prs_core::ctypes::Error {
+            VidExtFuncResizeWindow: ::m64prs_core::__vidext_closure!(|width: ::std::ffi::c_int, height: ::std::ffi::c_int| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::resize_window(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     width,
                     height
                 ));
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
             VidExtFuncGLGetDefaultFramebuffer: ::m64prs_core::__vidext_closure!(|| -> u32 {
                 ::m64prs_core::types::VideoExtension::gl_get_default_framebuffer(::std::ops::DerefMut::deref_mut(
@@ -304,34 +309,34 @@ macro_rules! vidext_table {
                 ))
             }),
             VidExtFuncInitWithRenderMode: ::m64prs_core::__vidext_closure!(
-                |render_mode: ::m64prs_core::ctypes::RenderMode| -> ::m64prs_core::ctypes::Error {
+                |render_mode: ::m64prs_sys::RenderMode| -> ::m64prs_sys::Error {
                     ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::init_with_render_mode(
                         ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                         render_mode,
                     ));
-                    ::m64prs_core::ctypes::Error::SUCCESS
+                    ::m64prs_sys::Error::Success
                 }
             ),
             VidExtFuncVKGetSurface: ::m64prs_core::__vidext_closure!(|surface_out: *mut *mut ::std::ffi::c_void,
                                                      instance: *mut ::std::ffi::c_void|
-            -> ::m64prs_core::ctypes::Error {
+            -> ::m64prs_sys::Error {
                 let surface = ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::vk_get_surface(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
                     <::ash::vk::Instance as ::ash::vk::Handle>::from_raw(instance as u64)
                 ));
                 *surface_out = ::ash::vk::Handle::as_raw(surface) as *mut ::std::ffi::c_void;
-                ::m64prs_core::ctypes::Error::SUCCESS
+                ::m64prs_sys::Error::Success
             }),
             VidExtFuncVKGetInstanceExtensions: ::m64prs_core::__vidext_closure!(
                 |extensions_out: *mut *mut *const ::std::ffi::c_char,
                 extensions_count_out: *mut u32|
-                -> ::m64prs_core::ctypes::Error {
+                -> ::m64prs_sys::Error {
                     let extensions_slice = ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::vk_get_instance_extensions(
                         ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap())
                     ));
                     *extensions_out = extensions_slice.as_ptr() as *mut *const ::std::ffi::c_char;
                     *extensions_count_out = extensions_slice.len().try_into().unwrap();
-                    ::m64prs_core::ctypes::Error::SUCCESS
+                    ::m64prs_sys::Error::Success
                 }
             ),
         };

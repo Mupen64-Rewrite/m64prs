@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_uint, c_void, CStr},
+    ffi::{c_char, c_int, c_void, CStr},
     fs,
     path::Path,
     pin::Pin,
@@ -7,39 +7,37 @@ use std::{
     sync::{mpsc, Mutex},
 };
 
+use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
 use futures::Future;
 use log::{log, Level};
 
-use crate::{
-    ctypes::{self, Command, CoreParam, MsgLevel, PluginType},
-    error::CoreError,
-    types::APIVersion,
-};
+use crate::{error::CoreError, types::APIVersion};
+
+use m64prs_sys::{api::{BasePluginApi, FullCoreApi}, Command, CoreParam, MsgLevel, PluginType};
 
 use crate::error::Result as CoreResult;
 
 use self::save::{SavestateWaitManager, SavestateWaiter};
 
-mod api;
 mod save;
 
 #[inline]
-fn core_fn(err: ctypes::Error) -> CoreResult<()> {
+fn core_fn(err: m64prs_sys::Error) -> CoreResult<()> {
     match err {
-        ctypes::Error::SUCCESS => Ok(()),
+        m64prs_sys::Error::Success => Ok(()),
         err => Err(CoreError::M64P(err.try_into().unwrap())),
     }
 }
 
 #[allow(unused)]
 unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
-    let log_level = match MsgLevel(level as c_uint) {
-        MsgLevel::ERROR => Level::Error,
-        MsgLevel::WARNING => Level::Warn,
-        MsgLevel::INFO => Level::Info,
-        MsgLevel::STATUS => Level::Debug,
-        MsgLevel::VERBOSE => Level::Trace,
+    let log_level = match MsgLevel::try_from(level as u32).unwrap() {
+        MsgLevel::Error => Level::Error,
+        MsgLevel::Warning => Level::Warn,
+        MsgLevel::Info => Level::Info,
+        MsgLevel::Status => Level::Debug,
+        MsgLevel::Verbose => Level::Trace,
         _ => panic!("Received invalid message level {}", level),
     };
     log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
@@ -50,7 +48,7 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
     let pinned_state = unsafe { &mut *(context as *mut PinnedCoreState) };
 
     match param {
-        CoreParam::STATE_SAVECOMPLETE | CoreParam::STATE_LOADCOMPLETE => {
+        CoreParam::StateSaveComplete | CoreParam::StateLoadComplete => {
             pinned_state.st_wait_mgr.on_state_change(param, value);
         }
         _ => (),
@@ -64,12 +62,12 @@ struct PinnedCoreState {
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
-    api: Container<api::FullCoreApi>,
+    api: Container<FullCoreApi>,
     pin_state: Pin<Box<PinnedCoreState>>,
     plugins: Option<[Plugin; 4]>,
 
     save_sender: mpsc::Sender<SavestateWaiter>,
-    save_mutex: async_std::sync::Mutex<()>,
+    save_mutex: AsyncMutex<()>,
 }
 
 unsafe impl Sync for Core {}
@@ -93,7 +91,7 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
-        let api = unsafe { Container::<api::FullCoreApi>::load(path.as_ref()) }
+        let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
             .map_err(CoreError::Library)?;
 
         let (save_tx, save_rx) = mpsc::channel();
@@ -105,7 +103,7 @@ impl Core {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
             }),
             save_sender: save_tx,
-            save_mutex: async_std::sync::Mutex::new(())
+            save_mutex: AsyncMutex::new(()),
         };
 
         core_fn(unsafe {
@@ -159,27 +157,27 @@ impl Core {
         // check all plugin types
         if !gfx_plugin
             .get_type()
-            .is_ok_and(|ptype| ptype == PluginType::GFX)
+            .is_ok_and(|ptype| ptype == PluginType::Graphics)
         {
-            return Err(CoreError::PluginInvalid(PluginType::GFX));
+            return Err(CoreError::PluginInvalid(PluginType::Graphics));
         }
         if !audio_plugin
             .get_type()
-            .is_ok_and(|ptype| ptype == PluginType::AUDIO)
+            .is_ok_and(|ptype| ptype == PluginType::Audio)
         {
-            return Err(CoreError::PluginInvalid(PluginType::AUDIO));
+            return Err(CoreError::PluginInvalid(PluginType::Audio));
         }
         if !input_plugin
             .get_type()
-            .is_ok_and(|ptype| ptype == PluginType::INPUT)
+            .is_ok_and(|ptype| ptype == PluginType::Input)
         {
-            return Err(CoreError::PluginInvalid(PluginType::INPUT));
+            return Err(CoreError::PluginInvalid(PluginType::Input));
         }
         if !rsp_plugin
             .get_type()
-            .is_ok_and(|ptype| ptype == PluginType::RSP)
+            .is_ok_and(|ptype| ptype == PluginType::Rsp)
         {
-            return Err(CoreError::PluginInvalid(PluginType::RSP));
+            return Err(CoreError::PluginInvalid(PluginType::Rsp));
         }
 
         // startup the four plugins
@@ -193,39 +191,39 @@ impl Core {
         if let Err(err) = core_fn(unsafe {
             self.api
                 .core
-                .attach_plugin(PluginType::GFX, gfx_plugin.api.into_raw())
+                .attach_plugin(PluginType::Graphics, gfx_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
+            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
                 .core
-                .attach_plugin(PluginType::AUDIO, audio_plugin.api.into_raw())
+                .attach_plugin(PluginType::Audio, audio_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
-            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
+            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
                 .core
-                .attach_plugin(PluginType::INPUT, input_plugin.api.into_raw())
+                .attach_plugin(PluginType::Input, input_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
-            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
-            unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
+            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
+            unsafe { self.api.core.detach_plugin(PluginType::Input) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
                 .core
-                .attach_plugin(PluginType::RSP, rsp_plugin.api.into_raw())
+                .attach_plugin(PluginType::Rsp, rsp_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::GFX) };
-            unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
-            unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
-            unsafe { self.api.core.detach_plugin(PluginType::RSP) };
+            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
+            unsafe { self.api.core.detach_plugin(PluginType::Input) };
+            unsafe { self.api.core.detach_plugin(PluginType::Rsp) };
             return Err(err);
         }
 
@@ -241,22 +239,28 @@ impl Core {
         }
 
         // detach plugins from core.
-        unsafe { self.api.core.detach_plugin(PluginType::GFX) };
-        unsafe { self.api.core.detach_plugin(PluginType::AUDIO) };
-        unsafe { self.api.core.detach_plugin(PluginType::INPUT) };
-        unsafe { self.api.core.detach_plugin(PluginType::RSP) };
+        unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
+        unsafe { self.api.core.detach_plugin(PluginType::Audio) };
+        unsafe { self.api.core.detach_plugin(PluginType::Input) };
+        unsafe { self.api.core.detach_plugin(PluginType::Rsp) };
         // drop the plugins. this shuts them down.
         self.plugins = None;
     }
 
     /// Overrides the functions used by graphics plugins to setup a window and OpenGL/Vulkan context.
-    /// 
+    ///
     /// The typical way of acquiring a [`ctypes::VideoExtensionFunctions`] is to generate it
     /// via the [`vidext_table!()`][`crate::vidext_table!`] macro and [`VideoExtension`][`crate::types::VideoExtension`] trait.
-    pub fn override_vidext(&mut self, vidext: &ctypes::VideoExtensionFunctions) -> CoreResult<()> {
+    pub fn override_vidext(
+        &mut self,
+        vidext: &m64prs_sys::VideoExtensionFunctions,
+    ) -> CoreResult<()> {
         // This is actually safe, since Mupen copies the table.
         core_fn(unsafe {
-            self.api.core.override_vidext(vidext as *const ctypes::VideoExtensionFunctions as *mut ctypes::VideoExtensionFunctions)
+            self.api.core.override_vidext(
+                vidext as *const m64prs_sys::VideoExtensionFunctions
+                    as *mut m64prs_sys::VideoExtensionFunctions,
+            )
         })
     }
 }
@@ -267,7 +271,7 @@ impl Core {
     pub fn open_rom(&mut self, rom_data: &[u8]) -> CoreResult<()> {
         core_fn(unsafe {
             self.api.core.do_command(
-                Command::ROM_OPEN,
+                Command::RomOpen,
                 rom_data.len() as c_int,
                 rom_data.as_ptr() as *mut c_void,
             )
@@ -282,12 +286,12 @@ impl Core {
 
     /// Closes a currently open ROM.
     pub fn close_rom(&mut self) -> CoreResult<()> {
-        core_fn(unsafe { self.api.core.do_command(Command::ROM_CLOSE, 0, null_mut()) })
+        core_fn(unsafe { self.api.core.do_command(Command::RomClose, 0, null_mut()) })
     }
 
     /// Executes the currently-open ROM.
     pub fn execute(&self) -> CoreResult<()> {
-        core_fn(unsafe { self.api.core.do_command(Command::EXECUTE, 0, null_mut()) })
+        core_fn(unsafe { self.api.core.do_command(Command::Execute, 0, null_mut()) })
     }
 }
 
@@ -296,20 +300,24 @@ impl Core {
     /// Stops the currently-running ROM.
     pub fn stop(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::STOP, 0, null_mut()) })
+        core_fn(unsafe { self.api.core.do_command(Command::Stop, 0, null_mut()) })
     }
     /// Pauses the currently-running ROM.
     pub fn pause(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::PAUSE, 0, null_mut()) })
+        core_fn(unsafe { self.api.core.do_command(Command::Pause, 0, null_mut()) })
     }
     pub fn resume(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::RESUME, 0, null_mut()) })
+        core_fn(unsafe { self.api.core.do_command(Command::Resume, 0, null_mut()) })
     }
     pub fn advance_frame(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::ADVANCE_FRAME, 0, null_mut()) })
+        core_fn(unsafe {
+            self.api
+                .core
+                .do_command(Command::AdvanceFrame, 0, null_mut())
+        })
     }
 
     /// Saves game state to the current slot.
@@ -318,7 +326,7 @@ impl Core {
         let res = self.save_state_inner().await;
         res
     }
-    
+
     /// Loads game state from the current slot.
     pub async fn load_state(&self) -> CoreResult<()> {
         let _lock = self.save_mutex.lock().await;
@@ -328,10 +336,14 @@ impl Core {
 
     fn save_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
-        let (mut future, waiter) = save::save_pair(CoreParam::STATE_SAVECOMPLETE);
-        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
+        let (mut future, waiter) = save::save_pair(CoreParam::StateSaveComplete);
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
-        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_SAVE, 0, null_mut()) }) {
+        if let Err(error) =
+            core_fn(unsafe { self.api.core.do_command(Command::StateSave, 0, null_mut()) })
+        {
             future.fail_early(error);
         }
 
@@ -339,10 +351,14 @@ impl Core {
     }
 
     fn load_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
-        let (mut future, waiter) = save::save_pair(CoreParam::STATE_LOADCOMPLETE);
-        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
+        let (mut future, waiter) = save::save_pair(CoreParam::StateLoadComplete);
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
 
-        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::STATE_LOAD, 0, null_mut()) }) {
+        if let Err(error) =
+            core_fn(unsafe { self.api.core.do_command(Command::StateLoad, 0, null_mut()) })
+        {
             future.fail_early(error);
         }
 
@@ -354,7 +370,7 @@ impl Core {
 ///
 /// The core is responsible for startup/shutdown of plugins; they are never started while you own them.
 pub struct Plugin {
-    api: Container<api::BasePluginApi>,
+    api: Container<BasePluginApi>,
 }
 
 impl Plugin {
@@ -370,7 +386,7 @@ impl Plugin {
 
     /// Gets the type of this plugin.
     pub fn get_type(&self) -> CoreResult<PluginType> {
-        let mut plugin_type: PluginType = PluginType::NULL;
+        let mut plugin_type: PluginType = PluginType::Null;
         core_fn(unsafe {
             self.api.get_version(
                 &mut plugin_type,
@@ -387,7 +403,7 @@ impl Plugin {
     /// Obtains version information about this plugin.
     pub fn get_version(&self) -> CoreResult<APIVersion> {
         unsafe {
-            let mut plugin_type: PluginType = PluginType::NULL;
+            let mut plugin_type: PluginType = PluginType::Null;
             let mut plugin_version: c_int = 0;
             let mut api_version: c_int = 0;
             let mut plugin_name: *const c_char = null();
