@@ -50,7 +50,7 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
     let pinned_state = unsafe { &mut *(context as *mut PinnedCoreState) };
 
     match param {
-        CoreParam::StateSavecomplete | CoreParam::StateLoadcomplete => {
+        CoreParam::StateSaveComplete | CoreParam::StateLoadComplete => {
             pinned_state.st_wait_mgr.on_state_change(param, value);
         }
         _ => (),
@@ -328,7 +328,7 @@ impl Core {
 
     fn save_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
-        let (mut future, waiter) = save::save_pair(CoreParam::StateSavecomplete);
+        let (mut future, waiter) = save::save_pair(CoreParam::StateSaveComplete);
         self.save_sender.send(waiter).expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
         if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::StateSave, 0, null_mut()) }) {
@@ -339,7 +339,7 @@ impl Core {
     }
 
     fn load_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
-        let (mut future, waiter) = save::save_pair(CoreParam::StateLoadcomplete);
+        let (mut future, waiter) = save::save_pair(CoreParam::StateLoadComplete);
         self.save_sender.send(waiter).expect("Waiter queue disconnected!");
 
         if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::StateLoad, 0, null_mut()) }) {

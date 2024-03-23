@@ -160,7 +160,7 @@ macro_rules! vidext_table {
             VidExtFuncInit: ::m64prs_core::__vidext_closure!(|| -> ::m64prs_sys::Error {
                 ::m64prs_core::__try_ffi_result!(::m64prs_core::types::VideoExtension::init_with_render_mode(
                     ::std::ops::DerefMut::deref_mut(&mut $inst.lock().unwrap()),
-                    ::m64prs_sys::RenderMode::RenderOpengl,
+                    ::m64prs_sys::RenderMode::OpenGl,
                 ));
                 ::m64prs_sys::Error::Success
             }),

@@ -1,5 +1,5 @@
 use bindgen::callbacks::{DeriveInfo, ParseCallbacks, TypeKind};
-use heck::ToPascalCase;
+use heck::{ToPascalCase, ToShoutySnakeCase, ToShoutySnekCase};
 use std::{
     env,
     error::Error,
@@ -44,37 +44,54 @@ impl ParseCallbacks for M64PParseCallbacks {
     }
 
     fn enum_variant_name(
-            &self,
-            enum_name: Option<&str>,
-            original_variant_name: &str,
-            _variant_value: bindgen::callbacks::EnumVariantValue,
-        ) -> Option<String> {
-
-        if let Some(enum_name) = enum_name {
-            if CORE_RR_BITFLAGS.contains(&enum_name) {
-                return None
-            }
-            if enum_name == "m64p_plugin_type" && original_variant_name == "M64PLUGIN_GFX" {
-                return Some("Graphics".to_owned())
-            }
-        }
-
+        &self,
+        enum_name: Option<&str>,
+        original_variant_name: &str,
+        _variant_value: bindgen::callbacks::EnumVariantValue,
+    ) -> Option<String> {
         let stripped = if original_variant_name.starts_with("M64P_GL_") {
             &original_variant_name[8..]
-        }
-        else if original_variant_name.starts_with("M64") {
+        } else if original_variant_name.starts_with("M64") {
             match original_variant_name.find('_') {
-                Some(pos) => &original_variant_name[pos..],
-                None => return None
+                Some(pos) => &original_variant_name[(pos + 1)..],
+                None => return None,
             }
-        }
-        else {
+        } else {
             match original_variant_name.find('_') {
-                Some(pos) => &original_variant_name[pos..],
-                None => original_variant_name
+                Some(pos) => &original_variant_name[(pos + 1)..],
+                None => original_variant_name,
             }
         };
 
+        if let Some(enum_name) = enum_name {
+            match enum_name {
+                "m64p_plugin_type" if original_variant_name == "M64PLUGIN_GFX" => {
+                    return Some("Graphics".to_owned())
+                }
+                "m64p_render_mode" => return match original_variant_name {
+                    "M64P_RENDER_OPENGL" => Some("OpenGl".to_owned()),
+                    "M64P_RENDER_VULKAN" => Some("Vulkan".to_owned()),
+                    _ => unimplemented!()
+                },
+                "m64p_core_param" => return if stripped.starts_with("STATE_") && stripped.ends_with("COMPLETE") {
+                    let mut name = stripped.to_pascal_case();
+                    unsafe {
+                        // stripped.to_pascal_case returns valid UTF-8.
+                        // We're only editing ASCII bytes, so we cannot break any non-ASCII data.
+                        let name_bytes = name.as_bytes_mut();
+                        name_bytes[name_bytes.len() - 8] = b'C';
+                    }
+                    Some(name)
+                }
+                else {
+                    Some(stripped.to_pascal_case())
+                },
+                name if CORE_RR_BITFLAGS.contains(&name) => {
+                    return Some(stripped.to_shouty_snake_case())
+                }
+                _ => (),
+            };
+        }
         Some(stripped.to_pascal_case())
     }
 }
@@ -112,12 +129,10 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         .blocklist_function(".*");
 
     // blocklist BUTTONS specifically
-    builder = builder
-        .blocklist_type(r"BUTTONS");
+    builder = builder.blocklist_type(r"BUTTONS");
 
     // Add extern crate for num_enum
-    builder = builder
-        .raw_line("extern crate num_enum;");
+    builder = builder.raw_line("extern crate num_enum;");
 
     // add bitflag enums
     for name in CORE_RR_BITFLAGS {

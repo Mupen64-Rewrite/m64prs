@@ -38,8 +38,8 @@ impl Future for SavestateFuture {
                 }
                 else {
                     Poll::Ready(Err(match self.core_param {
-                        CoreParam::StateLoadcomplete => CoreError::LoadStateFailed,
-                        CoreParam::StateSavecomplete => CoreError::SaveStateFailed,
+                        CoreParam::StateLoadComplete => CoreError::LoadStateFailed,
+                        CoreParam::StateSaveComplete => CoreError::SaveStateFailed,
                         _ => panic!()
                     }))
                 }
