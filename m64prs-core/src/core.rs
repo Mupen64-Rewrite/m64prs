@@ -14,7 +14,7 @@ use log::{log, Level};
 
 use crate::{error::CoreError, types::APIVersion};
 
-use m64prs_sys::{Command, CoreParam, MsgLevel, PluginType};
+use m64prs_sys::{api::{BasePluginApi, FullCoreApi}, Command, CoreParam, MsgLevel, PluginType};
 
 use crate::error::Result as CoreResult;
 
@@ -62,7 +62,7 @@ struct PinnedCoreState {
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
-    api: Container<m64prs_sys::FullCoreApi>,
+    api: Container<FullCoreApi>,
     pin_state: Pin<Box<PinnedCoreState>>,
     plugins: Option<[Plugin; 4]>,
 
@@ -91,7 +91,7 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
-        let api = unsafe { Container::<m64prs_sys::FullCoreApi>::load(path.as_ref()) }
+        let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
             .map_err(CoreError::Library)?;
 
         let (save_tx, save_rx) = mpsc::channel();
@@ -370,7 +370,7 @@ impl Core {
 ///
 /// The core is responsible for startup/shutdown of plugins; they are never started while you own them.
 pub struct Plugin {
-    api: Container<m64prs_sys::BasePluginApi>,
+    api: Container<BasePluginApi>,
 }
 
 impl Plugin {
