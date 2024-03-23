@@ -1,8 +1,8 @@
 mod core;
 // pub mod ctypes;
 pub mod error;
-pub mod types;
 mod macros;
+pub mod types;
 
 pub use crate::core::{Core, Plugin};
 

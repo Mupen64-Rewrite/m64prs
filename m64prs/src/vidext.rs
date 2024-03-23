@@ -1,6 +1,9 @@
-use std::{ffi::{c_char, c_int, c_void, CStr}, sync::Mutex};
-use m64prs_core::{types::{FFIResult, VideoExtension}};
+use m64prs_core::types::{FFIResult, VideoExtension};
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
+use std::{
+    ffi::{c_char, c_int, c_void, CStr},
+    sync::Mutex,
+};
 
 struct VidextState {}
 
@@ -44,7 +47,14 @@ impl VideoExtension for VidextState {
         screen_mode: VideoMode,
         flags: VideoFlags,
     ) -> FFIResult<()> {
-        let _ = (width, height, refresh_rate, bits_per_pixel, screen_mode, flags);
+        let _ = (
+            width,
+            height,
+            refresh_rate,
+            bits_per_pixel,
+            screen_mode,
+            flags,
+        );
         todo!()
     }
 

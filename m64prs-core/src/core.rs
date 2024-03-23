@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_uint, c_void, CStr},
+    ffi::{c_char, c_int, c_void, CStr},
     fs,
     path::Path,
     pin::Pin,
@@ -11,12 +11,9 @@ use dlopen2::wrapper::Container;
 use futures::Future;
 use log::{log, Level};
 
-use crate::{
-    error::CoreError,
-    types::APIVersion,
-};
+use crate::{error::CoreError, types::APIVersion};
 
-use m64prs_sys::{Command, CoreParam, Error, MsgLevel, PluginType};
+use m64prs_sys::{Command, CoreParam, MsgLevel, PluginType};
 
 use crate::error::Result as CoreResult;
 
@@ -105,7 +102,7 @@ impl Core {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
             }),
             save_sender: save_tx,
-            save_mutex: async_std::sync::Mutex::new(())
+            save_mutex: async_std::sync::Mutex::new(()),
         };
 
         core_fn(unsafe {
@@ -250,13 +247,19 @@ impl Core {
     }
 
     /// Overrides the functions used by graphics plugins to setup a window and OpenGL/Vulkan context.
-    /// 
+    ///
     /// The typical way of acquiring a [`ctypes::VideoExtensionFunctions`] is to generate it
     /// via the [`vidext_table!()`][`crate::vidext_table!`] macro and [`VideoExtension`][`crate::types::VideoExtension`] trait.
-    pub fn override_vidext(&mut self, vidext: &m64prs_sys::VideoExtensionFunctions) -> CoreResult<()> {
+    pub fn override_vidext(
+        &mut self,
+        vidext: &m64prs_sys::VideoExtensionFunctions,
+    ) -> CoreResult<()> {
         // This is actually safe, since Mupen copies the table.
         core_fn(unsafe {
-            self.api.core.override_vidext(vidext as *const m64prs_sys::VideoExtensionFunctions as *mut m64prs_sys::VideoExtensionFunctions)
+            self.api.core.override_vidext(
+                vidext as *const m64prs_sys::VideoExtensionFunctions
+                    as *mut m64prs_sys::VideoExtensionFunctions,
+            )
         })
     }
 }
@@ -309,7 +312,11 @@ impl Core {
     }
     pub fn advance_frame(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::AdvanceFrame, 0, null_mut()) })
+        core_fn(unsafe {
+            self.api
+                .core
+                .do_command(Command::AdvanceFrame, 0, null_mut())
+        })
     }
 
     /// Saves game state to the current slot.
@@ -318,7 +325,7 @@ impl Core {
         let res = self.save_state_inner().await;
         res
     }
-    
+
     /// Loads game state from the current slot.
     pub async fn load_state(&self) -> CoreResult<()> {
         let _lock = self.save_mutex.lock().await;
@@ -329,9 +336,13 @@ impl Core {
     fn save_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         // create transmission channel for savestate result
         let (mut future, waiter) = save::save_pair(CoreParam::StateSaveComplete);
-        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
-        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::StateSave, 0, null_mut()) }) {
+        if let Err(error) =
+            core_fn(unsafe { self.api.core.do_command(Command::StateSave, 0, null_mut()) })
+        {
             future.fail_early(error);
         }
 
@@ -340,9 +351,13 @@ impl Core {
 
     fn load_state_inner(&self) -> impl Future<Output = CoreResult<()>> {
         let (mut future, waiter) = save::save_pair(CoreParam::StateLoadComplete);
-        self.save_sender.send(waiter).expect("Waiter queue disconnected!");
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
 
-        if let Err(error) = core_fn(unsafe { self.api.core.do_command(Command::StateLoad, 0, null_mut()) }) {
+        if let Err(error) =
+            core_fn(unsafe { self.api.core.do_command(Command::StateLoad, 0, null_mut()) })
+        {
             future.fail_early(error);
         }
 

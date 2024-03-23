@@ -80,8 +80,6 @@ bitflags! {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use std::{mem::MaybeUninit, ptr::addr_of};
@@ -122,6 +120,6 @@ mod tests {
     fn test_error() {
         let err = Error::InputNotFound;
         let res: u32 = err.into();
-        let err2: Error = res.try_into().unwrap();
+        let _err2: Error = res.try_into().unwrap();
     }
 }

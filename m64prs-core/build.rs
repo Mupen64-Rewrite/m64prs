@@ -56,7 +56,9 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     let mut builder = bindgen::builder()
         .impl_debug(true)
         .clang_arg(format!("-I{}", src_dir.display()))
-        .parse_callbacks(Box::new(::bindgen::CargoCallbacks::new().rerun_on_header_files(true)))
+        .parse_callbacks(Box::new(
+            ::bindgen::CargoCallbacks::new().rerun_on_header_files(true),
+        ))
         .parse_callbacks(Box::new(M64PParseCallbacks {}))
         .default_enum_style(bindgen::EnumVariation::NewType {
             is_bitfield: false,

@@ -68,24 +68,27 @@ impl ParseCallbacks for M64PParseCallbacks {
                 "m64p_plugin_type" if original_variant_name == "M64PLUGIN_GFX" => {
                     return Some("Graphics".to_owned())
                 }
-                "m64p_render_mode" => return match original_variant_name {
-                    "M64P_RENDER_OPENGL" => Some("OpenGl".to_owned()),
-                    "M64P_RENDER_VULKAN" => Some("Vulkan".to_owned()),
-                    _ => unimplemented!()
-                },
-                "m64p_core_param" => return if stripped.starts_with("STATE_") && stripped.ends_with("COMPLETE") {
-                    let mut name = stripped.to_pascal_case();
-                    unsafe {
-                        // stripped.to_pascal_case returns valid UTF-8.
-                        // We're only editing ASCII bytes, so we cannot break any non-ASCII data.
-                        let name_bytes = name.as_bytes_mut();
-                        name_bytes[name_bytes.len() - 8] = b'C';
+                "m64p_render_mode" => {
+                    return match original_variant_name {
+                        "M64P_RENDER_OPENGL" => Some("OpenGl".to_owned()),
+                        "M64P_RENDER_VULKAN" => Some("Vulkan".to_owned()),
+                        _ => unimplemented!(),
                     }
-                    Some(name)
                 }
-                else {
-                    Some(stripped.to_pascal_case())
-                },
+                "m64p_core_param" => {
+                    return if stripped.starts_with("STATE_") && stripped.ends_with("COMPLETE") {
+                        let mut name = stripped.to_pascal_case();
+                        unsafe {
+                            // stripped.to_pascal_case returns valid UTF-8.
+                            // We're only editing ASCII bytes, so we cannot break any non-ASCII data.
+                            let name_bytes = name.as_bytes_mut();
+                            name_bytes[name_bytes.len() - 8] = b'C';
+                        }
+                        Some(name)
+                    } else {
+                        Some(stripped.to_pascal_case())
+                    }
+                }
                 name if CORE_RR_BITFLAGS.contains(&name) => {
                     return Some(stripped.to_shouty_snake_case())
                 }

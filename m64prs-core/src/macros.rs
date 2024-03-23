@@ -37,26 +37,25 @@ macro_rules! __try_ffi_result {
     };
 }
 
-
 /// Utility macro for generating a function table from a static object implementing [`VideoExtension`][crate::types::VideoExtension].
-/// 
-/// To use it, first create a static variable (here called `INSTANCE_NAME`) of type `Mutex<T>` where `T: VideoExtension`. Then invoke 
+///
+/// To use it, first create a static variable (here called `INSTANCE_NAME`) of type `Mutex<T>` where `T: VideoExtension`. Then invoke
 /// the macro with the following syntax:
-/// 
+///
 /// ```ignore
 /// vidext_table!([INSTANCE_NAME] TABLE_NAME)
 /// ```
-/// 
+///
 /// You may also add a visibility qualifer before the table name; this gives the resulting table that visibility.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```no_run
 /// # use std::{ffi::{c_char, c_int, c_void, CStr}, sync::Mutex};
 /// # use m64prs_core::{ctypes::{RenderMode, Size2D, VideoFlags, VideoMode}, types::{FFIResult, VideoExtension}};
-/// 
+///
 /// struct VidextState {}
-/// 
+///
 /// impl VideoExtension for VidextState {
 ///     // ...
 /// #    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()> {
@@ -148,7 +147,7 @@ macro_rules! __try_ffi_result {
 /// #        todo!()
 /// #    }
 /// }
-/// 
+///
 /// static VIDEXT_INSTANCE: Mutex<VidextState> = Mutex::new(VidextState {});
 /// m64prs_core::vidext_table!([VIDEXT_INSTANCE] pub VIDEXT_TABLE);
 /// ```

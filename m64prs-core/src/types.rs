@@ -1,7 +1,4 @@
-use std::{
-    ffi::{c_char, c_int, c_void, CStr},
-    sync::{Arc, RwLock},
-};
+use std::ffi::{c_char, c_int, c_void, CStr};
 
 use crate::error::M64PError;
 

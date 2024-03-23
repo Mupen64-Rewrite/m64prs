@@ -35,15 +35,14 @@ impl Future for SavestateFuture {
             Poll::Ready(res) => {
                 if res.unwrap() {
                     Poll::Ready(Ok(()))
-                }
-                else {
+                } else {
                     Poll::Ready(Err(match self.core_param {
                         CoreParam::StateLoadComplete => CoreError::LoadStateFailed,
                         CoreParam::StateSaveComplete => CoreError::SaveStateFailed,
-                        _ => panic!()
+                        _ => panic!(),
                     }))
                 }
-            },
+            }
             Poll::Pending => Poll::Pending,
         }
     }
@@ -63,7 +62,10 @@ pub(super) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) 
             early_fail: None,
             rx,
         },
-        SavestateWaiter { core_param: param, tx },
+        SavestateWaiter {
+            core_param: param,
+            tx,
+        },
     )
 }
 

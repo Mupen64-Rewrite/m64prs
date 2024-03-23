@@ -1,5 +1,5 @@
-use std::ffi::{c_int, c_uint, c_char, c_void};
 use dlopen2::wrapper::{WrapperApi, WrapperMultiApi};
+use std::ffi::{c_char, c_int, c_uint, c_void};
 
 mod types;
 
@@ -8,9 +8,8 @@ pub use types::*;
 #[derive(WrapperMultiApi)]
 pub struct FullCoreApi {
     pub core: CoreBaseApi,
-    pub vcr: CoreVcrApi
+    pub vcr: CoreVcrApi,
 }
-
 
 #[derive(WrapperApi)]
 pub struct CoreBaseApi {
@@ -45,39 +44,25 @@ pub struct CoreBaseApi {
     #[dlopen2_name = "CoreShutdown"]
     shutdown: unsafe extern "C" fn() -> Error,
     #[dlopen2_name = "CoreAttachPlugin"]
-    attach_plugin: unsafe extern "C" fn(
-        plugin_type: PluginType,
-        plugin_lib_handle: DynlibHandle,
-    ) -> Error,
+    attach_plugin:
+        unsafe extern "C" fn(plugin_type: PluginType, plugin_lib_handle: DynlibHandle) -> Error,
     #[dlopen2_name = "CoreDetachPlugin"]
     detach_plugin: unsafe extern "C" fn(plugin_type: PluginType) -> Error,
     #[dlopen2_name = "CoreDoCommand"]
-    do_command: unsafe extern "C" fn(
-        command: Command,
-        int_param: c_int,
-        ptr_param: *mut c_void,
-    ) -> Error,
+    do_command:
+        unsafe extern "C" fn(command: Command, int_param: c_int, ptr_param: *mut c_void) -> Error,
     #[dlopen2_name = "CoreOverrideVidExt"]
-    override_vidext: unsafe extern "C" fn(
-        video_function_struct: *mut VideoExtensionFunctions,
-    ) -> Error,
+    override_vidext:
+        unsafe extern "C" fn(video_function_struct: *mut VideoExtensionFunctions) -> Error,
 }
 #[derive(WrapperApi)]
 pub struct CoreVcrApi {
     #[dlopen2_name = "VCR_SetErrorCallback"]
-    set_error_callback: unsafe extern "C" fn(
-        callb: unsafe extern "C" fn(
-            lvl: MsgLevel,
-            msg: *const c_char
-        )
-    ),
+    set_error_callback:
+        unsafe extern "C" fn(callb: unsafe extern "C" fn(lvl: MsgLevel, msg: *const c_char)),
     #[dlopen2_name = "VCR_SetStateCallback"]
-    set_state_callback: unsafe extern "C" fn(
-        callb: unsafe extern "C" fn(
-            param: VcrParam,
-            value: c_int
-        )
-    ),
+    set_state_callback:
+        unsafe extern "C" fn(callb: unsafe extern "C" fn(param: VcrParam, value: c_int)),
     #[dlopen2_name = "VCR_GetCurFrame"]
     get_cur_frame: unsafe extern "C" fn() -> c_uint,
 
@@ -110,13 +95,11 @@ pub struct CoreVcrApi {
         path: *const c_char,
         author: *const c_char,
         description: *const c_char,
-        start_type: VcrStartType
+        start_type: VcrStartType,
     ) -> Error,
 
     #[dlopen2_name = "VCR_StartMovie"]
-    start_movie: unsafe extern "C" fn(
-        path: *const c_char,
-    ) -> Error
+    start_movie: unsafe extern "C" fn(path: *const c_char) -> Error,
 }
 
 #[derive(WrapperApi)]
