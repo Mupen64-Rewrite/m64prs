@@ -7,6 +7,7 @@ use std::{
     sync::{mpsc, Mutex},
 };
 
+use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
 use futures::Future;
 use log::{log, Level};
@@ -66,7 +67,7 @@ pub struct Core {
     plugins: Option<[Plugin; 4]>,
 
     save_sender: mpsc::Sender<SavestateWaiter>,
-    save_mutex: async_std::sync::Mutex<()>,
+    save_mutex: AsyncMutex<()>,
 }
 
 unsafe impl Sync for Core {}
@@ -102,7 +103,7 @@ impl Core {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
             }),
             save_sender: save_tx,
-            save_mutex: async_std::sync::Mutex::new(()),
+            save_mutex: AsyncMutex::new(()),
         };
 
         core_fn(unsafe {
