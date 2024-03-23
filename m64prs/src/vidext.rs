@@ -1,5 +1,6 @@
 use std::{ffi::{c_char, c_int, c_void, CStr}, sync::Mutex};
-use m64prs_core::{ctypes::{RenderMode, Size2D, VideoFlags, VideoMode}, types::{FFIResult, VideoExtension}};
+use m64prs_core::{types::{FFIResult, VideoExtension}};
+use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 
 struct VidextState {}
 
@@ -66,12 +67,12 @@ impl VideoExtension for VidextState {
         todo!()
     }
 
-    unsafe fn gl_set_attribute(&mut self, attr: m64prs_core::ctypes::GLAttribute, value: c_int) -> FFIResult<()> {
+    unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> FFIResult<()> {
         let _ = (attr, value);
         todo!()
     }
 
-    unsafe fn gl_get_attribute(&mut self, attr: m64prs_core::ctypes::GLAttribute) -> FFIResult<c_int> {
+    unsafe fn gl_get_attribute(&mut self, attr: GLAttribute) -> FFIResult<c_int> {
         let _ = attr;
         todo!()
     }

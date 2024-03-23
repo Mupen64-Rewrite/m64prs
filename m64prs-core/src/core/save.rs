@@ -5,19 +5,20 @@ use std::{
     task::{Context, Poll},
 };
 
-use futures::{channel::oneshot, Future, FutureExt};
+use futures::{channel::oneshot, Future};
+use m64prs_sys::CoreParam;
 
-use crate::{ctypes::{self, CoreParam}, error::{CoreError, Result as CoreResult}};
+use crate::error::{CoreError, Result as CoreResult};
 
 /// Class that waits for a state change and resolves a savestate future.
 pub(super) struct SavestateWaiter {
-    core_param: ctypes::CoreParam,
+    core_param: CoreParam,
     tx: oneshot::Sender<bool>,
 }
 
 /// Future implementation for savestates operations.
 pub struct SavestateFuture {
-    core_param: ctypes::CoreParam,
+    core_param: CoreParam,
     early_fail: Option<CoreError>,
     rx: oneshot::Receiver<bool>,
 }
@@ -37,8 +38,8 @@ impl Future for SavestateFuture {
                 }
                 else {
                     Poll::Ready(Err(match self.core_param {
-                        CoreParam::STATE_LOADCOMPLETE => CoreError::LoadStateFailed,
-                        CoreParam::STATE_SAVECOMPLETE => CoreError::SaveStateFailed,
+                        CoreParam::StateLoadcomplete => CoreError::LoadStateFailed,
+                        CoreParam::StateSavecomplete => CoreError::SaveStateFailed,
                         _ => panic!()
                     }))
                 }
@@ -54,7 +55,7 @@ impl SavestateFuture {
     }
 }
 
-pub(super) fn save_pair(param: ctypes::CoreParam) -> (SavestateFuture, SavestateWaiter) {
+pub(super) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) {
     let (tx, rx) = oneshot::channel();
     (
         SavestateFuture {
@@ -78,7 +79,7 @@ impl SavestateWaitManager {
         }
     }
 
-    pub fn on_state_change(&mut self, param: ctypes::CoreParam, value: c_int) {
+    pub fn on_state_change(&mut self, param: CoreParam, value: c_int) {
         // add any new waiters that may need to be processed
         while let Ok(next) = self.rx.try_recv() {
             self.waiters.push(next);

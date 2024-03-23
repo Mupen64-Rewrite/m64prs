@@ -3,16 +3,14 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::{
-    ctypes::{self, GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode},
-    error::M64PError,
-};
+use crate::error::M64PError;
 
 use ash::vk;
+use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct APIVersion {
-    pub api_type: ctypes::PluginType,
+    pub api_type: m64prs_sys::PluginType,
     pub plugin_version: c_int,
     pub api_version: c_int,
     pub plugin_name: &'static str,

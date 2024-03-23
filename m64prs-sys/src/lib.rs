@@ -1,22 +1,14 @@
 use std::ffi::{c_int, c_uint, c_char, c_void};
 use dlopen2::wrapper::{WrapperApi, WrapperMultiApi};
 
-include!(concat!(env!("OUT_DIR"), "/types.gen.rs"));
+mod types;
+
+pub use types::*;
 
 #[derive(WrapperMultiApi)]
 pub struct FullCoreApi {
     pub core: CoreBaseApi,
     pub vcr: CoreVcrApi
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct VcrStartType(c_int);
-
-impl VcrStartType {
-    pub const FROM_SNAPSHOT: VcrStartType = VcrStartType(1 << 0);
-    pub const FROM_START: VcrStartType = VcrStartType(1 << 1);
-    pub const FROM_EEPROM: VcrStartType = VcrStartType(1 << 2);
 }
 
 
@@ -149,10 +141,4 @@ pub struct BasePluginApi {
     ) -> Error,
     #[dlopen2_name = "PluginShutdown"]
     shutdown: unsafe extern "C" fn() -> Error,
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

@@ -7,8 +7,10 @@ edition = "2021"
 
 [dependencies]
 dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
+num_enum = "0.7.2"
+bitflags = "2.5.0"
 
 [build-dependencies]
 
-bindgen = "0.69.2"
+bindgen = "0.69.4"
 heck = "0.4.1"

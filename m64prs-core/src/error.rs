@@ -1,72 +1,56 @@
-
-
 use std::ffi::c_uint;
 
+use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
-use crate::ctypes::{self, PluginType};
-
-
 #[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Error, IntoPrimitive, TryFromPrimitive)]
 pub enum M64PError {
     #[error("A function was called before it's associated module was initialized")]
-    NotInit = ctypes::Error::NOT_INIT.0,
+    NotInit = m64prs_sys::Error::NotInit as u32,
     #[error("Initialization function called twice")]
-    AlreadyInit = ctypes::Error::ALREADY_INIT.0,
+    AlreadyInit = m64prs_sys::Error::AlreadyInit as u32,
     #[error("API versions between components are incompatible")]
-    Incompatible = ctypes::Error::INCOMPATIBLE.0,
+    Incompatible = m64prs_sys::Error::Incompatible as u32,
     #[error("Invalid function parameters, such as a NULL pointer")]
-    InputAssert = ctypes::Error::INPUT_ASSERT.0,
+    InputAssert = m64prs_sys::Error::InputAssert as u32,
     #[error("An input function parameter is logically invalid")]
-    InputInvalid = ctypes::Error::INPUT_INVALID.0,
+    InputInvalid = m64prs_sys::Error::InputInvalid as u32,
     #[error("The input parameter(s) specified a particular item which was not found")]
-    InputNotFound = ctypes::Error::INPUT_NOT_FOUND.0,
+    InputNotFound = m64prs_sys::Error::InputNotFound as u32,
     #[error("Memory allocation failed")]
-    NoMemory = ctypes::Error::NO_MEMORY.0,
+    NoMemory = m64prs_sys::Error::NoMemory as u32,
     #[error("Error opening, creating, reading, or writing to a file")]
-    Files = ctypes::Error::FILES.0,
+    Files = m64prs_sys::Error::Files as u32,
     #[error("Logical inconsistency in program code. Probably a bug.")]
-    Internal = ctypes::Error::INTERNAL.0,
+    Internal = m64prs_sys::Error::Internal as u32,
     #[error("An operation was requested which is not allowed in the current state")]
-    InvalidState = ctypes::Error::INVALID_STATE.0,
+    InvalidState = m64prs_sys::Error::InvalidState as u32,
     #[error("A plugin function returned a fatal error")]
-    PluginFail = ctypes::Error::PLUGIN_FAIL.0,
+    PluginFail = m64prs_sys::Error::PluginFail as u32,
     #[error("A system function call, such as an SDL or file operation, failed")]
-    SystemFail = ctypes::Error::SYSTEM_FAIL.0,
-    #[error("Function call or argument is not supported (e.g. no debugger, invalid encoder format)")]
-    Unsupported = ctypes::Error::UNSUPPORTED.0,
+    SystemFail = m64prs_sys::Error::SystemFail as u32,
+    #[error(
+        "Function call or argument is not supported (e.g. no debugger, invalid encoder format)"
+    )]
+    Unsupported = m64prs_sys::Error::Unsupported as u32,
     #[error("A given input type parameter cannot be used for desired operation")]
-    WrongType = ctypes::Error::WRONG_TYPE.0
+    WrongType = m64prs_sys::Error::WrongType as u32,
 }
 
-impl TryFrom<ctypes::Error> for M64PError {
-    type Error = CoreError;
+impl TryFrom<m64prs_sys::Error> for M64PError {
+    type Error = TryFromPrimitiveError<M64PError>;
 
-    fn try_from(value: ctypes::Error) -> std::result::Result<Self, Self::Error> {
-        match value {
-            ctypes::Error::NOT_INIT => Ok(M64PError::NotInit),
-            ctypes::Error::ALREADY_INIT => Ok(M64PError::AlreadyInit),
-            ctypes::Error::INCOMPATIBLE => Ok(M64PError::Incompatible),
-            ctypes::Error::INPUT_ASSERT => Ok(M64PError::InputAssert),
-            ctypes::Error::INPUT_INVALID => Ok(M64PError::InputInvalid),
-            ctypes::Error::INPUT_NOT_FOUND => Ok(M64PError::InputNotFound),
-            ctypes::Error::NO_MEMORY => Ok(M64PError::NoMemory),
-            ctypes::Error::FILES => Ok(M64PError::Files),
-            ctypes::Error::INTERNAL => Ok(M64PError::Internal),
-            ctypes::Error::INVALID_STATE => Ok(M64PError::InvalidState),
-            ctypes::Error::PLUGIN_FAIL => Ok(M64PError::PluginFail),
-            ctypes::Error::SYSTEM_FAIL => Ok(M64PError::SystemFail),
-            ctypes::Error::UNSUPPORTED => Ok(M64PError::Unsupported),
-            ctypes::Error::WRONG_TYPE => Ok(M64PError::WrongType),
-            _ => Err(CoreError::ErrorConversionFailed(value.0))
-        }
+    fn try_from(value: m64prs_sys::Error) -> std::result::Result<Self, Self::Error> {
+        let prim: u32 = value.into();
+        prim.try_into()
     }
 }
 
-impl Into<ctypes::Error> for M64PError {
-    fn into(self) -> ctypes::Error {
-        ctypes::Error(self as c_uint)
+impl Into<m64prs_sys::Error> for M64PError {
+    fn into(self) -> m64prs_sys::Error {
+        let prim: u32 = self.into();
+        prim.try_into().unwrap()
     }
 }
 
@@ -78,8 +62,8 @@ pub enum CoreError {
     M64P(#[source] M64PError),
     #[error("Error occurred when performing I/O.")]
     IO(#[source] ::std::io::Error),
-    #[error("The {0} plugin is not valid for its type.")]
-    PluginInvalid(crate::ctypes::PluginType),
+    #[error("The plugin is not valid for its type.")]
+    PluginInvalid(m64prs_sys::PluginType),
     #[error("Could not convert {0} to a valid Mupen64Plus error")]
     ErrorConversionFailed(c_uint),
     #[error("Savestate loading failed, see logs for details")]
