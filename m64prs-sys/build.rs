@@ -87,8 +87,14 @@ impl ParseCallbacks for M64PParseCallbacks {
                         Some(name)
                     } else {
                         Some(stripped.to_pascal_case())
-                    }
+                    };
                 }
+                "m64p_GLContextType" => match stripped.rfind('_') {
+                    Some(last_uscore) => {
+                        return Some(stripped[(last_uscore + 1)..].to_pascal_case())
+                    }
+                    None => return None,
+                },
                 name if CORE_RR_BITFLAGS.contains(&name) => {
                     return Some(stripped.to_shouty_snake_case())
                 }

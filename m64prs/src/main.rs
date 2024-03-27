@@ -12,6 +12,8 @@ fn main() {
 
     let mut core = Core::init(PathBuf::from(&args[1])).unwrap();
 
+    core.override_vidext(&vidext::VIDEXT_TABLE).unwrap();
+
     core.load_rom(PathBuf::from(&args[2])).unwrap();
 
     core.attach_plugins(
@@ -24,23 +26,5 @@ fn main() {
 
     let core = Arc::new(core);
 
-    let exec_thread = {
-        let core = Arc::clone(&core);
-        thread::spawn(move || {
-            core.execute().unwrap();
-        })
-    };
-
-    task::block_on(async {
-        task::sleep(Duration::from_secs(2)).await;
-
-        let fut1 = core.save_state();
-        let fut2 = core.load_state();
-
-        let (res1, res2) = futures::join!(fut1, fut2);
-        res1.unwrap();
-        res2.unwrap();
-    });
-
-    exec_thread.join().unwrap();
+    core.execute().unwrap();
 }

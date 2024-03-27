@@ -1,4 +1,5 @@
-use std::mem;
+#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
+use std::{hash::Hash, mem};
 
 use bitflags::bitflags;
 
@@ -56,6 +57,11 @@ impl From<Buttons> for u32 {
         unsafe { mem::transmute(value) }
     }
 }
+impl Hash for Buttons {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u32(u32::from(self.clone()))
+    }
+}
 
 // VCR start type
 
@@ -71,7 +77,7 @@ impl VcrStartType {
 }
 */
 bitflags! {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
     #[repr(C)]
     pub struct VcrStartType: u32 {
         const FROM_SNAPSHOT = 1 << 0;
