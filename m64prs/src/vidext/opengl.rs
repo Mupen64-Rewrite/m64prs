@@ -20,7 +20,7 @@ use m64prs_core::{error::M64PError, types::FFIResult};
 use m64prs_sys::{GLAttribute, GLContextType, VideoFlags, VideoMode};
 use rwh_05::HasRawWindowHandle;
 use winit::{
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::LogicalSize,
     event::{Event, WindowEvent},
     platform::pump_events::EventLoopExtPumpEvents,
     window::{Window, WindowBuilder},
@@ -376,7 +376,7 @@ impl OpenGlActiveState {
             },
             GLAttribute::ContextProfileMask => match self.context.context_api() {
                 ContextApi::OpenGl(Some(version)) => {
-                    let display = self.surface.display();
+                    let _display = self.surface.display();
                     if version.major < 3 || version.major == 3 && version.minor < 1 {
                         Ok(u32::from(GLContextType::Core) as c_int)
                     } else {

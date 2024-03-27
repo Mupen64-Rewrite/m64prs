@@ -1,6 +1,6 @@
-use std::{path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{path::PathBuf, sync::Arc};
 
-use async_std::task;
+
 use m64prs_core::{Core, Plugin};
 
 mod vidext;
