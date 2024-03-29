@@ -1,9 +1,11 @@
-use std::sync::Mutex;
 use m64prs_core::{
     error::M64PError,
-    types::{FFIResult, VideoExtension}, vidext_table,
+    types::{FFIResult, VideoExtension},
+    vidext_table,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
+use send_wrapper::SendWrapper;
+use std::{cell::RefMut, ops::DerefMut, sync::{Mutex, MutexGuard}};
 use std::{
     cell::RefCell,
     ffi::{c_char, c_int, c_void, CStr},
@@ -58,8 +60,14 @@ enum VideoState {
     OpenGlActive(OpenGlActiveState),
 }
 
-unsafe impl Send for VideoState {}
-unsafe impl Sync for VideoState {}
+// unsafe impl Send for VideoState {}
+// unsafe impl Sync for VideoState {}
+
+impl Default for VideoState {
+    fn default() -> Self {
+        VideoState::Uninit
+    }
+}
 
 impl VideoExtension for VideoState {
     unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()> {
@@ -74,7 +82,7 @@ impl VideoExtension for VideoState {
                     RenderMode::Vulkan => return Err(M64PError::Unsupported),
                 }
             }
-            _ => return Err(M64PError::AlreadyInit)
+            _ => return Err(M64PError::AlreadyInit),
         }
 
         Ok(())
@@ -195,6 +203,4 @@ impl VideoExtension for VideoState {
     }
 }
 
-static VIDEXT_INST: Mutex<VideoState> = Mutex::new(VideoState::Uninit);
-
-vidext_table!([VIDEXT_INST] pub VIDEXT_TABLE);
+vidext_table!(pub VIDEXT_TABLE: VideoState);

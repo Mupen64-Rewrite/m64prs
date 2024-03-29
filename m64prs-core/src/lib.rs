@@ -3,6 +3,7 @@ mod core;
 pub mod error;
 mod macros;
 pub mod types;
+pub mod reexports;
 
 pub use crate::core::{Core, Plugin};
 

@@ -144,19 +144,42 @@ impl OpenGlInitState {
         }
     }
 
-    pub(crate) fn generate_config_template(&self) -> ConfigTemplateBuilder {
+    pub(crate) fn generate_config_template(&self, bits_per_pixel: c_int) -> FFIResult<ConfigTemplateBuilder> {
         let mut builder = ConfigTemplateBuilder::new()
             .with_buffer_type(self.color_buffer_type)
             .with_alpha_size(self.alpha_size)
             .with_depth_size(self.depth_size)
             .with_multisampling(self.msaa_samples);
 
+        match bits_per_pixel {
+            32 => {
+                builder = builder
+                    .with_buffer_type(ColorBufferType::Rgb {
+                        r_size: 8,
+                        g_size: 8,
+                        b_size: 8,
+                    })
+                    .with_alpha_size(8);
+            }
+            24 => {
+                builder = builder
+                    .with_buffer_type(ColorBufferType::Rgb {
+                        r_size: 8,
+                        g_size: 8,
+                        b_size: 8,
+                    })
+                    .with_alpha_size(0);
+            }
+            0 => (),
+            _ => return Err(M64PError::InputAssert),
+        }
+
         builder = match self.swap_control {
             0u16 => builder.with_swap_interval(None, None),
             value => builder.with_swap_interval(Some(value), None),
         };
 
-        builder
+        Ok(builder)
     }
 
     pub(crate) fn generate_context_attributes(&self) -> ContextAttributesBuilder {
@@ -216,7 +239,7 @@ impl OpenGlActiveState {
                     .with_transparent(true)
                     .with_inner_size(LogicalSize::new(params.width, params.height));
 
-                let template_builder = state.generate_config_template();
+                let template_builder = state.generate_config_template(params.bits_per_pixel)?;
                 let (window, gl_config) = glutin_winit::DisplayBuilder::new()
                     .with_window_builder(Some(window_builder))
                     .build(&event_loop, template_builder, |mut iter| {

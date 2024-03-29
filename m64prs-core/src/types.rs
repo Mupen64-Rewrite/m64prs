@@ -19,7 +19,7 @@ pub type FFIResult<T> = Result<T, M64PError>;
 
 /// Trait for implementing the video extension. The function APIs have been Rustified for convenience.
 /// The functions in this trait are unsafe, as there are some thread-safety guarantees that need to be upheld from Mupen's side.
-pub trait VideoExtension {
+pub trait VideoExtension: Default {
     /// Initializes the video extension with the specified graphics API.
     unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()>;
     /// Shuts down the video extension.
