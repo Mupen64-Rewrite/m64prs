@@ -249,7 +249,7 @@ impl Core {
 
     /// Overrides the functions used by graphics plugins to setup a window and OpenGL/Vulkan context.
     ///
-    /// The typical way of acquiring a [`ctypes::VideoExtensionFunctions`] is to generate it
+    /// The typical way of acquiring a [`m64prs_sys::VideoExtensionFunctions`] is to generate it
     /// via the [`vidext_table!()`][`crate::vidext_table!`] macro and [`VideoExtension`][`crate::types::VideoExtension`] trait.
     pub fn override_vidext(
         &mut self,
