@@ -144,7 +144,10 @@ impl OpenGlInitState {
         }
     }
 
-    pub(crate) fn generate_config_template(&self, bits_per_pixel: c_int) -> FFIResult<ConfigTemplateBuilder> {
+    pub(crate) fn generate_config_template(
+        &self,
+        bits_per_pixel: c_int,
+    ) -> FFIResult<ConfigTemplateBuilder> {
         let mut builder = ConfigTemplateBuilder::new()
             .with_buffer_type(self.color_buffer_type)
             .with_alpha_size(self.alpha_size)

@@ -4,8 +4,7 @@ use m64prs_core::{
     vidext_table,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
-use send_wrapper::SendWrapper;
-use std::{cell::RefMut, ops::DerefMut, sync::{Mutex, MutexGuard}};
+
 use std::{
     cell::RefCell,
     ffi::{c_char, c_int, c_void, CStr},

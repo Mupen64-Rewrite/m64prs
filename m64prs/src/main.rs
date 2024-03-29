@@ -1,6 +1,5 @@
 use std::{path::PathBuf, sync::Arc};
 
-
 use m64prs_core::{Core, Plugin};
 
 mod vidext;

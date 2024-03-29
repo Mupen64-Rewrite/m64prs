@@ -14,7 +14,10 @@ use log::{log, Level};
 
 use crate::{error::CoreError, types::APIVersion};
 
-use m64prs_sys::{api::{BasePluginApi, FullCoreApi}, Command, CoreParam, MsgLevel, PluginType};
+use m64prs_sys::{
+    api::{BasePluginApi, FullCoreApi},
+    Command, CoreParam, MsgLevel, PluginType,
+};
 
 use crate::error::Result as CoreResult;
 
@@ -91,8 +94,8 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
-        let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
-            .map_err(CoreError::Library)?;
+        let api =
+            unsafe { Container::<FullCoreApi>::load(path.as_ref()) }.map_err(CoreError::Library)?;
 
         let (save_tx, save_rx) = mpsc::channel();
 

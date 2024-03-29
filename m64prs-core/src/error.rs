@@ -1,5 +1,3 @@
-use std::ffi::c_uint;
-
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 

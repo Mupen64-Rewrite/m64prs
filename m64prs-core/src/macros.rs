@@ -38,7 +38,7 @@ macro_rules! __try_ffi_result {
 }
 
 /// Utility macro for generating a function table from a static object implementing [`VideoExtension`][crate::types::VideoExtension].
-/// 
+///
 /// # Syntax
 /// ```ignore
 /// vidext_table!([&mut instance_expr()] pub TABLE_NAME)
@@ -46,16 +46,16 @@ macro_rules! __try_ffi_result {
 /// - The brackets must contain an expression evaluating to a value of type `&mut impl DerefMut<Target = impl VideoExtension>`.
 /// - It is expected that the bracketed expression references the same object each time it is called. Not doing so is undefined behaviour.
 /// - The resulting table is a static object. It may be encapsulated in a method if desired.
-/// 
+///
 /// ```ignore
 /// vidext_table!(pub TABLE_NAME: Type)
 /// ```
 /// - The type must be `impl VideoExtension`.
 /// - The visibility qualifier may be omitted.
-/// - The resulting wrapper assumes that the object isn't thread-safe; attempting to use the video extension 
+/// - The resulting wrapper assumes that the object isn't thread-safe; attempting to use the video extension
 /// outside of the thread it was first created on results in a panic.
 /// - The resulting table is a static object. It may be encapsulated in a method if desired.
-/// 
+///
 /// ```ignore
 /// vidext_table!(pub thread_safe TABLE_NAME: Type)
 /// ```
@@ -166,7 +166,7 @@ macro_rules! __try_ffi_result {
 /// #        todo!()
 /// #    }
 /// }
-/// 
+///
 /// vidext_table!(pub VIDEXT_TABLE: VidextState);
 /// ```
 #[macro_export]
