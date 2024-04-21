@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{io, path::PathBuf, sync::Arc};
 
 use m64prs_core::{Core, Plugin};
 
@@ -25,5 +25,15 @@ fn main() {
 
     let core = Arc::new(core);
 
+    let waiter_thread = {
+        let core = Arc::clone(&core);
+        std::thread::spawn(move || {
+            let mut line = String::new();
+            io::stdin().read_line(&mut line).unwrap();
+            core.stop().unwrap();
+        })
+    };
+
     core.execute().unwrap();
+    waiter_thread.join().unwrap();
 }

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dlopen2 = { git = "https://github.com/jgcodes2020/dlopen2.git" }
+dlopen2 = "0.7.0"
 num_enum = "0.7.2"
 bitflags = "2.5.0"
 

@@ -7,11 +7,13 @@ include!(concat!(env!("OUT_DIR"), "/types.gen.rs"));
 
 // BUTTONS
 
-#[cfg(any(target_arch = "x86_64"))]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 bitflags! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     #[repr(C)]
     pub struct ButtonFlags: u16 {
+        const NONE = 0;
+
         const D_RIGHT = 1 << 0;
         const D_LEFT = 1 << 1;
         const D_DOWN = 1 << 2;
@@ -35,7 +37,7 @@ bitflags! {
     }
 }
 
-#[cfg(any(target_arch = "x86_64"))]
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C, align(4))]
 pub struct Buttons {
@@ -44,7 +46,7 @@ pub struct Buttons {
     pub y_axis: i8,
 }
 
-#[cfg(not(any(target_arch = "x86_64")))]
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 compile_error!("The layout of `struct Buttons` has not been tested on this platform. Submit a PR if either the layout works or you can make it work.");
 
 impl From<u32> for Buttons {
@@ -90,7 +92,10 @@ bitflags! {
 mod tests {
     use std::{mem::MaybeUninit, ptr::addr_of};
 
-    use crate::types::{Buttons, Error};
+    use crate::{
+        types::{Buttons, Error},
+        ButtonFlags,
+    };
 
     #[test]
     fn test_button_layout() {
@@ -103,7 +108,7 @@ mod tests {
         unsafe { test_button_fields(ptr) };
     }
 
-    #[cfg(any(target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     unsafe fn test_button_fields(ptr: *const Buttons) {
         assert_eq!(
             addr_of!((*ptr).button_bits) as usize - ptr as usize,
@@ -127,5 +132,36 @@ mod tests {
         let err = Error::InputNotFound;
         let res: u32 = err.into();
         let _err2: Error = res.try_into().unwrap();
+    }
+
+    #[test]
+    fn test_button_conversion() {
+        assert_eq!(
+            u32::from(Buttons {
+                button_bits: ButtonFlags::NONE,
+                x_axis: 127,
+                y_axis: 127
+            }),
+            0x7F7F0000u32,
+            "positive axes"
+        );
+        assert_eq!(
+            u32::from(Buttons {
+                button_bits: ButtonFlags::NONE,
+                x_axis: -1,
+                y_axis: -1
+            }),
+            0xFFFF0000u32,
+            "negative axes"
+        );
+        assert_eq!(
+            u32::from(Buttons {
+                button_bits: ButtonFlags::Z | ButtonFlags::A | ButtonFlags::C_LEFT,
+                x_axis: 0,
+                y_axis: 0
+            }),
+            0x00002A0u32,
+            "a few buttons"
+        );
     }
 }

@@ -4,54 +4,19 @@ use m64prs_core::{
     vidext_table,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
+use send_wrapper::SendWrapper;
 
 use std::{
     cell::RefCell,
     ffi::{c_char, c_int, c_void, CStr},
     sync::OnceLock,
-    thread::{self, ThreadId},
 };
 use winit::event_loop::{EventLoop, EventLoopBuilder};
 
 mod opengl;
 use opengl::*;
 
-/// A thread-safe, overly-protective wrapper around the event loop.
-struct SafeEventLoop<T: 'static> {
-    event_loop: RefCell<EventLoop<T>>,
-    src_thread: ThreadId,
-}
-
-impl<T: 'static> SafeEventLoop<T> {
-    pub fn new() -> Self {
-        let event_loop = EventLoopBuilder::<T>::with_user_event()
-            .build()
-            .expect("Event loop creation failed!");
-        let src_thread = thread::current().id();
-
-        Self {
-            event_loop: RefCell::new(event_loop),
-            src_thread,
-        }
-    }
-
-    pub fn is_src_thread(&self) -> bool {
-        thread::current().id() != self.src_thread
-    }
-
-    pub fn with<R>(&self, f: impl FnOnce(&mut EventLoop<T>) -> R) -> Result<R, ()> {
-        if thread::current().id() != self.src_thread {
-            Err(())
-        } else {
-            Ok(f(&mut self.event_loop.borrow_mut()))
-        }
-    }
-}
-
-unsafe impl<T> Send for SafeEventLoop<T> {}
-unsafe impl<T> Sync for SafeEventLoop<T> {}
-
-static EVENT_LOOP: OnceLock<SafeEventLoop<()>> = OnceLock::new();
+static EVENT_LOOP: OnceLock<SendWrapper<RefCell<EventLoop<()>>>> = OnceLock::new();
 
 enum VideoState {
     Uninit,
@@ -72,7 +37,9 @@ impl VideoExtension for VideoState {
     unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()> {
         match self {
             VideoState::Uninit => {
-                let _event_loop = EVENT_LOOP.get_or_init(|| SafeEventLoop::new());
+                let _event_loop = EVENT_LOOP.get_or_init(|| {
+                    SendWrapper::new(RefCell::new(EventLoopBuilder::new().build().unwrap()))
+                });
 
                 match mode {
                     RenderMode::OpenGl => {

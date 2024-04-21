@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
+    ffi::{c_char, c_int, c_uint, c_void, CStr},
     fs,
     path::Path,
     pin::Pin,
@@ -25,7 +25,7 @@ use self::save::{SavestateWaitManager, SavestateWaiter};
 
 mod save;
 
-#[inline]
+#[inline(always)]
 fn core_fn(err: m64prs_sys::Error) -> CoreResult<()> {
     match err {
         m64prs_sys::Error::Success => Ok(()),
@@ -42,6 +42,17 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
         MsgLevel::Status => Level::Debug,
         MsgLevel::Verbose => Level::Trace,
         _ => panic!("Received invalid message level {}", level),
+    };
+    log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
+}
+#[allow(unused)]
+unsafe extern "C" fn vcr_debug_callback(level: MsgLevel, message: *const c_char) {
+    let log_level = match level {
+        MsgLevel::Error => Level::Error,
+        MsgLevel::Warning => Level::Warn,
+        MsgLevel::Info => Level::Info,
+        MsgLevel::Status => Level::Debug,
+        MsgLevel::Verbose => Level::Trace,
     };
     log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
 }
@@ -109,17 +120,20 @@ impl Core {
             save_mutex: AsyncMutex::new(()),
         };
 
-        core_fn(unsafe {
-            core.api.core.startup(
-                0x02_01_00,
-                null(),
-                null(),
-                null_mut(),
-                debug_callback,
-                &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
-                state_callback,
-            )
-        })?;
+        unsafe {
+            core_fn(
+                core.api.core.startup(
+                    0x02_01_00,
+                    null(),
+                    null(),
+                    null_mut(),
+                    debug_callback,
+                    &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
+                    state_callback,
+                )
+            )?;
+            core.api.vcr.set_error_callback(vcr_debug_callback)
+        };
 
         *guard = true;
         Ok(core)
@@ -292,6 +306,22 @@ impl Core {
         core_fn(unsafe { self.api.core.do_command(Command::RomClose, 0, null_mut()) })
     }
 
+    pub fn set_frame_callback(&mut self, callback: unsafe extern "C" fn(c_uint)) -> CoreResult<()> {
+        core_fn(unsafe {
+            self.api.core.do_command(Command::SetFrameCallback, 0, {
+                callback as *const c_void as *mut c_void
+            })
+        })
+    }
+
+    pub fn clear_frame_callback(&mut self) -> CoreResult<()> {
+        core_fn(unsafe {
+            self.api
+                .core
+                .do_command(Command::SetFrameCallback, 0, null_mut())
+        })
+    }
+
     /// Executes the currently-open ROM.
     pub fn execute(&self) -> CoreResult<()> {
         core_fn(unsafe { self.api.core.do_command(Command::Execute, 0, null_mut()) })
@@ -367,6 +397,9 @@ impl Core {
 
         future
     }
+}
+
+impl Core {
 }
 
 /// Holds a loaded instance of a Mupen64Plus plugin.

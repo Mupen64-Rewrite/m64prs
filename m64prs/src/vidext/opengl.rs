@@ -9,7 +9,7 @@ use glutin::{
     config::{ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
     context::{
         ContextApi, ContextAttributesBuilder, GlContext, GlProfile, NotCurrentGlContext,
-        PossiblyCurrentContext, PossiblyCurrentGlContext, Version,
+        PossiblyCurrentContext, Version,
     },
     display::{GetGlDisplay, GlDisplay},
     surface::{GlSurface, Surface, SurfaceAttributesBuilder, SwapInterval, WindowSurface},
@@ -234,73 +234,72 @@ impl OpenGlActiveState {
         if params.screen_mode != VideoMode::Windowed {
             return Err(M64PError::Unsupported);
         }
+        // this is to silence a usage warning, in case Mupen actually wants to use this
+        let _ = params.video_flags;
 
-        let event_loop = EVENT_LOOP.get().ok_or(M64PError::Internal)?;
-        event_loop
-            .with(|event_loop| -> FFIResult<OpenGlActiveState> {
-                let window_builder = WindowBuilder::new()
-                    .with_transparent(true)
-                    .with_inner_size(LogicalSize::new(params.width, params.height));
+        let event_loop_cell = EVENT_LOOP.get().ok_or(M64PError::Internal)?;
+        let event_loop = event_loop_cell.borrow_mut();
 
-                let template_builder = state.generate_config_template(params.bits_per_pixel)?;
-                let (window, gl_config) = glutin_winit::DisplayBuilder::new()
-                    .with_window_builder(Some(window_builder))
-                    .build(&event_loop, template_builder, |mut iter| {
-                        iter.next().unwrap()
-                    })
-                    .map_err(|_| M64PError::SystemFail)?;
+        let window_builder = WindowBuilder::new()
+            .with_transparent(true)
+            .with_inner_size(LogicalSize::new(params.width, params.height));
 
-                let window = window.ok_or(M64PError::SystemFail)?;
-                window.set_cursor_visible(false);
-                let window_handle = window.raw_window_handle();
-
-                let gl_display = gl_config.display();
-                let gl_context = unsafe {
-                    gl_display
-                        .create_context(
-                            &gl_config,
-                            &state
-                                .generate_context_attributes()
-                                .build(Some(window_handle)),
-                        )
-                        .map_err(|_| M64PError::SystemFail)?
-                };
-                let gl_surface = unsafe {
-                    gl_display
-                        .create_window_surface(
-                            &gl_config,
-                            &window.build_surface_attributes(state.generate_surface_attributes()),
-                        )
-                        .map_err(|_| M64PError::SystemFail)?
-                };
-                let gl_context = gl_context
-                    .make_current(&gl_surface)
-                    .map_err(|_| M64PError::SystemFail)?;
-
-                let swap_interval = match state.swap_control {
-                    0 => SwapInterval::DontWait,
-                    1.. => SwapInterval::Wait(NonZeroU32::new(1).unwrap()),
-                };
-                if let Err(_) = gl_surface.set_swap_interval(&gl_context, swap_interval) {
-                    warn!("Failed to set swap interval. Plugin may not behave as intended.");
-                }
-
-                // This is necessary to distinguish core from compatibility contexts.
-                {
-                    let load_fn = |ptr: &'static str| {
-                        gl_display.get_proc_address(&CString::new(ptr).unwrap())
-                    };
-                    gl::GetIntegerv::load_with(load_fn);
-                }
-
-                Ok(OpenGlActiveState {
-                    window: window,
-                    surface: gl_surface,
-                    context: gl_context,
-                    swap_interval,
-                })
+        let template_builder = state.generate_config_template(params.bits_per_pixel)?;
+        let (window, gl_config) = glutin_winit::DisplayBuilder::new()
+            .with_window_builder(Some(window_builder))
+            .build(&event_loop, template_builder, |mut iter| {
+                iter.next().unwrap()
             })
-            .map_err(|_| M64PError::Internal)?
+            .map_err(|_| M64PError::SystemFail)?;
+
+        let window = window.ok_or(M64PError::SystemFail)?;
+        window.set_cursor_visible(false);
+        let window_handle = window.raw_window_handle();
+
+        let gl_display = gl_config.display();
+        let gl_context = unsafe {
+            gl_display
+                .create_context(
+                    &gl_config,
+                    &state
+                        .generate_context_attributes()
+                        .build(Some(window_handle)),
+                )
+                .map_err(|_| M64PError::SystemFail)?
+        };
+        let gl_surface = unsafe {
+            gl_display
+                .create_window_surface(
+                    &gl_config,
+                    &window.build_surface_attributes(state.generate_surface_attributes()),
+                )
+                .map_err(|_| M64PError::SystemFail)?
+        };
+        let gl_context = gl_context
+            .make_current(&gl_surface)
+            .map_err(|_| M64PError::SystemFail)?;
+
+        let swap_interval = match state.swap_control {
+            0 => SwapInterval::DontWait,
+            1.. => SwapInterval::Wait(NonZeroU32::new(1).unwrap()),
+        };
+        if let Err(_) = gl_surface.set_swap_interval(&gl_context, swap_interval) {
+            warn!("Failed to set swap interval. Plugin may not behave as intended.");
+        }
+
+        // This is necessary to distinguish core from compatibility contexts.
+        {
+            let load_fn =
+                |ptr: &'static str| gl_display.get_proc_address(&CString::new(ptr).unwrap());
+            gl::GetIntegerv::load_with(load_fn);
+        }
+
+        Ok(OpenGlActiveState {
+            window: window,
+            surface: gl_surface,
+            context: gl_context,
+            swap_interval,
+        })
     }
 
     pub(crate) fn swap_buffers(&mut self) -> FFIResult<()> {
@@ -308,35 +307,32 @@ impl OpenGlActiveState {
 
         let id = self.window.id();
 
-        EVENT_LOOP
-            .get()
-            .unwrap()
-            .with(|event_loop| {
-                event_loop.pump_events(Some(Duration::ZERO), |event, _| {
-                    // println!("{:?}", event);
-                    match event {
-                        Event::WindowEvent { window_id, event } => match event {
-                            WindowEvent::Resized(size) => {
-                                if size.width != 0 && size.height != 0 {
-                                    self.surface.resize(
-                                        &self.context,
-                                        NonZeroU32::new(size.width).unwrap(),
-                                        NonZeroU32::new(size.height).unwrap(),
-                                    );
-                                }
-                            }
-                            WindowEvent::RedrawRequested => {
-                                if id == window_id {
-                                    self.surface.swap_buffers(&self.context).unwrap();
-                                }
-                            }
-                            _ => (),
-                        },
-                        _ => (),
+        let event_loop_cell = EVENT_LOOP.get().ok_or(M64PError::Internal)?;
+        let mut event_loop = event_loop_cell.borrow_mut();
+
+        event_loop.pump_events(Some(Duration::ZERO), |event, _| {
+            // println!("{:?}", event);
+            match event {
+                Event::WindowEvent { window_id, event } => match event {
+                    WindowEvent::Resized(size) => {
+                        if size.width != 0 && size.height != 0 {
+                            self.surface.resize(
+                                &self.context,
+                                NonZeroU32::new(size.width).unwrap(),
+                                NonZeroU32::new(size.height).unwrap(),
+                            );
+                        }
                     }
-                });
-            })
-            .map_err(|_| M64PError::Internal)?;
+                    WindowEvent::RedrawRequested => {
+                        if id == window_id {
+                            self.surface.swap_buffers(&self.context).unwrap();
+                        }
+                    }
+                    _ => (),
+                },
+                _ => (),
+            }
+        });
 
         Ok(())
     }

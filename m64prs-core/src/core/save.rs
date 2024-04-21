@@ -11,13 +11,13 @@ use m64prs_sys::CoreParam;
 use crate::error::{CoreError, Result as CoreResult};
 
 /// Class that waits for a state change and resolves a savestate future.
-pub(super) struct SavestateWaiter {
+pub(crate) struct SavestateWaiter {
     core_param: CoreParam,
     tx: oneshot::Sender<bool>,
 }
 
 /// Future implementation for savestates operations.
-pub struct SavestateFuture {
+pub(crate) struct SavestateFuture {
     core_param: CoreParam,
     early_fail: Option<CoreError>,
     rx: oneshot::Receiver<bool>,
@@ -49,12 +49,12 @@ impl Future for SavestateFuture {
 }
 
 impl SavestateFuture {
-    pub(super) fn fail_early(&mut self, error: CoreError) {
+    pub(crate) fn fail_early(&mut self, error: CoreError) {
         self.early_fail = Some(error);
     }
 }
 
-pub(super) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) {
+pub(crate) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) {
     let (tx, rx) = oneshot::channel();
     (
         SavestateFuture {
@@ -69,7 +69,7 @@ pub(super) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) 
     )
 }
 
-pub(super) struct SavestateWaitManager {
+pub(crate) struct SavestateWaitManager {
     rx: mpsc::Receiver<SavestateWaiter>,
     waiters: Vec<SavestateWaiter>,
 }
