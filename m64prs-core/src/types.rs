@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_void, CStr};
+use std::ffi::{c_char, c_int, c_uint, c_void, CStr};
 
 use crate::error::M64PError;
 
@@ -72,4 +72,14 @@ pub trait VideoExtension: Default {
     unsafe fn vk_get_surface(&mut self, inst: vk::Instance) -> FFIResult<vk::SurfaceKHR>;
     /// Lists the extensions needed to use [`VideoExtension::vk_get_surface`]
     unsafe fn vk_get_instance_extensions(&mut self) -> FFIResult<&'static [*const c_char]>;
+}
+
+/// Represents a controller port on the N64. Used for VCR input functions.
+#[derive(Debug, Clone, Copy, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+#[repr(u32)]
+pub enum ControllerPort {
+    Port1 = 0,
+    Port2 = 1,
+    Port3 = 2,
+    Port4 = 3,
 }

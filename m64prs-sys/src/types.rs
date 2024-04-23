@@ -46,6 +46,10 @@ pub struct Buttons {
     pub y_axis: i8,
 }
 
+impl Buttons {
+    pub const BLANK: Buttons = Buttons { button_bits: ButtonFlags::NONE, x_axis: 0, y_axis: 0 };
+}
+
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 compile_error!("The layout of `struct Buttons` has not been tested on this platform. Submit a PR if either the layout works or you can make it work.");
 

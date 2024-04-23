@@ -90,4 +90,5 @@ pub enum CoreError {
     SaveStateFailed,
 }
 
+/// Result type used for most Mupen64Plus functions.
 pub type Result<T> = ::std::result::Result<T, CoreError>;
