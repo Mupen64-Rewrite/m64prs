@@ -7,7 +7,6 @@ use crate::types::*;
 #[derive(WrapperMultiApi)]
 pub struct FullCoreApi {
     pub core: CoreBaseApi,
-    pub vcr: CoreVcrApi,
 }
 
 #[derive(WrapperApi)]
@@ -53,52 +52,6 @@ pub struct CoreBaseApi {
     #[dlopen2_name = "CoreOverrideVidExt"]
     override_vidext:
         unsafe extern "C" fn(video_function_struct: *mut VideoExtensionFunctions) -> Error,
-}
-#[derive(WrapperApi)]
-pub struct CoreVcrApi {
-    #[dlopen2_name = "VCR_SetErrorCallback"]
-    set_error_callback:
-        unsafe extern "C" fn(callb: unsafe extern "C" fn(lvl: MsgLevel, msg: *const c_char)),
-    #[dlopen2_name = "VCR_SetStateCallback"]
-    set_state_callback:
-        unsafe extern "C" fn(callb: unsafe extern "C" fn(param: VcrParam, value: c_int)),
-    #[dlopen2_name = "VCR_GetCurFrame"]
-    get_cur_frame: unsafe extern "C" fn() -> c_uint,
-
-    #[dlopen2_name = "VCR_StopMovie"]
-    stop_movie: unsafe extern "C" fn(restart: c_int),
-
-    #[dlopen2_name = "VCR_SetOverlay"]
-    set_overlay: unsafe extern "C" fn(keys: Buttons, channel: c_uint),
-
-    #[dlopen2_name = "VCR_GetKeys"]
-    get_keys: unsafe extern "C" fn(keys: *mut Buttons, channel: c_uint) -> c_int,
-
-    #[dlopen2_name = "VCR_IsPlaying"]
-    is_playing: unsafe extern "C" fn() -> c_int,
-
-    #[dlopen2_name = "VCR_AdvanceFrame"]
-    advance_frame: unsafe extern "C" fn() -> c_int,
-
-    #[dlopen2_name = "VCR_ResetOverlay"]
-    reset_overlay: unsafe extern "C" fn(),
-
-    #[dlopen2_name = "VCR_IsReadOnly"]
-    is_read_only: unsafe extern "C" fn() -> c_int,
-
-    #[dlopen2_name = "VCR_SetReadOnly"]
-    set_read_only: unsafe extern "C" fn(read_only: c_int) -> c_int,
-
-    #[dlopen2_name = "VCR_StartRecording"]
-    start_recording: unsafe extern "C" fn(
-        path: *const c_char,
-        author: *const c_char,
-        description: *const c_char,
-        start_type: VcrStartType,
-    ) -> Error,
-
-    #[dlopen2_name = "VCR_StartMovie"]
-    start_movie: unsafe extern "C" fn(path: *const c_char) -> Error,
 }
 
 #[derive(WrapperApi)]

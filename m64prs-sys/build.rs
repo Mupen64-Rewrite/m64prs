@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_vcr.h", "m64p_plugin.h"];
+const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_tas.h", "m64p_plugin.h"];
 const CORE_RR_BITFLAGS: [&str; 2] = ["m64p_core_caps", "m64p_video_flags"];
 const CORE_RR_BITFLAGS_RUST: [&str; 2] = ["CoreCaps", "VideoFlags"];
 
@@ -165,6 +165,9 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
     let core_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../mupen64plus-core-rr");
+    if !core_dir.exists() {
+        panic!("Core directory does not exist!");
+    }
     run_bindgen(&core_dir)?;
 
     Ok(())

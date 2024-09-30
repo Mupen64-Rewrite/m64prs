@@ -123,18 +123,18 @@ impl Core {
             save_mutex: AsyncMutex::new(()),
         };
 
-        unsafe {
-            core_fn(core.api.core.startup(
-                0x02_01_00,
-                null(),
-                null(),
-                null_mut(),
-                debug_callback,
-                &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
-                state_callback,
-            ))?;
-            core.api.vcr.set_error_callback(vcr_debug_callback)
-        };
+        // unsafe {
+        //     core_fn(core.api.core.startup(
+        //         0x02_01_00,
+        //         null(),
+        //         null(),
+        //         null_mut(),
+        //         debug_callback,
+        //         &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
+        //         state_callback,
+        //     ))?;
+        //     core.api.vcr.set_error_callback(vcr_debug_callback)
+        // };
 
         *guard = true;
         Ok(core)
@@ -404,27 +404,27 @@ impl Core {
 }
 
 // VCR
-impl Core {
-    /// Gets the input that will be used on the next frame. The returned tuple contains:
-    /// - A [`Buttons`] containing the inputs.
-    /// - A `bool` which is true if the input was overridden via [`Core::set_overlay`].
-    pub fn get_input(&self, port: ControllerPort) -> (Buttons, bool) {
-        let mut buttons = Buttons::BLANK;
-        let is_overlay = unsafe { self.api.vcr.get_keys(&mut buttons, port.into()) };
-        (buttons, is_overlay != 0)
-    }
+// impl Core {
+//     /// Gets the input that will be used on the next frame. The returned tuple contains:
+//     /// - A [`Buttons`] containing the inputs.
+//     /// - A `bool` which is true if the input was overridden via [`Core::set_overlay`].
+//     pub fn get_input(&self, port: ControllerPort) -> (Buttons, bool) {
+//         let mut buttons = Buttons::BLANK;
+//         let is_overlay = unsafe { self.api.vcr.get_keys(&mut buttons, port.into()) };
+//         (buttons, is_overlay != 0)
+//     }
 
-    /// Overrides the input for a specific port for the next frame. You may remove an overlay
-    /// by calling [`Core::reset_overlay`].
-    pub fn set_overlay(&self, inputs: Buttons, port: ControllerPort) {
-        unsafe { self.api.vcr.set_overlay(inputs, port.into()) };
-    }
+//     /// Overrides the input for a specific port for the next frame. You may remove an overlay
+//     /// by calling [`Core::reset_overlay`].
+//     pub fn set_overlay(&self, inputs: Buttons, port: ControllerPort) {
+//         unsafe { self.api.vcr.set_overlay(inputs, port.into()) };
+//     }
 
-    /// Resets all input overrides set with [`Core::set_overlay`]
-    pub fn reset_overlay(&self) {
-        unsafe { self.api.vcr.reset_overlay() };
-    }
-}
+//     /// Resets all input overrides set with [`Core::set_overlay`]
+//     pub fn reset_overlay(&self) {
+//         unsafe { self.api.vcr.reset_overlay() };
+//     }
+// }
 
 /// Holds a loaded instance of a Mupen64Plus plugin.
 ///
