@@ -13,5 +13,5 @@ bitflags = "2.5.0"
 [build-dependencies]
 
 bindgen = "0.69.4"
-gix = "0.66.0"
+# gix = "0.66.0"
 heck = "0.4.1"
