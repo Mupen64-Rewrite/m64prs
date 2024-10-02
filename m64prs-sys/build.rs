@@ -20,6 +20,7 @@ impl ParseCallbacks for M64PParseCallbacks {
             "m64p_2d_size" => Some("Size2D".to_owned()),
             "m64p_GLattr" => Some("GLAttribute".to_owned()),
             "m64p_GLContextType" => Some("GLContextType".to_owned()),
+            "BUTTONS" => Some("Buttons".to_owned()),
             // other items
             item if item.starts_with("m64p_") => Some(original_item_name[5..].to_pascal_case()),
             _ => None,
@@ -137,16 +138,18 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         .blocklist_type(r"ptr_.*")
         .blocklist_function(".*");
 
+
+
     // blocklist BUTTONS specifically
     builder = builder.blocklist_type(r"BUTTONS");
 
+    // blocklist bitflag enums so I can give them the bitflags! treatment
+    for name in CORE_RR_BITFLAGS {
+        builder = builder.blocklist_type(name);
+    }
+
     // Add extern crate for num_enum
     builder = builder.raw_line("extern crate num_enum;");
-
-    // add bitflag enums
-    for name in CORE_RR_BITFLAGS {
-        builder = builder.bitfield_enum(name);
-    }
 
     // add headers
     for header in CORE_RR_HEADERS {

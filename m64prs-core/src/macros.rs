@@ -243,7 +243,7 @@ macro_rules! vidext_table {
                         Ok(val) => val,
                         Err(_) => return ::m64prs_sys::Error::InputAssert
                     },
-                    ::m64prs_sys::VideoFlags(flags as u32)
+                    ::m64prs_sys::VideoFlags::from_bits_retain(flags as u32)
                 ));
                 ::m64prs_sys::Error::Success
             }),
@@ -264,7 +264,7 @@ macro_rules! vidext_table {
                         Ok(val) => val,
                         Err(_) => return ::m64prs_sys::Error::InputAssert
                     },
-                    ::m64prs_sys::VideoFlags(flags as u32)
+                    ::m64prs_sys::VideoFlags::from_bits_retain(flags as u32)
                 ));
                 ::m64prs_sys::Error::Success
             }),

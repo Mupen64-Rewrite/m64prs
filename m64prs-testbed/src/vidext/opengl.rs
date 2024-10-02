@@ -1,422 +1,653 @@
 use std::{
-    ffi::{c_int, c_uint, c_void, CStr, CString},
+    ffi::{c_int, c_void, CStr, CString},
+    mem,
     num::NonZeroU32,
+    ptr::null_mut,
+    sync::Arc,
     time::Duration,
 };
 
-use gl::types::{GLenum, GLint};
+mod gl {
+    include!(concat!(env!("OUT_DIR"), "/opengl.gen.rs"));
+}
+
+use gl::{
+    types::{GLenum, GLint},
+    Gl,
+};
 use glutin::{
-    config::{ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
-    context::{
-        ContextApi, ContextAttributesBuilder, GlContext, GlProfile, NotCurrentGlContext,
-        PossiblyCurrentContext, Version,
-    },
-    display::{GetGlDisplay, GlDisplay},
-    surface::{GlSurface, Surface, SurfaceAttributesBuilder, SwapInterval, WindowSurface},
+    config::{Api, ColorBufferType, Config, ConfigTemplateBuilder, GlConfig},
+    context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
+    display::{Display, GetGlDisplay},
+    prelude::{GlContext, GlDisplay, NotCurrentGlContext, PossiblyCurrentGlContext},
+    surface::{GlSurface, Surface, SurfaceAttributesBuilder, WindowSurface},
 };
-use glutin_winit::GlWindow;
-use log::warn;
-use m64prs_core::{error::M64PError, types::FFIResult};
-use m64prs_sys::{GLAttribute, GLContextType, VideoFlags, VideoMode};
-use rwh_05::HasRawWindowHandle;
+use glutin_winit::{DisplayBuilder, GlWindow};
+use m64prs_core::{
+    error::{CoreError, M64PError},
+    types::FFIResult,
+    Core,
+};
+use m64prs_sys::{Error, GLAttribute, GLContextType, VideoFlags, VideoMode};
+use raw_window_handle::HasWindowHandle;
+use std::sync::RwLock;
 use winit::{
-    dpi::LogicalSize,
-    event::{Event, WindowEvent},
-    platform::pump_events::EventLoopExtPumpEvents,
-    window::{Window, WindowBuilder},
+    application::ApplicationHandler,
+    dpi::PhysicalSize,
+    event::WindowEvent,
+    event_loop::EventLoop,
+    platform::pump_events::{EventLoopExtPumpEvents, PumpStatus},
+    window::Window,
 };
 
-use super::EVENT_LOOP;
+use super::VideoUserEvent;
 
-pub(super) struct OpenGlInitState {
-    color_buffer_type: ColorBufferType,
-    alpha_size: u8,
-    depth_size: u8,
+pub enum OpenGlEvent {}
+
+#[derive(Debug)]
+pub struct OpenGlInitState {
+    double_buffer: bool,
+    depth_bits: u8,
+    red_bits: u8,
+    green_bits: u8,
+    blue_bits: u8,
+    alpha_bits: u8,
     swap_control: u16,
-    msaa_samples: u8,
-    gl_version_major: u8,
-    gl_version_minor: u8,
-    context_type: GLContextType,
+    multisample_samples: u8,
+    gl_major_version: u8,
+    gl_minor_version: u8,
+    gl_context_type: GLContextType,
 }
 
 impl Default for OpenGlInitState {
     fn default() -> Self {
         Self {
-            color_buffer_type: ColorBufferType::Rgb {
-                r_size: 8u8,
-                g_size: 8u8,
-                b_size: 8u8,
-            },
-            alpha_size: 8u8,
-            depth_size: 24u8,
-            swap_control: 0u16,
-            msaa_samples: 1u8,
-            gl_version_major: 3u8,
-            gl_version_minor: 3u8,
-            context_type: GLContextType::Compatibility,
+            double_buffer: true,
+            depth_bits: 24,
+            red_bits: 8,
+            green_bits: 8,
+            blue_bits: 8,
+            alpha_bits: 8,
+            swap_control: 1,
+            multisample_samples: 0,
+            gl_major_version: 3,
+            gl_minor_version: 3,
+            gl_context_type: GLContextType::Compatibility,
         }
     }
 }
 
 impl OpenGlInitState {
-    pub(crate) fn set_attr(&mut self, attr: GLAttribute, value: c_int) -> FFIResult<()> {
+    fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> Result<(), M64PError> {
         match attr {
-            GLAttribute::Doublebuffer => {
-                if value == 0 {
-                    Err(M64PError::InputInvalid)
-                } else {
-                    Ok(())
+            GLAttribute::Doublebuffer => self.double_buffer = value != 0,
+            GLAttribute::BufferSize => match value {
+                32 => {
+                    self.red_bits = 8;
+                    self.green_bits = 8;
+                    self.blue_bits = 8;
+                    self.alpha_bits = 8;
                 }
-            }
-            GLAttribute::BufferSize => {
-                match value {
-                    32 => {
-                        self.color_buffer_type = ColorBufferType::Rgb {
-                            r_size: 8u8,
-                            g_size: 8u8,
-                            b_size: 8u8,
-                        };
-                        self.alpha_size = 8u8;
-                    }
-                    24 => {
-                        self.color_buffer_type = ColorBufferType::Rgb {
-                            r_size: 8u8,
-                            g_size: 8u8,
-                            b_size: 8u8,
-                        };
-                        self.alpha_size = 0u8;
-                    }
-                    _ => return Err(M64PError::InputAssert),
+                24 => {
+                    self.red_bits = 8;
+                    self.green_bits = 8;
+                    self.blue_bits = 8;
+                    self.alpha_bits = 8;
                 }
-                Ok(())
-            }
+                _ => return Err(M64PError::InputAssert),
+            },
             GLAttribute::DepthSize => {
-                self.depth_size = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                self.depth_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::RedSize => {
-                if let ColorBufferType::Rgb { r_size, .. } = &mut self.color_buffer_type {
-                    *r_size = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                }
-                Ok(())
+                self.red_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::GreenSize => {
-                if let ColorBufferType::Rgb { g_size, .. } = &mut self.color_buffer_type {
-                    *g_size = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                }
-                Ok(())
+                self.green_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::BlueSize => {
-                if let ColorBufferType::Rgb { b_size, .. } = &mut self.color_buffer_type {
-                    *b_size = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                }
-                Ok(())
+                self.blue_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::AlphaSize => {
-                self.alpha_size = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                self.alpha_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::SwapControl => {
                 self.swap_control = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
             }
-            GLAttribute::Multisamplebuffers => Ok(()),
+            GLAttribute::Multisamplebuffers => (),
             GLAttribute::Multisamplesamples => {
-                self.msaa_samples = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                if (value & (value - 1)) != 0 {
+                    return Err(M64PError::InputAssert);
+                }
+                self.multisample_samples = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
             GLAttribute::ContextMajorVersion => {
-                self.gl_version_major = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                self.gl_major_version = value.try_into().map_err(|_| M64PError::InputAssert)?
             }
             GLAttribute::ContextMinorVersion => {
-                self.gl_version_minor = value.try_into().map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                self.gl_minor_version = value.try_into().map_err(|_| M64PError::InputAssert)?
             }
             GLAttribute::ContextProfileMask => {
-                // You can't just do c_int -> GLContextType, so we do c_int -> c_uint -> GLContextType
-                self.context_type = c_uint::try_from(value)
-                    .map_err(|_| M64PError::InputAssert)?
+                self.gl_context_type = (value as u32)
                     .try_into()
-                    .map_err(|_| M64PError::InputAssert)?;
-                Ok(())
+                    .map_err(|_| M64PError::InputAssert)?
             }
         }
-    }
-
-    pub(crate) fn generate_config_template(
-        &self,
-        bits_per_pixel: c_int,
-    ) -> FFIResult<ConfigTemplateBuilder> {
-        let mut builder = ConfigTemplateBuilder::new()
-            .with_buffer_type(self.color_buffer_type)
-            .with_alpha_size(self.alpha_size)
-            .with_depth_size(self.depth_size)
-            .with_multisampling(self.msaa_samples);
-
-        match bits_per_pixel {
-            32 => {
-                builder = builder
-                    .with_buffer_type(ColorBufferType::Rgb {
-                        r_size: 8,
-                        g_size: 8,
-                        b_size: 8,
-                    })
-                    .with_alpha_size(8);
-            }
-            24 => {
-                builder = builder
-                    .with_buffer_type(ColorBufferType::Rgb {
-                        r_size: 8,
-                        g_size: 8,
-                        b_size: 8,
-                    })
-                    .with_alpha_size(0);
-            }
-            0 => (),
-            _ => return Err(M64PError::InputAssert),
-        }
-
-        builder = match self.swap_control {
-            0u16 => builder.with_swap_interval(None, None),
-            value => builder.with_swap_interval(Some(value), None),
-        };
-
-        Ok(builder)
-    }
-
-    pub(crate) fn generate_context_attributes(&self) -> ContextAttributesBuilder {
-        let builder = ContextAttributesBuilder::new();
-
-        match self.context_type {
-            GLContextType::Core => builder
-                .with_context_api(ContextApi::OpenGl(Some(Version {
-                    major: self.gl_version_major,
-                    minor: self.gl_version_minor,
-                })))
-                .with_profile(GlProfile::Core),
-            GLContextType::Compatibility => builder
-                .with_context_api(ContextApi::OpenGl(Some(Version {
-                    major: self.gl_version_major,
-                    minor: self.gl_version_minor,
-                })))
-                .with_profile(GlProfile::Compatibility),
-            GLContextType::Es => builder.with_context_api(ContextApi::Gles(Some(Version {
-                major: self.gl_version_major,
-                minor: self.gl_version_minor,
-            }))),
-        }
-    }
-
-    pub(crate) fn generate_surface_attributes(&self) -> SurfaceAttributesBuilder<WindowSurface> {
-        let builder = SurfaceAttributesBuilder::<WindowSurface>::new();
-        builder
-    }
-}
-
-pub(crate) struct OpenGlInitParams {
-    pub width: c_int,
-    pub height: c_int,
-    pub bits_per_pixel: c_int,
-    pub screen_mode: VideoMode,
-    pub video_flags: VideoFlags,
-}
-
-pub(crate) struct OpenGlActiveState {
-    window: Window,
-    surface: Surface<WindowSurface>,
-    context: PossiblyCurrentContext,
-    swap_interval: SwapInterval,
-}
-
-impl OpenGlActiveState {
-    pub(crate) fn init_from(state: &OpenGlInitState, params: OpenGlInitParams) -> FFIResult<Self> {
-        if params.screen_mode != VideoMode::Windowed {
-            return Err(M64PError::Unsupported);
-        }
-        // this is to silence a usage warning, in case Mupen actually wants to use this
-        let _ = params.video_flags;
-
-        let event_loop_cell = EVENT_LOOP.get().ok_or(M64PError::Internal)?;
-        let event_loop = event_loop_cell.borrow_mut();
-
-        let window_builder = WindowBuilder::new()
-            .with_transparent(true)
-            .with_inner_size(LogicalSize::new(params.width, params.height));
-
-        let template_builder = state.generate_config_template(params.bits_per_pixel)?;
-        let (window, gl_config) = glutin_winit::DisplayBuilder::new()
-            .with_window_builder(Some(window_builder))
-            .build(&event_loop, template_builder, |mut iter| {
-                iter.next().unwrap()
-            })
-            .map_err(|_| M64PError::SystemFail)?;
-
-        let window = window.ok_or(M64PError::SystemFail)?;
-        window.set_cursor_visible(false);
-        let window_handle = window.raw_window_handle();
-
-        let gl_display = gl_config.display();
-        let gl_context = unsafe {
-            gl_display
-                .create_context(
-                    &gl_config,
-                    &state
-                        .generate_context_attributes()
-                        .build(Some(window_handle)),
-                )
-                .map_err(|_| M64PError::SystemFail)?
-        };
-        let gl_surface = unsafe {
-            gl_display
-                .create_window_surface(
-                    &gl_config,
-                    &window.build_surface_attributes(state.generate_surface_attributes()),
-                )
-                .map_err(|_| M64PError::SystemFail)?
-        };
-        let gl_context = gl_context
-            .make_current(&gl_surface)
-            .map_err(|_| M64PError::SystemFail)?;
-
-        let swap_interval = match state.swap_control {
-            0 => SwapInterval::DontWait,
-            1.. => SwapInterval::Wait(NonZeroU32::new(1).unwrap()),
-        };
-        if let Err(_) = gl_surface.set_swap_interval(&gl_context, swap_interval) {
-            warn!("Failed to set swap interval. Plugin may not behave as intended.");
-        }
-
-        // This is necessary to distinguish core from compatibility contexts.
-        {
-            let load_fn =
-                |ptr: &'static str| gl_display.get_proc_address(&CString::new(ptr).unwrap());
-            gl::GetIntegerv::load_with(load_fn);
-        }
-
-        Ok(OpenGlActiveState {
-            window: window,
-            surface: gl_surface,
-            context: gl_context,
-            swap_interval,
-        })
-    }
-
-    pub(crate) fn swap_buffers(&mut self) -> FFIResult<()> {
-        self.window.request_redraw();
-
-        let id = self.window.id();
-
-        let event_loop_cell = EVENT_LOOP.get().ok_or(M64PError::Internal)?;
-        let mut event_loop = event_loop_cell.borrow_mut();
-
-        event_loop.pump_events(Some(Duration::ZERO), |event, _| {
-            // println!("{:?}", event);
-            match event {
-                Event::WindowEvent { window_id, event } => match event {
-                    WindowEvent::Resized(size) => {
-                        if size.width != 0 && size.height != 0 {
-                            self.surface.resize(
-                                &self.context,
-                                NonZeroU32::new(size.width).unwrap(),
-                                NonZeroU32::new(size.height).unwrap(),
-                            );
-                        }
-                    }
-                    WindowEvent::RedrawRequested => {
-                        if id == window_id {
-                            self.surface.swap_buffers(&self.context).unwrap();
-                        }
-                    }
-                    _ => (),
-                },
-                _ => (),
-            }
-        });
 
         Ok(())
     }
 
-    pub(crate) fn get_proc_address(&self, symbol: &CStr) -> *mut c_void {
-        self.context.display().get_proc_address(symbol) as *mut c_void
+    fn ready(
+        self,
+        core: Arc<RwLock<Core>>,
+        width: NonZeroU32,
+        height: NonZeroU32,
+        video_mode: VideoMode,
+        video_flags: VideoFlags,
+    ) -> Result<OpenGlReadyState, M64PError> {
+        Ok(OpenGlReadyState {
+            core,
+            init_state: self,
+            width,
+            height,
+            video_mode,
+            video_flags,
+        })
+    }
+}
+
+pub struct OpenGlReadyState {
+    init_state: OpenGlInitState,
+    core: Arc<RwLock<Core>>,
+    width: NonZeroU32,
+    height: NonZeroU32,
+    video_mode: VideoMode,
+    video_flags: VideoFlags,
+}
+
+impl OpenGlReadyState {
+    fn activate(
+        self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+    ) -> Result<OpenGlActiveState, M64PError> {
+        log::trace!("Creating window attributes");
+        // setup window and OpenGL config attributes
+        let mut window_attrs = Window::default_attributes()
+            .with_title("m64prs")
+            .with_transparent(true)
+            .with_inner_size(PhysicalSize::<u32>::new(
+                self.width.into(),
+                self.height.into(),
+            ));
+        if !self.video_flags.contains(VideoFlags::SUPPORT_RESIZING) {
+            window_attrs = window_attrs.with_resizable(false);
+        }
+
+        log::trace!("Creating OpenGL configuration");
+
+        let mut template = ConfigTemplateBuilder::new()
+            .with_buffer_type(glutin::config::ColorBufferType::Rgb {
+                r_size: self.init_state.red_bits,
+                g_size: self.init_state.green_bits,
+                b_size: self.init_state.blue_bits,
+            })
+            .with_alpha_size(self.init_state.alpha_bits)
+            .with_depth_size(self.init_state.depth_bits)
+            .with_stencil_size(8)
+            .with_swap_interval(
+                None,
+                if self.init_state.swap_control == 0 {
+                    None
+                } else {
+                    Some(self.init_state.swap_control)
+                },
+            )
+            .with_single_buffering(!self.init_state.double_buffer);
+
+        if self.init_state.multisample_samples > 0 {
+            template = template.with_multisampling(self.init_state.multisample_samples)
+        }
+
+        // build window and OpenGL config
+        log::debug!("Setting up window with OpenGL configuration");
+        let (window, gl_config) = DisplayBuilder::new()
+            .with_window_attributes(Some(window_attrs))
+            .build(event_loop, template, |mut configs| {
+                configs.next().expect("no configs? that's balls")
+            })
+            .map(|(window, gl_config)| (window.unwrap(), gl_config))
+            .map_err(|_| M64PError::SystemFail)?;
+
+        // acquire handles to init other OpenGL objects
+        log::trace!("Acquiring window and display handles");
+        let window_handle = window
+            .window_handle()
+            .map_err(|_| M64PError::SystemFail)?
+            .as_raw();
+        let gl_display = gl_config.display();
+
+        // setup OpenGL surface
+        log::debug!("Creating OpenGL surface attributes");
+        let surface_attrs = window
+            .build_surface_attributes(
+                SurfaceAttributesBuilder::<WindowSurface>::new()
+                    .with_single_buffer(!self.init_state.double_buffer),
+            )
+            .map_err(|_| M64PError::SystemFail)?;
+
+        log::debug!("Setting up OpenGL surface");
+        let gl_surface = unsafe { gl_display.create_window_surface(&gl_config, &surface_attrs) }
+            .map_err(|_| M64PError::SystemFail)?;
+
+        log::trace!("Creating OpenGL context attributes");
+        // setup OpenGL context
+        let context_attrs = match (
+            self.init_state.gl_context_type,
+            self.init_state.gl_major_version,
+        ) {
+            // For OpenGL < 3.0, profile doesn't make sense
+            (GLContextType::Core, ..=2) | (GLContextType::Compatibility, ..=2) => {
+                ContextAttributesBuilder::new().with_context_api(ContextApi::OpenGl(Some(
+                    Version {
+                        major: self.init_state.gl_major_version,
+                        minor: self.init_state.gl_minor_version,
+                    },
+                )))
+            }
+            // For OpenGL >= 3.0, it does
+            (GLContextType::Core, 3..) => ContextAttributesBuilder::new()
+                .with_context_api(ContextApi::OpenGl(Some(Version {
+                    major: self.init_state.gl_major_version,
+                    minor: self.init_state.gl_minor_version,
+                })))
+                .with_profile(GlProfile::Core),
+            (GLContextType::Compatibility, 3..) => ContextAttributesBuilder::new()
+                .with_context_api(ContextApi::OpenGl(Some(Version {
+                    major: self.init_state.gl_major_version,
+                    minor: self.init_state.gl_minor_version,
+                })))
+                .with_profile(GlProfile::Compatibility),
+            // OpenGL ES
+            (GLContextType::Es, _) => {
+                ContextAttributesBuilder::new().with_context_api(ContextApi::Gles(Some(Version {
+                    major: self.init_state.gl_major_version,
+                    minor: self.init_state.gl_minor_version,
+                })))
+            }
+        }
+        .build(Some(window_handle));
+
+        log::debug!("Creating OpenGL context");
+        // create OpenGL context and make it current
+        let gl_context = unsafe { gl_display.create_context(&gl_config, &context_attrs) }
+            .and_then(|context| context.make_current(&gl_surface))
+            .map_err(|_| M64PError::SystemFail)?;
+
+        log::debug!("Loading OpenGL functions");
+        let gl = gl::Gl::load_with(|s| {
+            gl_display
+                .get_proc_address(&CString::new(s).expect("invalid symbol found during loading"))
+        });
+
+        log::info!("OpenGL successfully started");
+        // transfer all objects we created to active state, also the core
+        Ok(OpenGlActiveState {
+            core: self.core,
+            window,
+            // saved parameters
+            video_flags: self.video_flags,
+            // OpenGL objects
+            gl,
+            gl_display,
+            gl_config,
+            gl_context,
+            gl_surface,
+        })
+    }
+}
+
+pub struct OpenGlActiveState {
+    core: Arc<RwLock<Core>>,
+    window: Window,
+    // saved parameters
+    video_flags: VideoFlags,
+    // OpenGL objects
+    gl: Gl,
+    gl_display: Display,
+    gl_config: Config,
+    gl_context: PossiblyCurrentContext,
+    gl_surface: Surface<WindowSurface>,
+}
+
+impl OpenGlActiveState {
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) -> Result<(), M64PError> {
+        if window_id != self.window.id() {
+            return Ok(());
+        }
+        match event {
+            WindowEvent::CloseRequested => {
+                self.core
+                    .read()
+                    .unwrap()
+                    .stop()
+                    .map_err(|_| M64PError::PluginFail)?;
+            }
+            WindowEvent::RedrawRequested => {
+                self.window.pre_present_notify();
+                self.gl_surface
+                    .swap_buffers(&self.gl_context)
+                    .map_err(|_| M64PError::SystemFail)?;
+            }
+            WindowEvent::Resized(size) => {
+                if self.video_flags.contains(VideoFlags::SUPPORT_RESIZING) {
+                    match self.core.read().unwrap().notify_resize(
+                        size.width.try_into().map_err(|_| M64PError::Internal)?,
+                        size.height.try_into().map_err(|_| M64PError::Internal)?,
+                    ) {
+                        Ok(_) => (),
+                        Err(CoreError::M64P(M64PError::InvalidState)) => (),
+                        Err(_) => return Err(M64PError::Internal),
+                    }
+                }
+            }
+            _ => (),
+        }
+        Ok(())
     }
 
-    pub(crate) fn get_attr(&self, attr: GLAttribute) -> FFIResult<c_int> {
+    fn request_redraw(&mut self) -> FFIResult<()> {
+        self.window.request_redraw();
+        Ok(())
+    }
+
+    // fn clear_background(&mut self) -> FFIResult<()> {
+    //     unsafe {
+    //         let mut clear_colour = [0.0f32; 4];
+    //         self.gl
+    //             .GetFloatv(gl::COLOR_CLEAR_VALUE, clear_colour.as_mut_ptr());
+
+    //         self.gl.ClearColor(0.0f32, 0.0f32, 0.0f32, 1.0f32);
+    //         self.gl.Clear(gl::COLOR_BUFFER_BIT);
+
+    //         self.gl.ClearColor(
+    //             clear_colour[0],
+    //             clear_colour[1],
+    //             clear_colour[2],
+    //             clear_colour[3],
+    //         );
+
+    //         Ok(())
+    //     }
+    // }
+
+    fn gl_get_attribute(&self, attr: GLAttribute) -> Result<c_int, M64PError> {
         match attr {
-            GLAttribute::Doublebuffer => Ok(1),
+            GLAttribute::Doublebuffer => match self.gl_surface.is_single_buffered() {
+                true => Ok(0),
+                false => Ok(1),
+            },
             GLAttribute::BufferSize => {
-                let config = self.context.config();
-                let color_size = match config.color_buffer_type() {
+                let color_size = match self.gl_config.color_buffer_type() {
                     Some(ColorBufferType::Rgb {
                         r_size,
                         g_size,
                         b_size,
                     }) => r_size + g_size + b_size,
-                    None => 0,
-                    _ => return Err(M64PError::Internal),
+                    Some(ColorBufferType::Luminance(y_size)) => y_size,
+                    None => todo!(),
                 };
-                Ok(config.alpha_size() as c_int + color_size as c_int)
+                Ok((color_size + self.gl_config.alpha_size()).into())
             }
-            GLAttribute::DepthSize => Ok(self.context.config().depth_size() as c_int),
-            GLAttribute::RedSize => match self.context.config().color_buffer_type() {
-                Some(ColorBufferType::Rgb { r_size, .. }) => Ok(r_size as c_int),
-                None => Err(M64PError::InputNotFound),
-                _ => return Err(M64PError::Internal),
+            GLAttribute::DepthSize => Ok(self.gl_config.depth_size().into()),
+            GLAttribute::RedSize => match self.gl_config.color_buffer_type() {
+                Some(ColorBufferType::Rgb { r_size, .. }) => Ok(r_size.into()),
+                _ => Err(M64PError::InputInvalid),
             },
-            GLAttribute::GreenSize => match self.context.config().color_buffer_type() {
-                Some(ColorBufferType::Rgb { g_size, .. }) => Ok(g_size as c_int),
-                None => Err(M64PError::InputNotFound),
-                _ => return Err(M64PError::Internal),
+            GLAttribute::GreenSize => match self.gl_config.color_buffer_type() {
+                Some(ColorBufferType::Rgb { g_size, .. }) => Ok(g_size.into()),
+                _ => Err(M64PError::InputInvalid),
             },
-            GLAttribute::BlueSize => match self.context.config().color_buffer_type() {
-                Some(ColorBufferType::Rgb { b_size, .. }) => Ok(b_size as c_int),
-                None => Err(M64PError::InputNotFound),
-                _ => return Err(M64PError::Internal),
+            GLAttribute::BlueSize => match self.gl_config.color_buffer_type() {
+                Some(ColorBufferType::Rgb { b_size, .. }) => Ok(b_size.into()),
+                _ => Err(M64PError::InputInvalid),
             },
-            GLAttribute::AlphaSize => Ok(self.context.config().alpha_size() as c_int),
-            GLAttribute::SwapControl => match self.swap_interval {
-                SwapInterval::DontWait => Ok(0),
-                SwapInterval::Wait(n) => Ok(u32::from(n) as c_int),
+            GLAttribute::AlphaSize => Ok(self.gl_config.alpha_size().into()),
+            GLAttribute::SwapControl => Err(M64PError::Unsupported),
+            GLAttribute::Multisamplebuffers => match self.gl_config.num_samples() {
+                1.. => Ok(1),
+                0 => Ok(0),
             },
-            GLAttribute::Multisamplebuffers => {
-                if self.context.config().num_samples() > 1 {
-                    Ok(1)
-                } else {
-                    Ok(0)
-                }
-            }
-            GLAttribute::Multisamplesamples => Ok(self.context.config().num_samples() as c_int),
-            GLAttribute::ContextMajorVersion => match self.context.context_api() {
-                ContextApi::OpenGl(Some(version)) => Ok(version.major as c_int),
-                ContextApi::Gles(Some(version)) => Ok(version.major as c_int),
-                _ => Err(M64PError::SystemFail),
+            GLAttribute::Multisamplesamples => Ok(self.gl_config.num_samples().into()),
+            GLAttribute::ContextMajorVersion => unsafe {
+                let mut version: GLint = 0;
+                self.gl
+                    .GetIntegerv(gl::MAJOR_VERSION, &mut version as *mut GLint);
+                Ok(version as c_int)
             },
-            GLAttribute::ContextMinorVersion => match self.context.context_api() {
-                ContextApi::OpenGl(Some(version)) => Ok(version.minor as c_int),
-                ContextApi::Gles(Some(version)) => Ok(version.minor as c_int),
-                _ => Err(M64PError::SystemFail),
+            GLAttribute::ContextMinorVersion => unsafe {
+                let mut version: GLint = 0;
+                self.gl
+                    .GetIntegerv(gl::MINOR_VERSION, &mut version as *mut GLint);
+                Ok(version as c_int)
             },
-            GLAttribute::ContextProfileMask => match self.context.context_api() {
-                ContextApi::OpenGl(Some(version)) => {
-                    let _display = self.surface.display();
-                    if version.major < 3 || version.major == 3 && version.minor < 1 {
-                        Ok(u32::from(GLContextType::Core) as c_int)
-                    } else {
-                        let mut profile_mask: GLint = 0;
-                        unsafe {
-                            gl::GetIntegerv(gl::CONTEXT_PROFILE_MASK, &mut profile_mask);
-                        }
-
-                        if profile_mask as GLenum & gl::CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-                            Ok(u32::from(GLContextType::Compatibility) as c_int)
+            GLAttribute::ContextProfileMask => {
+                if self
+                    .gl_config
+                    .api()
+                    .intersects(Api::GLES1 | Api::GLES2 | Api::GLES3)
+                {
+                    Ok(GLContextType::Es as u32 as i32)
+                } else if self.gl_config.api().intersects(Api::OPENGL) {
+                    unsafe {
+                        let mut version: GLint = 0;
+                        self.gl
+                            .GetIntegerv(gl::CONTEXT_PROFILE_MASK, &mut version as *mut GLint);
+                        if ((version as GLenum) & gl::CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0 {
+                            Ok(GLContextType::Compatibility as u32 as i32)
                         } else {
-                            Ok(u32::from(GLContextType::Core) as c_int)
+                            Ok(GLContextType::Core as u32 as i32)
                         }
                     }
+                } else {
+                    Err(M64PError::Internal)
                 }
-                ContextApi::Gles(_) => Ok(u32::from(GLContextType::Es) as c_int),
-                _ => Err(M64PError::Internal),
+            }
+        }
+    }
+
+    fn gl_get_proc_address(&self, symbol: &CStr) -> *mut c_void {
+        self.gl_display.get_proc_address(symbol) as *mut c_void
+    }
+
+    fn resize_window(&self, width: NonZeroU32, height: NonZeroU32) -> Result<(), M64PError> {
+        self.gl_surface.resize(&self.gl_context, width, height);
+        Ok(())
+    }
+}
+
+pub enum OpenGlState {
+    Empty,
+    FatalError(M64PError),
+    Init(OpenGlInitState),
+    Ready(OpenGlReadyState),
+    Active(OpenGlActiveState),
+}
+
+impl Default for OpenGlState {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
+impl ApplicationHandler<VideoUserEvent> for OpenGlState {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        match mem::take(self) {
+            // ready state transitions to active
+            Self::Ready(ready_state) => match ready_state.activate(event_loop) {
+                Ok(active_state) => *self = Self::Active(active_state),
+                Err(err) => *self = Self::FatalError(err),
             },
+            // active state doesn't change
+            Self::Active(active_state) => *self = Self::Active(active_state),
+            Self::FatalError(_) => (),
+            _ => *self = Self::FatalError(M64PError::Internal),
+        }
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        log::debug!("handling window event ({:?})", event);
+        match self {
+            Self::Active(active_state) => {
+                if let Err(error) = active_state.window_event(event_loop, window_id, event) {
+                    *self = Self::FatalError(error);
+                }
+            }
+            Self::FatalError(_) => (),
+            _ => *self = Self::FatalError(M64PError::Internal),
+        }
+    }
+
+    fn user_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        event: VideoUserEvent,
+    ) {
+        match self {
+            Self::Active(_active_state) => match event {
+                VideoUserEvent::CoreQuitRequest => event_loop.exit(),
+            },
+            Self::FatalError(_) => (),
+            _ => *self = Self::FatalError(M64PError::Internal),
+        }
+    }
+}
+
+impl OpenGlState {
+    pub fn init() -> Self {
+        log::info!("Setting up winit/OpenGL video extension");
+        Self::Init(OpenGlInitState::default())
+    }
+
+    pub fn cleanup(&mut self, event_loop: &mut EventLoop<VideoUserEvent>) {
+        // pump the event loop until it stops
+        while let PumpStatus::Continue = event_loop.pump_app_events(None, self) {}
+    }
+
+    pub fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> FFIResult<()> {
+        match self {
+            Self::Init(init_state) => {
+                log::debug!("Setting OpenGL attribute {:?} to {}", attr, value);
+                init_state.gl_set_attribute(attr, value)
+            }
+            Self::FatalError(error) => Err(*error),
+            _ => Err(M64PError::Internal),
+        }
+    }
+
+    pub fn set_video_mode(
+        &mut self,
+        core: Arc<RwLock<Core>>,
+        event_loop: &mut EventLoop<VideoUserEvent>,
+        width: c_int,
+        height: c_int,
+        _bits_per_pixel: c_int,
+        screen_mode: VideoMode,
+        flags: VideoFlags,
+    ) -> FFIResult<()> {
+        match self {
+            Self::Init(init_state) => {
+                log::info!(
+                    "Initializing OpenGL window (size: {}x{}, can resize: {})",
+                    width,
+                    height,
+                    flags.contains(VideoFlags::SUPPORT_RESIZING)
+                );
+                // Ensure width and height are positive integers
+                let width = u32::try_from(width)
+                    .and_then(|value| value.try_into())
+                    .map_err(|_| M64PError::InputAssert)?;
+                let height = u32::try_from(height)
+                    .and_then(|value| value.try_into())
+                    .map_err(|_| M64PError::InputAssert)?;
+
+                // prepare to start the event loop
+                match mem::take(init_state).ready(core, width, height, screen_mode, flags) {
+                    Ok(ready_state) => {
+                        *self = Self::Ready(ready_state);
+                    }
+                    Err(error) => {
+                        *self = Self::FatalError(error);
+                        return Err(error);
+                    }
+                }
+                log::info!("Parameters ready. Starting event loop...");
+
+                // start the event loop, transitioning to active
+                // this is fallible, so if any errors occur, they are reported
+                event_loop.pump_app_events(Some(Duration::ZERO), self);
+                if let Self::FatalError(error) = self {
+                    log::warn!("Error occurred during initial pump!");
+                    return Err(*error);
+                }
+
+                Ok(())
+            }
+            Self::FatalError(error) => Err(*error),
+            _ => Err(M64PError::Internal),
+        }
+    }
+
+    pub fn gl_get_attribute(&mut self, attr: GLAttribute) -> FFIResult<c_int> {
+        match self {
+            Self::Active(active_state) => active_state.gl_get_attribute(attr),
+            Self::FatalError(error) => Err(*error),
+            _ => Err(M64PError::Internal),
+        }
+    }
+
+    pub fn gl_get_proc_address(&mut self, symbol: &CStr) -> *mut c_void {
+        match self {
+            Self::Active(active_state) => active_state.gl_get_proc_address(symbol),
+            _ => null_mut(),
+        }
+    }
+
+    pub fn gl_swap_buffers(&mut self, event_loop: &mut EventLoop<VideoUserEvent>) -> FFIResult<()> {
+        match self {
+            Self::Active(active_state) => {
+                // Perform actions necessary to trigger buffer swap
+                active_state.request_redraw()?;
+                // swap buffers, poll event loop
+                event_loop.pump_app_events(Some(Duration::ZERO), self);
+            }
+            Self::FatalError(error) => return Err(*error),
+            _ => return Err(M64PError::Internal),
+        }
+        Ok(())
+    }
+
+    pub fn resize_window(&mut self, width: c_int, height: c_int) -> FFIResult<()> {
+        match self {
+            Self::Active(active_state) => active_state.resize_window(
+                u32::try_from(width)
+                    .and_then(|value| value.try_into())
+                    .map_err(|_| M64PError::InputAssert)?,
+                u32::try_from(height)
+                    .and_then(|value| value.try_into())
+                    .map_err(|_| M64PError::InputAssert)?,
+            ),
+            Self::FatalError(error) => Err(*error),
+            _ => Err(M64PError::Internal),
         }
     }
 }

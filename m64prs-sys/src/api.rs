@@ -6,7 +6,8 @@ use crate::types::*;
 
 #[derive(WrapperMultiApi)]
 pub struct FullCoreApi {
-    pub core: CoreBaseApi,
+    pub base: CoreBaseApi,
+    pub tas: Option<CoreTasApi>,
 }
 
 #[derive(WrapperApi)]
@@ -52,6 +53,21 @@ pub struct CoreBaseApi {
     #[dlopen2_name = "CoreOverrideVidExt"]
     override_vidext:
         unsafe extern "C" fn(video_function_struct: *mut VideoExtensionFunctions) -> Error,
+}
+
+#[derive(WrapperApi)]
+pub struct CoreTasApi {
+    set_input_callback: unsafe extern "C" fn(
+        context: *mut c_void,
+        callback: InputFilterCallback
+    ) -> Error,
+    set_audio_callbacks: unsafe extern "C" fn(
+        context: *mut c_void,
+        rate_callback: AudioRateCallbck,
+    ),
+    set_audio_tap_enabled: unsafe extern "C" fn(
+        value: bool,
+    ) -> Error
 }
 
 #[derive(WrapperApi)]

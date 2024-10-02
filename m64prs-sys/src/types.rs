@@ -37,6 +37,9 @@ bitflags! {
     }
 }
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+compile_error!("The layout of `struct Buttons` has not been tested on this platform. Submit a PR if either the layout works or you can make it work.");
+
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C, align(4))]
@@ -49,9 +52,6 @@ pub struct Buttons {
 impl Buttons {
     pub const BLANK: Buttons = Buttons { button_bits: ButtonFlags::NONE, x_axis: 0, y_axis: 0 };
 }
-
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-compile_error!("The layout of `struct Buttons` has not been tested on this platform. Submit a PR if either the layout works or you can make it work.");
 
 impl From<u32> for Buttons {
     fn from(value: u32) -> Self {
@@ -69,26 +69,22 @@ impl Hash for Buttons {
     }
 }
 
-// VCR start type
-
-/*
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct VcrStartType(c_int);
-
-impl VcrStartType {
-    pub const FROM_SNAPSHOT: VcrStartType = VcrStartType(1 << 0);
-    pub const FROM_START: VcrStartType = VcrStartType(1 << 1);
-    pub const FROM_EEPROM: VcrStartType = VcrStartType(1 << 2);
-}
-*/
 bitflags! {
-    #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     #[repr(C)]
-    pub struct VcrStartType: u32 {
-        const FROM_SNAPSHOT = 1 << 0;
-        const FROM_START = 1 << 1;
-        const FROM_EEPROM = 1 << 2;
+    pub struct VideoFlags: u32 {
+        const SUPPORT_RESIZING = 1 << 1;
+    }
+}
+
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(C)]
+    pub struct CoreCaps: u32 {
+        const DYNAREC = 1 << 0;
+        const DEBUGGER = 1 << 1;
+        const CORE_COMPARE = 1 << 2;
+        const TAS_CALLBACKS = 1 << 16;
     }
 }
 

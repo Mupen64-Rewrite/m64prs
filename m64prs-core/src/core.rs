@@ -1,10 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_uint, c_void, CStr},
-    fs,
-    path::Path,
-    pin::Pin,
-    ptr::{null, null_mut},
-    sync::{mpsc, Mutex},
+    ffi::{c_char, c_int, c_uint, c_void, CStr}, fmt::Debug, fs, path::Path, pin::Pin, ptr::{null, null_mut}, sync::{mpsc, Mutex}
 };
 
 use async_std::sync::Mutex as AsyncMutex;
@@ -78,6 +73,7 @@ struct PinnedCoreState {
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
+
 pub struct Core {
     api: Container<FullCoreApi>,
     pin_state: Pin<Box<PinnedCoreState>>,
@@ -87,9 +83,15 @@ pub struct Core {
     save_mutex: AsyncMutex<()>,
 }
 
+impl Debug for Core {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Core {}")
+    }
+}
+
 unsafe impl Sync for Core {}
 
-// initialization and cleanup
+// initialization, helper functions, and cleanup
 impl Core {
     /// Loads and starts up the core from a given path.
     ///
@@ -123,27 +125,51 @@ impl Core {
             save_mutex: AsyncMutex::new(()),
         };
 
-        // unsafe {
-        //     core_fn(core.api.core.startup(
-        //         0x02_01_00,
-        //         null(),
-        //         null(),
-        //         null_mut(),
-        //         debug_callback,
-        //         &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
-        //         state_callback,
-        //     ))?;
-        //     core.api.vcr.set_error_callback(vcr_debug_callback)
-        // };
+        unsafe {
+            core_fn(core.api.base.startup(
+                0x02_01_00,
+                null(),
+                null(),
+                null_mut(),
+                debug_callback,
+                &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
+                state_callback,
+            ))?;
+        };
 
         *guard = true;
         Ok(core)
+    }
+
+    #[inline(always)]
+    unsafe fn do_command_ip(
+        &self,
+        command: Command,
+        int_param: c_int,
+        ptr_param: *mut c_void,
+    ) -> CoreResult<()> {
+        core_fn(unsafe { self.api.base.do_command(command, int_param, ptr_param) })
+    }
+
+    #[inline(always)]
+    unsafe fn do_command_p(&self, command: Command, ptr_param: *mut c_void) -> CoreResult<()> {
+        self.do_command_ip(command, 0, ptr_param)
+    }
+
+    #[inline(always)]
+    fn do_command_i(&self, command: Command, int_param: c_int) -> CoreResult<()> {
+        unsafe { self.do_command_ip(command, int_param, null_mut()) }
+    }
+
+    #[inline(always)]
+    fn do_command(&self, command: Command) -> CoreResult<()> {
+        unsafe { self.do_command_ip(command, 0, null_mut()) }
     }
 }
 impl Drop for Core {
     fn drop(&mut self) {
         // shutdown the core before it's freed
-        unsafe { self.api.core.shutdown() };
+        unsafe { self.api.base.shutdown() };
         // drop the guard so that another core can be constructed
         {
             let mut guard = CORE_GUARD.lock().unwrap();
@@ -208,40 +234,40 @@ impl Core {
         // attach all plugins. If one fails, detach everything.
         if let Err(err) = core_fn(unsafe {
             self.api
-                .core
+                .base
                 .attach_plugin(PluginType::Graphics, gfx_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.base.detach_plugin(PluginType::Graphics) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
-                .core
+                .base
                 .attach_plugin(PluginType::Audio, audio_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
-            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
+            unsafe { self.api.base.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.base.detach_plugin(PluginType::Audio) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
-                .core
+                .base
                 .attach_plugin(PluginType::Input, input_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
-            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
-            unsafe { self.api.core.detach_plugin(PluginType::Input) };
+            unsafe { self.api.base.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.base.detach_plugin(PluginType::Audio) };
+            unsafe { self.api.base.detach_plugin(PluginType::Input) };
             return Err(err);
         }
         if let Err(err) = core_fn(unsafe {
             self.api
-                .core
+                .base
                 .attach_plugin(PluginType::Rsp, rsp_plugin.api.into_raw())
         }) {
-            unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
-            unsafe { self.api.core.detach_plugin(PluginType::Audio) };
-            unsafe { self.api.core.detach_plugin(PluginType::Input) };
-            unsafe { self.api.core.detach_plugin(PluginType::Rsp) };
+            unsafe { self.api.base.detach_plugin(PluginType::Graphics) };
+            unsafe { self.api.base.detach_plugin(PluginType::Audio) };
+            unsafe { self.api.base.detach_plugin(PluginType::Input) };
+            unsafe { self.api.base.detach_plugin(PluginType::Rsp) };
             return Err(err);
         }
 
@@ -257,10 +283,10 @@ impl Core {
         }
 
         // detach plugins from core.
-        unsafe { self.api.core.detach_plugin(PluginType::Graphics) };
-        unsafe { self.api.core.detach_plugin(PluginType::Audio) };
-        unsafe { self.api.core.detach_plugin(PluginType::Input) };
-        unsafe { self.api.core.detach_plugin(PluginType::Rsp) };
+        unsafe { self.api.base.detach_plugin(PluginType::Graphics) };
+        unsafe { self.api.base.detach_plugin(PluginType::Audio) };
+        unsafe { self.api.base.detach_plugin(PluginType::Input) };
+        unsafe { self.api.base.detach_plugin(PluginType::Rsp) };
         // drop the plugins. this shuts them down.
         self.plugins = None;
     }
@@ -275,7 +301,7 @@ impl Core {
     ) -> CoreResult<()> {
         // This is actually safe, since Mupen copies the table.
         core_fn(unsafe {
-            self.api.core.override_vidext(
+            self.api.base.override_vidext(
                 vidext as *const m64prs_sys::VideoExtensionFunctions
                     as *mut m64prs_sys::VideoExtensionFunctions,
             )
@@ -287,13 +313,13 @@ impl Core {
 impl Core {
     /// Opens a ROM that is pre-loaded into memory.
     pub fn open_rom(&mut self, rom_data: &[u8]) -> CoreResult<()> {
-        core_fn(unsafe {
-            self.api.core.do_command(
+        unsafe {
+            self.do_command_ip(
                 Command::RomOpen,
                 rom_data.len() as c_int,
                 rom_data.as_ptr() as *mut c_void,
             )
-        })
+        }
     }
 
     /// Loads and opens a ROM from a given file path.
@@ -304,28 +330,25 @@ impl Core {
 
     /// Closes a currently open ROM.
     pub fn close_rom(&mut self) -> CoreResult<()> {
-        core_fn(unsafe { self.api.core.do_command(Command::RomClose, 0, null_mut()) })
+        self.do_command(Command::RomClose)
     }
 
     pub fn set_frame_callback(&mut self, callback: unsafe extern "C" fn(c_uint)) -> CoreResult<()> {
-        core_fn(unsafe {
-            self.api.core.do_command(Command::SetFrameCallback, 0, {
-                callback as *const c_void as *mut c_void
-            })
-        })
+        unsafe {
+            self.do_command_p(
+                Command::SetFrameCallback,
+                callback as *const c_void as *mut c_void,
+            )
+        }
     }
 
     pub fn clear_frame_callback(&mut self) -> CoreResult<()> {
-        core_fn(unsafe {
-            self.api
-                .core
-                .do_command(Command::SetFrameCallback, 0, null_mut())
-        })
+        unsafe { self.do_command_p(Command::SetFrameCallback, null_mut()) }
     }
 
     /// Executes the currently-open ROM.
     pub fn execute(&self) -> CoreResult<()> {
-        core_fn(unsafe { self.api.core.do_command(Command::Execute, 0, null_mut()) })
+        self.do_command(Command::Execute)
     }
 }
 
@@ -334,24 +357,32 @@ impl Core {
     /// Stops the currently-running ROM.
     pub fn stop(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::Stop, 0, null_mut()) })
+        self.do_command(Command::Stop)
     }
     /// Pauses the currently-running ROM.
     pub fn pause(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::Pause, 0, null_mut()) })
+        self.do_command(Command::Pause)
     }
     pub fn resume(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe { self.api.core.do_command(Command::Resume, 0, null_mut()) })
+        self.do_command(Command::Resume)
     }
     pub fn advance_frame(&self) -> CoreResult<()> {
         // TODO: add async waiter that waits on emulator state
-        core_fn(unsafe {
-            self.api
-                .core
-                .do_command(Command::AdvanceFrame, 0, null_mut())
-        })
+        self.do_command(Command::AdvanceFrame)
+    }
+
+    /// Notifies the graphics plugin of a change in the window's size.
+    pub fn notify_resize(&self, width: u16, height: u16) -> CoreResult<()> {
+        let size_packed = (((width as u32) << 16) | (height as u32)) as c_int;
+        unsafe {
+            self.do_command_ip(
+                Command::CoreStateSet,
+                u32::from(CoreParam::VideoSize) as c_int,
+                &size_packed as *const c_int as *mut c_void,
+            )
+        }
     }
 }
 
@@ -379,7 +410,7 @@ impl Core {
             .expect("Waiter queue disconnected!");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
         if let Err(error) =
-            core_fn(unsafe { self.api.core.do_command(Command::StateSave, 0, null_mut()) })
+            core_fn(unsafe { self.api.base.do_command(Command::StateSave, 0, null_mut()) })
         {
             future.fail_early(error);
         }
@@ -394,7 +425,7 @@ impl Core {
             .expect("Waiter queue disconnected!");
 
         if let Err(error) =
-            core_fn(unsafe { self.api.core.do_command(Command::StateLoad, 0, null_mut()) })
+            core_fn(unsafe { self.api.base.do_command(Command::StateLoad, 0, null_mut()) })
         {
             future.fail_early(error);
         }
