@@ -67,7 +67,29 @@ impl Into<m64prs_sys::Error> for M64PError {
     }
 }
 
-/// Error returned by almost all Mupen64Plus functions.
+
+/// Error that may occur during initialization.
+#[derive(Debug, Error)]
+pub enum StartupError {
+    /// An error occurred involving a dynamic library.
+    #[error("Error occurred involving a dynamic library.")]
+    Library(#[source] ::dlopen2::Error),
+    /// An error occurred while initializing Mupen64Plus.
+    #[error("Error occurred while initializing Mupen64Plus.")]
+    CoreInit(#[source] M64PError),
+}
+
+#[derive(Debug, Error)]
+pub enum SavestateError {
+    /// An error occurred while requesting the savestate operation.
+    #[error("Error occurred requesting the savestate operation.")]
+    EarlyFail(#[source] M64PError),
+
+    /// An error occurred while saving or loading the savestate.
+    #[error("Error occurred while saving or loading the savestate")]
+    SaveLoad
+}
+
 #[derive(Debug, Error)]
 pub enum CoreError {
     /// An error occurred involving a dynamic library.
@@ -89,6 +111,3 @@ pub enum CoreError {
     #[error("Savestate saving failed")]
     SaveStateFailed,
 }
-
-/// Result type used for most Mupen64Plus functions.
-pub type Result<T> = ::std::result::Result<T, CoreError>;

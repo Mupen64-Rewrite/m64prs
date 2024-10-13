@@ -12,7 +12,7 @@ mod gl {
 }
 
 use gl::{
-    types::{GLenum, GLint},
+    types::{GLenum, GLfloat, GLint, GLsizei},
     Gl,
 };
 use glutin::{
@@ -20,7 +20,7 @@ use glutin::{
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, GetGlDisplay},
     prelude::{GlContext, GlDisplay, NotCurrentGlContext, PossiblyCurrentGlContext},
-    surface::{GlSurface, Surface, SurfaceAttributesBuilder, WindowSurface},
+    surface::{GlSurface, Surface, SurfaceAttributesBuilder, SwapInterval, WindowSurface},
 };
 use glutin_winit::{DisplayBuilder, GlWindow};
 use m64prs_core::{
@@ -67,7 +67,7 @@ impl Default for OpenGlInitState {
             red_bits: 8,
             green_bits: 8,
             blue_bits: 8,
-            alpha_bits: 8,
+            alpha_bits: 0,
             swap_control: 1,
             multisample_samples: 0,
             gl_major_version: 3,
@@ -81,21 +81,22 @@ impl OpenGlInitState {
     fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> Result<(), M64PError> {
         match attr {
             GLAttribute::Doublebuffer => self.double_buffer = value != 0,
-            GLAttribute::BufferSize => match value {
-                32 => {
-                    self.red_bits = 8;
-                    self.green_bits = 8;
-                    self.blue_bits = 8;
-                    self.alpha_bits = 8;
-                }
-                24 => {
-                    self.red_bits = 8;
-                    self.green_bits = 8;
-                    self.blue_bits = 8;
-                    self.alpha_bits = 8;
-                }
-                _ => return Err(M64PError::InputAssert),
-            },
+            GLAttribute::BufferSize => (),
+            // match value {
+            //     32 => {
+            //         self.red_bits = 8;
+            //         self.green_bits = 8;
+            //         self.blue_bits = 8;
+            //         self.alpha_bits = 8;
+            //     }
+            //     24 => {
+            //         self.red_bits = 8;
+            //         self.green_bits = 8;
+            //         self.blue_bits = 8;
+            //         self.alpha_bits = 0;
+            //     }
+            //     _ => return Err(M64PError::InputAssert),
+            // },
             GLAttribute::DepthSize => {
                 self.depth_bits = value.try_into().map_err(|_| M64PError::InputAssert)?;
             }
@@ -174,11 +175,11 @@ impl OpenGlReadyState {
         // setup window and OpenGL config attributes
         let mut window_attrs = Window::default_attributes()
             .with_title("m64prs")
-            .with_transparent(true)
             .with_inner_size(PhysicalSize::<u32>::new(
                 self.width.into(),
                 self.height.into(),
-            ));
+            ))
+            .with_transparent(self.init_state.alpha_bits > 0);
         if !self.video_flags.contains(VideoFlags::SUPPORT_RESIZING) {
             window_attrs = window_attrs.with_resizable(false);
         }
@@ -289,6 +290,10 @@ impl OpenGlReadyState {
                 .get_proc_address(&CString::new(s).expect("invalid symbol found during loading"))
         });
 
+        gl_surface
+            .set_swap_interval(&gl_context, SwapInterval::DontWait)
+            .map_err(|_| M64PError::SystemFail)?;
+
         log::info!("OpenGL successfully started");
         // transfer all objects we created to active state, also the core
         Ok(OpenGlActiveState {
@@ -331,11 +336,8 @@ impl OpenGlActiveState {
         }
         match event {
             WindowEvent::CloseRequested => {
-                self.core
-                    .read()
-                    .unwrap()
-                    .stop()
-                    .map_err(|_| M64PError::PluginFail)?;
+                let core = self.core.read().unwrap();
+                core.stop().map_err(|_| M64PError::PluginFail)?;
             }
             WindowEvent::RedrawRequested => {
                 self.window.pre_present_notify();
@@ -345,12 +347,13 @@ impl OpenGlActiveState {
             }
             WindowEvent::Resized(size) => {
                 if self.video_flags.contains(VideoFlags::SUPPORT_RESIZING) {
-                    match self.core.read().unwrap().notify_resize(
+                    let core = self.core.read().unwrap();
+                    match core.notify_resize(
                         size.width.try_into().map_err(|_| M64PError::Internal)?,
                         size.height.try_into().map_err(|_| M64PError::Internal)?,
                     ) {
                         Ok(_) => (),
-                        Err(CoreError::M64P(M64PError::InvalidState)) => (),
+                        Err(M64PError::InvalidState) => (),
                         Err(_) => return Err(M64PError::Internal),
                     }
                 }
@@ -364,26 +367,6 @@ impl OpenGlActiveState {
         self.window.request_redraw();
         Ok(())
     }
-
-    // fn clear_background(&mut self) -> FFIResult<()> {
-    //     unsafe {
-    //         let mut clear_colour = [0.0f32; 4];
-    //         self.gl
-    //             .GetFloatv(gl::COLOR_CLEAR_VALUE, clear_colour.as_mut_ptr());
-
-    //         self.gl.ClearColor(0.0f32, 0.0f32, 0.0f32, 1.0f32);
-    //         self.gl.Clear(gl::COLOR_BUFFER_BIT);
-
-    //         self.gl.ClearColor(
-    //             clear_colour[0],
-    //             clear_colour[1],
-    //             clear_colour[2],
-    //             clear_colour[3],
-    //         );
-
-    //         Ok(())
-    //     }
-    // }
 
     fn gl_get_attribute(&self, attr: GLAttribute) -> Result<c_int, M64PError> {
         match attr {
@@ -505,7 +488,6 @@ impl ApplicationHandler<VideoUserEvent> for OpenGlState {
         window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        log::debug!("handling window event ({:?})", event);
         match self {
             Self::Active(active_state) => {
                 if let Err(error) = active_state.window_event(event_loop, window_id, event) {
@@ -599,12 +581,11 @@ impl OpenGlState {
                     log::warn!("Error occurred during initial pump!");
                     return Err(*error);
                 }
-
-                Ok(())
             }
-            Self::FatalError(error) => Err(*error),
-            _ => Err(M64PError::Internal),
+            Self::FatalError(error) => return Err(*error),
+            _ => return Err(M64PError::Internal),
         }
+        Ok(())
     }
 
     pub fn gl_get_attribute(&mut self, attr: GLAttribute) -> FFIResult<c_int> {

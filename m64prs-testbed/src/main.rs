@@ -1,3 +1,4 @@
+use std::fs;
 use std::{io, path::PathBuf, sync::Arc};
 
 use std::sync::RwLock;
@@ -12,13 +13,12 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
 
     let core = Arc::new(RwLock::new(Core::init(PathBuf::from(&args[1])).unwrap()));
-    init_video_state(Arc::clone(&core));
 
     {
         let mut core = core.write().unwrap();
-        core.load_rom(PathBuf::from(&args[2])).unwrap();
+        core.open_rom(&fs::read(PathBuf::from(&args[2])).unwrap()).unwrap();
         core.attach_plugins(
-            Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-glide64mk2.so").unwrap(),
+            Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so").unwrap(),
             Plugin::load("/usr/lib/mupen64plus/mupen64plus-audio-sdl.so").unwrap(),
             Plugin::load("/usr/lib/mupen64plus/mupen64plus-input-sdl.so").unwrap(),
             Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so").unwrap(),

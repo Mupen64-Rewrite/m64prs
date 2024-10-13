@@ -7,6 +7,7 @@ use crate::types::*;
 #[derive(WrapperMultiApi)]
 pub struct FullCoreApi {
     pub base: CoreBaseApi,
+    pub config: CoreConfigApi,
     pub tas: Option<CoreTasApi>,
 }
 
@@ -56,18 +57,38 @@ pub struct CoreBaseApi {
 }
 
 #[derive(WrapperApi)]
-pub struct CoreTasApi {
-    set_input_callback: unsafe extern "C" fn(
+pub struct CoreConfigApi {
+    #[dlopen2_name = "ConfigListSections"]
+    list_sections: unsafe extern "C" fn(
         context: *mut c_void,
-        callback: InputFilterCallback
+        callback: unsafe extern "C" fn(context: *mut c_void, section_name: *const c_char),
     ) -> Error,
+    #[dlopen2_name = "ConfigOpenSection"]
+    open_section: unsafe extern "C" fn(name: *const c_char, handle: *mut Handle) -> Error,
+    #[dlopen2_name = "ConfigListParameters"]
+    list_parameters: unsafe extern "C" fn() -> Error,
+    #[dlopen2_name = "ConfigDeleteSection"]
+    delete_section: unsafe extern "C" fn(name: *const c_char) -> Error,
+    #[dlopen2_name = "ConfigSaveFile"]
+    save_file: unsafe extern "C" fn() -> Error,
+    #[dlopen2_name = "ConfigSaveSection"]
+    save_section: unsafe extern "C" fn(name: *const c_char) -> Error,
+
+}
+
+#[derive(WrapperApi)]
+pub struct CoreTasApi {
+    #[dlopen2_name = "CoreTAS_SetInputFilterCallback"]
+    set_input_callback:
+        unsafe extern "C" fn(context: *mut c_void, callback: InputFilterCallback) -> Error,
+    #[dlopen2_name = "CoreTAS_SetAudioCallbacks"]
     set_audio_callbacks: unsafe extern "C" fn(
         context: *mut c_void,
         rate_callback: AudioRateCallbck,
+        sample_callback: AudioSampleCallback,
     ),
-    set_audio_tap_enabled: unsafe extern "C" fn(
-        value: bool,
-    ) -> Error
+    #[dlopen2_name = "CoreTAS_SetAudioTapEnabled"]
+    set_audio_tap_enabled: unsafe extern "C" fn(value: bool) -> Error,
 }
 
 #[derive(WrapperApi)]

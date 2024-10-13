@@ -8,7 +8,7 @@ use std::{
 use futures::{channel::oneshot, Future};
 use m64prs_sys::CoreParam;
 
-use crate::error::{CoreError, Result as CoreResult};
+use crate::error::{M64PError, SavestateError};
 
 /// Class that waits for a state change and resolves a savestate future.
 pub(crate) struct SavestateWaiter {
@@ -19,16 +19,16 @@ pub(crate) struct SavestateWaiter {
 /// Future implementation for savestates operations.
 pub(crate) struct SavestateFuture {
     core_param: CoreParam,
-    early_fail: Option<CoreError>,
+    early_fail: Option<M64PError>,
     rx: oneshot::Receiver<bool>,
 }
 
 impl Future for SavestateFuture {
-    type Output = CoreResult<()>;
+    type Output = Result<(), SavestateError>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if let Some(err) = self.early_fail.take() {
-            return Poll::Ready(Err(err));
+            return Poll::Ready(Err(SavestateError::EarlyFail(err)));
         }
 
         match Future::poll(Pin::new(&mut self.rx), cx) {
@@ -36,11 +36,7 @@ impl Future for SavestateFuture {
                 if res.unwrap() {
                     Poll::Ready(Ok(()))
                 } else {
-                    Poll::Ready(Err(match self.core_param {
-                        CoreParam::StateLoadComplete => CoreError::LoadStateFailed,
-                        CoreParam::StateSaveComplete => CoreError::SaveStateFailed,
-                        _ => panic!(),
-                    }))
+                    Poll::Ready(Err(SavestateError::SaveLoad))
                 }
             }
             Poll::Pending => Poll::Pending,
@@ -49,7 +45,7 @@ impl Future for SavestateFuture {
 }
 
 impl SavestateFuture {
-    pub(crate) fn fail_early(&mut self, error: CoreError) {
+    pub(crate) fn fail_early(&mut self, error: M64PError) {
         self.early_fail = Some(error);
     }
 }

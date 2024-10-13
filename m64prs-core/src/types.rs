@@ -10,7 +10,7 @@ pub struct APIVersion {
     pub api_type: m64prs_sys::PluginType,
     pub plugin_version: c_int,
     pub api_version: c_int,
-    pub plugin_name: &'static str,
+    pub plugin_name: &'static CStr,
     pub capabilities: c_int,
 }
 
