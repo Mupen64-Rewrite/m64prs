@@ -1,9 +1,9 @@
-use std::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use std::ffi::{c_char, c_float, c_int, c_uint, c_void, CStr, CString};
 
-use crate::error::M64PError;
+use crate::error::{M64PError, WrongConfigType};
 
 use ash::vk;
-use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
+use m64prs_sys::{ConfigType, GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct APIVersion {
@@ -72,6 +72,103 @@ pub trait VideoExtension {
     unsafe fn vk_get_surface(&mut self, inst: vk::Instance) -> FFIResult<vk::SurfaceKHR>;
     /// Lists the extensions needed to use [`VideoExtension::vk_get_surface`]
     unsafe fn vk_get_instance_extensions(&mut self) -> FFIResult<&'static [*const c_char]>;
+}
+
+/// Represents the value of a config parameter.
+#[derive(Debug, Clone)]
+pub enum ConfigValue {
+    Int(c_int),
+    Float(c_float),
+    Bool(bool),
+    String(CString)
+}
+
+impl ConfigValue {
+    pub fn cfg_type(&self) -> ConfigType {
+        match self {
+            ConfigValue::Int(_) => ConfigType::Int,
+            ConfigValue::Float(_) => ConfigType::Float,
+            ConfigValue::Bool(_) => ConfigType::Bool,
+            ConfigValue::String(_) => ConfigType::String,
+        }
+    }
+
+    pub(crate) unsafe fn as_ptr(&self) -> *const c_void {
+        match self {
+            ConfigValue::Int(value) => value as *const c_int as *const c_void,
+            ConfigValue::Float(value) => value as *const c_float as *const c_void,
+            ConfigValue::Bool(value) => value as *const bool as *const c_void,
+            ConfigValue::String(value) => value.as_ptr() as *const c_void,
+        }
+    }
+}
+
+impl From<c_int> for ConfigValue {
+    fn from(value: c_int) -> Self {
+        Self::Int(value)
+    }
+}
+
+impl From<c_float> for ConfigValue {
+    fn from(value: c_float) -> Self {
+        Self::Float(value)
+    }
+}
+
+impl From<bool> for ConfigValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+
+impl From<CString> for ConfigValue {
+    fn from(value: CString) -> Self {
+        Self::String(value)
+    }
+}
+
+impl TryInto<c_int> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<c_int, Self::Error> {
+        match self {
+            ConfigValue::Int(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type()))
+        }
+    }
+}
+
+impl TryInto<c_float> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<c_float, Self::Error> {
+        match self {
+            ConfigValue::Float(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Float, other.cfg_type()))
+        }
+    }
+}
+
+impl TryInto<bool> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<bool, Self::Error> {
+        match self {
+            ConfigValue::Bool(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Bool, other.cfg_type()))
+        }
+    }
+}
+
+impl TryInto<CString> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<CString, Self::Error> {
+        match self {
+            ConfigValue::String(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::String, other.cfg_type()))
+        }
+    }
 }
 
 /// Represents a controller port on the N64. Used for VCR input functions.

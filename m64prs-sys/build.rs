@@ -21,6 +21,8 @@ impl ParseCallbacks for M64PParseCallbacks {
             "m64p_GLattr" => Some("GLAttribute".to_owned()),
             "m64p_GLContextType" => Some("GLContextType".to_owned()),
             "BUTTONS" => Some("Buttons".to_owned()),
+            // confusing names
+            "m64p_type" => Some("ConfigType".to_owned()),
             // other items
             item if item.starts_with("m64p_") => Some(original_item_name[5..].to_pascal_case()),
             _ => None,

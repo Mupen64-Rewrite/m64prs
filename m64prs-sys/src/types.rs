@@ -1,9 +1,20 @@
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
-use std::{hash::Hash, mem};
+use std::{fmt::Display, hash::Hash, mem};
 
 use bitflags::bitflags;
 
 include!(concat!(env!("OUT_DIR"), "/types.gen.rs"));
+
+impl Display for ConfigType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            ConfigType::Int => f.write_str("int"),
+            ConfigType::Float => f.write_str("float"),
+            ConfigType::Bool => f.write_str("bool"),
+            ConfigType::String => f.write_str("string"),
+        }
+    }
+}
 
 // BUTTONS
 

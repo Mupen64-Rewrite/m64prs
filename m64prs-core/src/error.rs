@@ -1,3 +1,6 @@
+use std::{error::Error, fmt::{Debug, Display}};
+
+use m64prs_sys::ConfigType;
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
@@ -72,21 +75,21 @@ impl Into<m64prs_sys::Error> for M64PError {
 #[derive(Debug, Error)]
 pub enum StartupError {
     /// An error occurred involving a dynamic library.
-    #[error("Error occurred involving a dynamic library.")]
+    #[error("dynamic library load failed")]
     Library(#[source] ::dlopen2::Error),
     /// An error occurred while initializing Mupen64Plus.
-    #[error("Error occurred while initializing Mupen64Plus.")]
+    #[error("Mupen64Plus startup failed")]
     CoreInit(#[source] M64PError),
 }
 
 #[derive(Debug, Error)]
 pub enum SavestateError {
     /// An error occurred while requesting the savestate operation.
-    #[error("Error occurred requesting the savestate operation.")]
+    #[error("core command failed immediately")]
     EarlyFail(#[source] M64PError),
 
     /// An error occurred while saving or loading the savestate.
-    #[error("Error occurred while saving or loading the savestate")]
+    #[error("savestate save/load failed")]
     SaveLoad
 }
 
@@ -110,4 +113,26 @@ pub enum CoreError {
     /// A savestate save failed. Details are likely logged.
     #[error("Savestate saving failed")]
     SaveStateFailed,
+}
+
+
+#[derive(Debug)]
+pub struct WrongConfigType {
+    expected: ConfigType,
+    actual: ConfigType
+}
+
+impl WrongConfigType {
+    pub fn new(expected: ConfigType, actual: ConfigType) -> Self {
+        Self { expected, actual }
+    }
+}
+
+impl Display for WrongConfigType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("parameter type is {} (expected {})", self.actual, self.expected))
+    }
+}
+
+impl Error for WrongConfigType {
 }

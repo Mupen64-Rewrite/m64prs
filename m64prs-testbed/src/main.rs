@@ -1,5 +1,5 @@
 use std::fs;
-use std::{io, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use std::sync::RwLock;
 use m64prs_core::{Core, Plugin};
@@ -24,6 +24,11 @@ fn main() {
             Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so").unwrap(),
         )
         .unwrap();
+
+        let cfg_sect = core.cfg_open(c"Video-General").unwrap();
+        cfg_sect.for_each_param(|name, ptype| {
+            println!("param {} ({})", name.to_str().unwrap(), ptype);
+        }).unwrap()
     }
 
 
