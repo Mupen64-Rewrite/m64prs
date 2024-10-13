@@ -1,14 +1,67 @@
 use std::{
-    ffi::c_int,
-    pin::Pin,
-    sync::mpsc,
-    task::{Context, Poll},
+    ffi::c_int, pin::Pin, sync::mpsc, task::{Context, Poll}
 };
 
 use futures::{channel::oneshot, Future};
-use m64prs_sys::CoreParam;
+use m64prs_sys::{Command, CoreParam};
 
 use crate::error::{M64PError, SavestateError};
+
+use super::Core;
+
+/// Functions dealing with savestates.
+impl Core {
+    /// Saves game state to the current slot.
+    pub async fn save_state(&self) -> Result<(), SavestateError> {
+        let _lock = self.save_mutex.lock().await;
+        let res = self.save_state_inner().await;
+        res
+    }
+
+    /// Loads game state from the current slot.
+    pub async fn load_state(&self) -> Result<(), SavestateError> {
+        let _lock = self.save_mutex.lock().await;
+        let res = self.load_state_inner().await;
+        res
+    }
+
+    fn save_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
+        // create transmission channel for savestate result
+        let (mut future, waiter) = save_pair(CoreParam::StateSaveComplete);
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
+        // initiate the save operation. This is guaranteed to trip the waiter at some point.
+        if let Err(error) = self.do_command(Command::StateSave)
+        {
+            future.fail_early(error);
+        }
+
+        future
+    }
+
+    fn load_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
+        let (mut future, waiter) = save_pair(CoreParam::StateLoadComplete);
+        self.save_sender
+            .send(waiter)
+            .expect("Waiter queue disconnected!");
+
+        if let Err(error) = self.do_command(Command::StateSave)
+        {
+            future.fail_early(error);
+        }
+
+        future
+    }
+
+    pub fn set_savestate_slot(&self, slot: u8) -> Result<(), M64PError> {
+        if slot > 9 {
+            panic!("Slot value must be between 0-9")
+        }
+
+        self.do_command_i(Command::StateSetSlot, slot as i32)
+    }
+}
 
 /// Class that waits for a state change and resolves a savestate future.
 pub(crate) struct SavestateWaiter {
@@ -18,7 +71,6 @@ pub(crate) struct SavestateWaiter {
 
 /// Future implementation for savestates operations.
 pub(crate) struct SavestateFuture {
-    core_param: CoreParam,
     early_fail: Option<M64PError>,
     rx: oneshot::Receiver<bool>,
 }
@@ -54,7 +106,6 @@ pub(crate) fn save_pair(param: CoreParam) -> (SavestateFuture, SavestateWaiter) 
     let (tx, rx) = oneshot::channel();
     (
         SavestateFuture {
-            core_param: param,
             early_fail: None,
             rx,
         },

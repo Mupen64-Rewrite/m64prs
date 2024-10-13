@@ -5,12 +5,27 @@ use crate::error::{M64PError, WrongConfigType};
 use ash::vk;
 use m64prs_sys::{ConfigType, GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 
+/// Represents the full set of version data obtainable from Mupen64Plus.
 #[derive(Clone, PartialEq, Eq)]
 pub struct APIVersion {
+    /// The API data exposed.
     pub api_type: m64prs_sys::PluginType,
+    /// The plugin's current numerical version, represented as a packed bytefield.
+    /// Taking the least-significant byte as byte 0:
+    /// - byte 2 contains the major version
+    /// - byte 1 contains the minor version
+    /// - byte 0 contains the patch version
     pub plugin_version: c_int,
+    /// The plugin's supported API version represented as a packed bytefield.
+    /// Taking the least-significant byte as byte 0:
+    /// - byte 2 contains the major version
+    /// - byte 1 contains the minor version
+    /// - byte 0 contains the patch version
     pub api_version: c_int,
+    /// The plugin's name.
     pub plugin_name: &'static CStr,
+    /// A bitflag listing capabilities. For the core, available capabilities
+    /// are enumerated by [`CoreCaps`][`::m64prs_sys::CoreCaps`].
     pub capabilities: c_int,
 }
 
@@ -84,6 +99,7 @@ pub enum ConfigValue {
 }
 
 impl ConfigValue {
+    /// Returns the equivalent [`ConfigType`] for this value.
     pub fn cfg_type(&self) -> ConfigType {
         match self {
             ConfigValue::Int(_) => ConfigType::Int,
@@ -93,6 +109,7 @@ impl ConfigValue {
         }
     }
 
+    /// (INTERNAL) Obtains a pointer to this value's data.
     pub(crate) unsafe fn as_ptr(&self) -> *const c_void {
         match self {
             ConfigValue::Int(value) => value as *const c_int as *const c_void,
@@ -169,14 +186,4 @@ impl TryInto<CString> for ConfigValue {
             other => Err(WrongConfigType::new(ConfigType::String, other.cfg_type()))
         }
     }
-}
-
-/// Represents a controller port on the N64. Used for VCR input functions.
-#[derive(Debug, Clone, Copy, num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
-#[repr(u32)]
-pub enum ControllerPort {
-    Port1 = 0,
-    Port2 = 1,
-    Port3 = 2,
-    Port4 = 3,
 }

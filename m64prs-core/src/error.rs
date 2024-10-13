@@ -82,6 +82,7 @@ pub enum StartupError {
     CoreInit(#[source] M64PError),
 }
 
+/// Error that may occur during a savestate save or load.
 #[derive(Debug, Error)]
 pub enum SavestateError {
     /// An error occurred while requesting the savestate operation.
@@ -93,26 +94,19 @@ pub enum SavestateError {
     SaveLoad
 }
 
+
+/// Error that may occur during plugin loading.
 #[derive(Debug, Error)]
-pub enum CoreError {
+pub enum PluginLoadError {
     /// An error occurred involving a dynamic library.
     #[error("Error occurred involving a dynamic library.")]
     Library(#[source] ::dlopen2::Error),
     /// An error occurred within Mupen64Plus or one of its plugins
     #[error("Error occurred within Mupen64Plus or one of its plugins.")]
     M64P(#[source] M64PError),
-    /// An error occured during an I/O operation.
-    #[error("Error occurred during an I/O operation.")]
-    IO(#[source] ::std::io::Error),
     /// The plugin specified for a particular type isn't a valid plugin of that type.
     #[error("The plugin is not valid for its type.")]
     PluginInvalid(m64prs_sys::PluginType),
-    /// A savestate load failed. Defails are likely logged.
-    #[error("Savestate loading failed")]
-    LoadStateFailed,
-    /// A savestate save failed. Details are likely logged.
-    #[error("Savestate saving failed")]
-    SaveStateFailed,
 }
 
 

@@ -26,9 +26,8 @@ fn main() {
         .unwrap();
 
         let cfg_sect = core.cfg_open(c"Video-General").unwrap();
-        cfg_sect.for_each_param(|name, ptype| {
-            println!("param {} ({})", name.to_str().unwrap(), ptype);
-        }).unwrap()
+        cfg_sect.set(c"ScreenWidth", 960).unwrap();
+        cfg_sect.set(c"ScreenHeight", 720).unwrap();
     }
 
 

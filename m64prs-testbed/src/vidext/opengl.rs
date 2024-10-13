@@ -24,7 +24,7 @@ use glutin::{
 };
 use glutin_winit::{DisplayBuilder, GlWindow};
 use m64prs_core::{
-    error::{CoreError, M64PError},
+    error::{PluginLoadError, M64PError},
     types::FFIResult,
     Core,
 };
