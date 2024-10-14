@@ -35,19 +35,19 @@ fn main() {
         {
             let (_, inputs) = m64prs_movie::load_m64(&args[3]);
             let mut counter: usize = 0;
+            let mut first_frame = true;
 
             core.set_input_filter(Box::new(move |port, input| {
                 if port != 0 {
                     return input;
                 }
-                const OFFSET: usize = 1;
+                if first_frame {
+                    first_frame = false;
+                    return input;
+                }
 
-                if counter < inputs.len() + OFFSET {
-                    let result = match counter {
-                        OFFSET.. => inputs[counter - OFFSET],
-                        0.. => Buttons::BLANK
-                    };
-                    println!("{:4}: {:?}", counter, result);
+                if counter < inputs.len() {
+                    let result = inputs[counter];
                     counter += 1;
                     result
                 }
