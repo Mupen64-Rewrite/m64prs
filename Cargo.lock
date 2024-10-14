@@ -1197,6 +1197,7 @@ dependencies = [
  "glutin-winit",
  "log",
  "m64prs-core",
+ "m64prs-movie",
  "m64prs-sys",
  "raw-window-handle",
  "send_wrapper",
@@ -1219,6 +1220,15 @@ dependencies = [
  "num_enum",
  "paste",
  "send_wrapper",
+ "thiserror",
+]
+
+[[package]]
+name = "m64prs-movie"
+version = "0.1.0"
+dependencies = [
+ "m64prs-core",
+ "m64prs-sys",
  "thiserror",
 ]
 

@@ -12,6 +12,7 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
 
     let core = Arc::new(RwLock::new(Core::init(PathBuf::from(&args[1])).unwrap()));
+    vidext::init_video_state(Arc::clone(&core));
 
     {
         let mut core = core.write().unwrap();

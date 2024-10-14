@@ -1,0 +1,10 @@
+[package]
+name = "m64prs-movie"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+m64prs-core = { path = "../m64prs-core" }
+m64prs-sys = { path = "../m64prs-sys" }
+
+thiserror = "1.0.56"

@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 m64prs-core = { path = "../m64prs-core" }
 m64prs-sys = { path = "../m64prs-sys" }
+m64prs-movie = { path = "../m64prs-movie" }
 
 enum-map = "2.7.3"
 
