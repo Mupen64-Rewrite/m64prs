@@ -17,15 +17,15 @@ use crate::{
 };
 
 use m64prs_sys::{
-    api::FullCoreApi,
-    Command, ConfigType, CoreParam, MsgLevel,
+    api::FullCoreApi, Buttons, Command, ConfigType, CoreParam, MsgLevel
 };
 
 use self::save::{SavestateWaitManager, SavestateWaiter};
 
 mod config;
-mod save;
 mod plugin;
+mod save;
+mod tas_callbacks;
 
 pub use plugin::Plugin;
 pub use config::ConfigSection;
@@ -49,18 +49,10 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
         MsgLevel::Verbose => Level::Trace,
         _ => panic!("Received invalid message level {}", level),
     };
-    log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
-}
-#[allow(unused)]
-unsafe extern "C" fn vcr_debug_callback(level: MsgLevel, message: *const c_char) {
-    let log_level = match level {
-        MsgLevel::Error => Level::Error,
-        MsgLevel::Warning => Level::Warn,
-        MsgLevel::Info => Level::Info,
-        MsgLevel::Status => Level::Debug,
-        MsgLevel::Verbose => Level::Trace,
-    };
-    log!(log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
+
+    let target = CStr::from_ptr(context as *const c_char).to_str().unwrap();
+
+    log!(target: target, log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
 }
 
 #[allow(unused)]
@@ -77,14 +69,18 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
 
 struct PinnedCoreState {
     pub st_wait_mgr: SavestateWaitManager,
+    pub input_filter_callback: Option<Box<dyn FnMut(u32, Buttons) -> Buttons>>
 }
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
-    api: Container<FullCoreApi>,
     pin_state: Pin<Box<PinnedCoreState>>,
+
+    api: Container<FullCoreApi>,
     plugins: Option<[Plugin; 4]>,
+
+
 
     save_sender: mpsc::Sender<SavestateWaiter>,
     save_mutex: AsyncMutex<()>,
@@ -111,7 +107,7 @@ impl Core {
     /// - Library loading fails ([`CoreError::Library`])
     /// - Initialization of Mupen64Plus fails ([`CoreError::M64P`])
     pub fn init(path: impl AsRef<Path>) -> Result<Self, StartupError> {
-        const CORE_DEBUG_ID: &'static CStr = c"mupen64plus-core";
+        const CORE_DEBUG_ID: &'static CStr = c"m64p(core)";
 
         let mut guard = CORE_GUARD.lock().unwrap();
         if *guard {
@@ -129,6 +125,7 @@ impl Core {
             plugins: None,
             pin_state: Box::pin(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
+                input_filter_callback: None
             }),
             save_sender: save_tx,
             save_mutex: AsyncMutex::new(()),

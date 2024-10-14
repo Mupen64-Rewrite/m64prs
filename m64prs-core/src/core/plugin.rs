@@ -229,7 +229,15 @@ impl Plugin {
     }
 
     fn startup(&mut self, core_ptr: *mut c_void) -> Result<(), M64PError> {
-        core_fn(unsafe { self.api.startup(core_ptr, null_mut(), debug_callback) })
+        let debug_id: &'static CStr = match self.get_type().unwrap() {
+            PluginType::Rsp => c"m64p(rsp)",
+            PluginType::Graphics => c"m64p(gfx)",
+            PluginType::Audio => c"m64p(audio)",
+            PluginType::Input => c"m64p(input)",
+            _ => c"m64p(??)"
+        };
+
+        core_fn(unsafe { self.api.startup(core_ptr, debug_id.as_ptr() as *mut c_void, debug_callback) })
     }
 }
 
