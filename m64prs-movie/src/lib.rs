@@ -302,7 +302,7 @@ pub fn try_load_m64(filename: &str) -> Result<(M64Metadata, Vec<Buttons>), Error
     let mut inputs: Vec<Buttons> = Vec::with_capacity(f[0x400..].len() / 4);
     for chunk in f[0x400..].chunks_exact(4) {
         inputs.push(Buttons {
-            button_bits: ButtonFlags::from_bits_retain(u16::from_be_bytes([chunk[0], chunk[1]])),
+            button_bits: ButtonFlags::from_bits_retain(u16::from_le_bytes([chunk[0], chunk[1]])),
             x_axis: chunk[2] as i8,
             y_axis: chunk[3] as i8,
         });
@@ -384,7 +384,7 @@ fn save_m64_impl(filename: &str, metadata: &M64Metadata, inputs: &[Buttons]) -> 
     f.write_all(&description)?; // description
 
     for &input in inputs {
-        f.write_all(&input.button_bits.bits().to_be_bytes())?;
+        f.write_all(&input.button_bits.bits().to_le_bytes())?;
         f.write_all(&[input.x_axis as u8])?;
         f.write_all(&[input.y_axis as u8])?;
     }

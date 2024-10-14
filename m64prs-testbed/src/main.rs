@@ -1,8 +1,10 @@
-use std::fs;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::{fs, thread};
 use std::{path::PathBuf, sync::Arc};
 
 use std::sync::RwLock;
 use m64prs_core::{Core, Plugin};
+use m64prs_sys::{Buttons, EmuState};
 
 mod vidext;
 
@@ -28,6 +30,32 @@ fn main() {
         let cfg_sect = core.cfg_open(c"Video-General").unwrap();
         cfg_sect.set(c"ScreenWidth", 960).unwrap();
         cfg_sect.set(c"ScreenHeight", 720).unwrap();
+
+        // #[cfg(any())]
+        {
+            let (_, inputs) = m64prs_movie::load_m64(&args[3]);
+            let mut counter: usize = 0;
+
+            core.set_input_filter(Box::new(move |port, input| {
+                if port != 0 {
+                    return input;
+                }
+                const OFFSET: usize = 1;
+
+                if counter < inputs.len() + OFFSET {
+                    let result = match counter {
+                        OFFSET.. => inputs[counter - OFFSET],
+                        0.. => Buttons::BLANK
+                    };
+                    println!("{:4}: {:?}", counter, result);
+                    counter += 1;
+                    result
+                }
+                else {
+                    Buttons::BLANK
+                }
+            }));
+        }
     }
 
 

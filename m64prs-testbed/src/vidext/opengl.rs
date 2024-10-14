@@ -1,10 +1,5 @@
 use std::{
-    ffi::{c_int, c_void, CStr, CString},
-    mem,
-    num::NonZeroU32,
-    ptr::null_mut,
-    sync::Arc,
-    time::Duration,
+    ffi::{c_int, c_void, CStr, CString}, mem, num::NonZeroU32, ptr::null_mut, sync::Arc, thread, time::Duration
 };
 
 mod gl {
@@ -336,8 +331,11 @@ impl OpenGlActiveState {
         }
         match event {
             WindowEvent::CloseRequested => {
-                let core = self.core.read().unwrap();
-                core.stop().map_err(|_| M64PError::PluginFail)?;
+                let core = Arc::clone(&self.core);
+                let _ = thread::spawn(move || {
+                    let core = core.read().unwrap();
+                    let _ = futures::executor::block_on(core.stop());
+                });
             }
             WindowEvent::RedrawRequested => {
                 self.window.pre_present_notify();

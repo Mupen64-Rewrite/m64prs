@@ -9,6 +9,7 @@ use std::{
 
 use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
+use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
 
 use crate::error::{M64PError, StartupError};
@@ -20,6 +21,7 @@ use m64prs_sys::{
 use self::save::{SavestateWaitManager, SavestateWaiter};
 
 mod config;
+mod emu_state;
 mod plugin;
 mod save;
 mod tas_callbacks;
@@ -60,13 +62,17 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
         CoreParam::StateSaveComplete | CoreParam::StateLoadComplete => {
             pinned_state.st_wait_mgr.on_state_change(param, value);
         }
+        CoreParam::EmuState => {
+            pinned_state.emu_wait_mgr.on_emu_state_changed(value);
+        }
         _ => (),
     }
 }
 
 struct PinnedCoreState {
-    pub st_wait_mgr: SavestateWaitManager,
-    pub input_filter_callback: Option<Box<dyn FnMut(u32, Buttons) -> Buttons>>
+    st_wait_mgr: SavestateWaitManager,
+    emu_wait_mgr: EmulatorWaitManager,
+    input_filter_callback: Option<Box<dyn FnMut(u32, Buttons) -> Buttons + Send + Sync>>
 }
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
@@ -76,11 +82,12 @@ pub struct Core {
 
     api: Container<FullCoreApi>,
     plugins: Option<[Plugin; 4]>,
-
-
-
+    
     save_sender: mpsc::Sender<SavestateWaiter>,
     save_mutex: AsyncMutex<()>,
+
+    emu_sender: mpsc::Sender<EmulatorWaiter>,
+    emu_mutex: AsyncMutex<()>
 }
 
 impl Debug for Core {
@@ -116,16 +123,21 @@ impl Core {
             .map_err(StartupError::Library)?;
 
         let (save_tx, save_rx) = mpsc::channel();
+        let (emu_tx, emu_rx) = mpsc::channel();
 
         let mut core = Self {
             api,
             plugins: None,
             pin_state: Box::pin(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
-                input_filter_callback: None
+                emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
+                input_filter_callback: None,
             }),
             save_sender: save_tx,
             save_mutex: AsyncMutex::new(()),
+            
+            emu_sender: emu_tx,
+            emu_mutex: AsyncMutex::new(())
         };
 
         unsafe {
@@ -224,39 +236,5 @@ impl Core {
     /// Executes the currently-open ROM.
     pub fn execute(&self) -> Result<(), M64PError> {
         self.do_command(Command::Execute)
-    }
-}
-
-// Asynchronous core commands
-impl Core {
-    /// Stops the currently-running ROM.
-    pub fn stop(&self) -> Result<(), M64PError> {
-        // TODO: add async waiter that waits on emulator state
-        self.do_command(Command::Stop)
-    }
-    /// Pauses the currently-running ROM.
-    pub fn pause(&self) -> Result<(), M64PError> {
-        // TODO: add async waiter that waits on emulator state
-        self.do_command(Command::Pause)
-    }
-    pub fn resume(&self) -> Result<(), M64PError> {
-        // TODO: add async waiter that waits on emulator state
-        self.do_command(Command::Resume)
-    }
-    pub fn advance_frame(&self) -> Result<(), M64PError> {
-        // TODO: add async waiter that waits on emulator state
-        self.do_command(Command::AdvanceFrame)
-    }
-
-    /// Notifies the graphics plugin of a change in the window's size.
-    pub fn notify_resize(&self, width: u16, height: u16) -> Result<(), M64PError> {
-        let size_packed = (((width as u32) << 16) | (height as u32)) as c_int;
-        unsafe {
-            self.do_command_ip(
-                Command::CoreStateSet,
-                u32::from(CoreParam::VideoSize) as c_int,
-                &size_packed as *const c_int as *mut c_void,
-            )
-        }
     }
 }

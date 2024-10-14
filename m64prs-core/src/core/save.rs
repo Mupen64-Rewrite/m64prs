@@ -30,7 +30,7 @@ impl Core {
         let (mut future, waiter) = save_pair(CoreParam::StateSaveComplete);
         self.save_sender
             .send(waiter)
-            .expect("Waiter queue disconnected!");
+            .expect("save waiter queue disconnected");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
         if let Err(error) = self.do_command(Command::StateSave)
         {
@@ -44,7 +44,7 @@ impl Core {
         let (mut future, waiter) = save_pair(CoreParam::StateLoadComplete);
         self.save_sender
             .send(waiter)
-            .expect("Waiter queue disconnected!");
+            .expect("save waiter queue disconnected");
 
         if let Err(error) = self.do_command(Command::StateSave)
         {
