@@ -3,7 +3,6 @@ use std::{path::PathBuf, sync::Arc};
 
 use std::sync::RwLock;
 use m64prs_core::{Core, Plugin};
-use vidext::init_video_state;
 
 mod vidext;
 

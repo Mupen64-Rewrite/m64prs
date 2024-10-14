@@ -12,23 +12,23 @@ mod gl {
 }
 
 use gl::{
-    types::{GLenum, GLfloat, GLint, GLsizei},
+    types::{GLenum, GLint},
     Gl,
 };
 use glutin::{
     config::{Api, ColorBufferType, Config, ConfigTemplateBuilder, GlConfig},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, GetGlDisplay},
-    prelude::{GlContext, GlDisplay, NotCurrentGlContext, PossiblyCurrentGlContext},
+    prelude::{GlDisplay, NotCurrentGlContext, PossiblyCurrentGlContext},
     surface::{GlSurface, Surface, SurfaceAttributesBuilder, SwapInterval, WindowSurface},
 };
 use glutin_winit::{DisplayBuilder, GlWindow};
 use m64prs_core::{
-    error::{PluginLoadError, M64PError},
+    error::M64PError,
     types::FFIResult,
     Core,
 };
-use m64prs_sys::{Error, GLAttribute, GLContextType, VideoFlags, VideoMode};
+use m64prs_sys::{GLAttribute, GLContextType, VideoFlags, VideoMode};
 use raw_window_handle::HasWindowHandle;
 use std::sync::RwLock;
 use winit::{

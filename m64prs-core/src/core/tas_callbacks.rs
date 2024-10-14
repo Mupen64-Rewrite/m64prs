@@ -1,11 +1,8 @@
-use std::{
-    ffi::{c_int, c_void},
-    ptr::null_mut,
-};
+use std::ffi::{c_int, c_void};
 
 use m64prs_sys::Buttons;
 
-use crate::{core::PinnedCoreState, error::M64PError};
+use crate::core::PinnedCoreState;
 
 use super::{core_fn, Core};
 

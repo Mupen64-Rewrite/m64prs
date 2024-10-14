@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_float, c_int, c_uint, c_void, CStr};
+use std::ffi::{c_char, c_float, c_int, c_void};
 
 use dlopen2::wrapper::{WrapperApi, WrapperMultiApi};
 

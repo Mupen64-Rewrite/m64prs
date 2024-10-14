@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_uint, c_void, CStr, CString},
+    ffi::{c_char, c_int, c_uint, c_void, CStr},
     fmt::Debug,
     path::Path,
     pin::Pin,
@@ -11,13 +11,10 @@ use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
 use log::{log, Level};
 
-use crate::{
-    error::{M64PError, StartupError},
-    types::ConfigValue,
-};
+use crate::error::{M64PError, StartupError};
 
 use m64prs_sys::{
-    api::FullCoreApi, Buttons, Command, ConfigType, CoreParam, MsgLevel
+    api::FullCoreApi, Buttons, Command, CoreParam, MsgLevel
 };
 
 use self::save::{SavestateWaitManager, SavestateWaiter};
