@@ -169,7 +169,7 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let core_dir =
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../mupen64plus-core-rr");
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../mupen64plus-core-tas");
     if !core_dir.exists() {
         panic!("Core directory does not exist!");
     }

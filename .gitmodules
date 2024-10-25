@@ -1,0 +1,4 @@
+[submodule "mupen64plus-core-tas"]
+	path = mupen64plus-core-tas
+	url = https://github.com/jgcodes2020/mupen64plus-core
+	branch = rerecording
