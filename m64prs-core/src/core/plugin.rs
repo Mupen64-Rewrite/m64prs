@@ -62,7 +62,7 @@ impl Core {
         }
 
         // startup the four plugins
-        let core_ptr = unsafe { self.api.into_raw() };
+        let core_ptr = unsafe { std::mem::transmute::<_, *mut c_void>(self.api.into_raw()) };
         gfx_plugin
             .startup(core_ptr)
             .map_err(|err| PluginLoadError::M64P(err))?;
@@ -149,23 +149,6 @@ impl Core {
         unsafe { self.api.base.detach_plugin(PluginType::Rsp) };
         // drop the plugins. this shuts them down.
         self.plugins = None;
-    }
-
-    /// Overrides the functions used by graphics plugins to setup a window and OpenGL/Vulkan context.
-    ///
-    /// The typical way of acquiring a [`m64prs_sys::VideoExtensionFunctions`] is to generate it
-    /// via the [`vidext_table!()`][`crate::vidext_table!`] macro and [`VideoExtension`][`crate::types::VideoExtension`] trait.
-    pub fn override_vidext(
-        &mut self,
-        vidext: &m64prs_sys::VideoExtensionFunctions,
-    ) -> Result<(), M64PError> {
-        // This is actually safe, since Mupen copies the table.
-        core_fn(unsafe {
-            self.api.base.override_vidext(
-                vidext as *const m64prs_sys::VideoExtensionFunctions
-                    as *mut m64prs_sys::VideoExtensionFunctions,
-            )
-        })
     }
 }
 

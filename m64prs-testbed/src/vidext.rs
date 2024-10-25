@@ -1,11 +1,11 @@
 use m64prs_core::{
     error::M64PError,
     types::{FFIResult, VideoExtension},
-    vidext_table, Core,
+    Core,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 use send_wrapper::SendWrapper;
-use std::{ptr::null_mut, sync::RwLock};
+use std::{iter, ptr::null_mut, sync::RwLock};
 
 use std::{
     cell::{RefCell, RefMut},
@@ -28,9 +28,24 @@ pub struct VideoState {
     render: RenderState,
 }
 
+impl VideoState {
+    pub fn new(core: Arc<RwLock<Core>>) -> Self {
+        let event_loop = EventLoop::with_user_event().build().unwrap();
+        let event_proxy = event_loop.create_proxy();
+
+        Self { core, event_loop, event_proxy, render: RenderState::Uninit }
+    }
+}
+
 enum RenderState {
     Uninit,
     OpenGl(OpenGlState),
+}
+
+impl Default for RenderState {
+    fn default() -> Self {
+        RenderState::Uninit
+    }
 }
 
 impl VideoExtension for VideoState {
@@ -59,15 +74,13 @@ impl VideoExtension for VideoState {
             }
         }
     }
-
-    #[allow(refining_impl_trait)]
-    unsafe fn list_fullscreen_modes(&mut self) -> FFIResult<&'static [Size2D]> {
-        Err(M64PError::Unsupported)
+    
+    unsafe fn list_fullscreen_modes(&mut self) -> FFIResult<impl Iterator<Item = Size2D>> {
+        Result::<iter::Empty<Size2D>, M64PError>::Err(M64PError::Unsupported)
     }
 
-    #[allow(refining_impl_trait)]
-    unsafe fn list_fullscreen_rates(&mut self, _size: Size2D) -> FFIResult<&'static [c_int]> {
-        Err(M64PError::Unsupported)
+    unsafe fn list_fullscreen_rates(&mut self, _size: Size2D) -> FFIResult<impl Iterator<Item = c_int>> {
+        Result::<iter::Empty<c_int>, M64PError>::Err(M64PError::Unsupported)
     }
 
     unsafe fn set_video_mode(
@@ -159,48 +172,3 @@ impl VideoExtension for VideoState {
         Err(M64PError::Unsupported)
     }
 }
-
-impl VideoState {
-    fn new(core: Arc<RwLock<Core>>) -> Self {
-        let event_loop = EventLoop::with_user_event().build().unwrap();
-        let event_proxy = event_loop.create_proxy();
-
-        Self {
-            core,
-            event_loop,
-            event_proxy,
-            render: RenderState::Uninit,
-        }
-    }
-}
-
-static VIDEO_INSTANCE: OnceLock<SendWrapper<RefCell<VideoState>>> = OnceLock::new();
-
-pub fn init_video_state(core: Arc<RwLock<Core>>) {
-    let mut flag = false;
-
-    let inst_cell = VIDEO_INSTANCE.get_or_init(|| {
-        let res = SendWrapper::new(RefCell::new(VideoState::new(core)));
-        flag = true;
-        res
-    });
-    if !flag {
-        panic!("init_video_state should only be called once!");
-    }
-
-    // borrow core and initialize vidext
-    {
-        let inst = inst_cell.borrow_mut();
-        let mut core = inst.core.write().unwrap();
-        core.override_vidext(&VIDEXT_TABLE).unwrap();
-    }
-}
-
-pub fn get_video_state_mut() -> RefMut<'static, VideoState> {
-    VIDEO_INSTANCE
-        .get()
-        .expect("Call init_video_state() first")
-        .borrow_mut()
-}
-
-vidext_table!([&mut get_video_state_mut()] pub VIDEXT_TABLE);

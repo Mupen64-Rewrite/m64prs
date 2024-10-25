@@ -5,6 +5,7 @@ use std::{path::PathBuf, sync::Arc};
 use std::sync::RwLock;
 use m64prs_core::{Core, Plugin};
 use m64prs_sys::{Buttons, EmuState};
+use vidext::VideoState;
 
 mod vidext;
 
@@ -14,10 +15,14 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
 
     let core = Arc::new(RwLock::new(Core::init(PathBuf::from(&args[1])).unwrap()));
-    vidext::init_video_state(Arc::clone(&core));
 
     {
+        let core_arc = &core;
         let mut core = core.write().unwrap();
+
+        let vidext_instance = VideoState::new(Arc::clone(core_arc));
+        core.override_vidext(vidext_instance).unwrap();
+
         core.open_rom(&fs::read(PathBuf::from(&args[2])).unwrap()).unwrap();
         core.attach_plugins(
             Plugin::load("/usr/lib/mupen64plus/mupen64plus-video-rice.so").unwrap(),

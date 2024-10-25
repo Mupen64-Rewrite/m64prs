@@ -25,6 +25,7 @@ mod emu_state;
 mod plugin;
 mod save;
 mod tas_callbacks;
+mod vidext;
 
 pub use plugin::Plugin;
 pub use config::ConfigSection;

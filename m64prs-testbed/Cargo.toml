@@ -1,5 +1,5 @@
 [package]
-name = "m64prs"
+name = "m64prs-testbed"
 version = "0.1.0"
 edition = "2021"
 

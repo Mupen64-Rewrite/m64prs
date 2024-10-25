@@ -41,9 +41,9 @@ pub trait VideoExtension {
     unsafe fn quit(&mut self) -> FFIResult<()>;
 
     /// Lists the available resolutions when rendering in full screen.
-    unsafe fn list_fullscreen_modes(&mut self) -> FFIResult<impl AsRef<[Size2D]>>;
+    unsafe fn list_fullscreen_modes(&mut self) -> FFIResult<impl Iterator<Item = Size2D>>;
     /// Lists the available refresh rates for a specific fullscreen resolution.
-    unsafe fn list_fullscreen_rates(&mut self, size: Size2D) -> FFIResult<impl AsRef<[c_int]>>;
+    unsafe fn list_fullscreen_rates(&mut self, size: Size2D) -> FFIResult<impl Iterator<Item = c_int>>;
 
     /// Sets up a render context with the specified dimensions and current OpenGL attributes.
     unsafe fn set_video_mode(
