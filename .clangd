@@ -1,0 +1,4 @@
+If:
+  PathMatch: "mupen64plus-core-tas/.+"
+CompileFlags:
+  CompilationDatabase: "mupen64plus-core-tas/projects/unix"
