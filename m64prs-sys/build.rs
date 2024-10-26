@@ -1,9 +1,10 @@
 use bindgen::callbacks::{DeriveInfo, ParseCallbacks, TypeKind};
-use heck::{ToPascalCase, ToShoutySnakeCase, ToShoutySnekCase};
+use heck::{ToPascalCase, ToShoutySnakeCase};
 use std::{
     env,
     error::Error,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_tas.h", "m64p_plugin.h"];
@@ -140,8 +141,6 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         .blocklist_type(r"ptr_.*")
         .blocklist_function(".*");
 
-
-
     // blocklist BUTTONS specifically
     builder = builder.blocklist_type(r"BUTTONS");
 
@@ -167,12 +166,41 @@ fn run_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn run_compiler<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
+    #[cfg(unix)]
+    {
+        let makefile_dir = core_dir.as_ref().join("projects/unix");
+        let mut make_proc = Command::new("make")
+            .args(["all"])
+            .current_dir(makefile_dir)
+            .stdout(os_pipe::dup_stderr().unwrap())
+            .spawn()
+            .expect("Command::spawn failed");
+
+        let make_proc = make_proc.wait().expect("Child::wait failed");
+        if !make_proc.success() {
+            panic!(
+                "[make all] failed; exit code {}",
+                make_proc
+                    .code()
+                    .map_or("unknown".to_string(), |code| code.to_string())
+            );
+        }
+
+        // execute compiledb to make 
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let core_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../mupen64plus-core-tas");
     if !core_dir.exists() {
         panic!("Core directory does not exist!");
     }
+
+    run_compiler(&core_dir)?;
     run_bindgen(&core_dir)?;
 
     Ok(())

@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr, CString}, mem, thread::ThreadId
+    ffi::{c_char, c_int, c_void, CStr}, mem
 };
 
 use ash::vk::{self, Handle};
