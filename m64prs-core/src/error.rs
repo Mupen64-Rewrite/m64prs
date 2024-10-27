@@ -58,15 +58,15 @@ impl TryFrom<m64prs_sys::Error> for M64PError {
     type Error = TryFromPrimitiveError<M64PError>;
 
     fn try_from(value: m64prs_sys::Error) -> std::result::Result<Self, Self::Error> {
-        let prim: u32 = value.into();
+        let prim = value as u32;
         prim.try_into()
     }
 }
 
-impl Into<m64prs_sys::Error> for M64PError {
-    fn into(self) -> m64prs_sys::Error {
-        let prim: u32 = self.into();
-        prim.try_into().unwrap()
+impl From<M64PError> for m64prs_sys::Error {
+    fn from(value: M64PError) -> Self {
+        // SAFETY: every value of M64PError always corresponds to a value of m64prs_sys::Error.
+        unsafe { std::mem::transmute(value) }
     }
 }
 

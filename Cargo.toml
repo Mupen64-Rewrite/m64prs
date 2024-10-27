@@ -6,4 +6,5 @@ members = [
     "m64prs-core",
     "m64prs-sys",
     "m64prs-movie", 
+    "m64prs-native", 
 ]

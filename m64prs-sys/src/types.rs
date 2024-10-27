@@ -103,6 +103,8 @@ bitflags! {
 mod tests {
     use std::{mem::MaybeUninit, ptr::addr_of};
 
+    use num_enum::TryFromPrimitive;
+
     use crate::{
         types::{Buttons, Error},
         ButtonFlags,
@@ -141,7 +143,7 @@ mod tests {
     #[test]
     fn test_error() {
         let err = Error::InputNotFound;
-        let res: u32 = err.into();
+        let res: <Error as TryFromPrimitive>::Primitive = err.into();
         let _err2: Error = res.try_into().unwrap();
     }
 

@@ -1,7 +1,7 @@
 use bindgen::callbacks::{DeriveInfo, ParseCallbacks, TypeKind};
 use heck::{ToPascalCase, ToShoutySnakeCase};
 use std::{
-    env, error::Error, ffi::OsString, fmt::Write, path::{Path, PathBuf}, process::{Command, Stdio}, sync::LazyLock
+    env, error::Error, path::{Path, PathBuf}
 };
 
 const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_tas.h", "m64p_plugin.h"];
@@ -157,155 +157,12 @@ fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
             continue;
         }
         let path_str = path.to_string_lossy();
-        builder = builder.header(path_str.clone()).allowlist_file(path_str);
+        builder = builder.header(&*path_str).allowlist_file(regex::escape(&path_str));
     }
     builder.generate()?.write_to_file(out_file)?;
     Ok(())
 }
 
-/// Compiles a mupen64plus-like project using its provided makefile.
-fn m64p_compile_project<P: AsRef<Path>, Q: AsRef<Path>>(project_dir: P, output_dir: Q) -> Result<(), Box<dyn Error>> {
-    #[cfg(unix)]
-    {
-        let makefile_dir = project_dir.as_ref().join("projects/unix");
-        let mut make_proc = Command::new("make")
-            .args(["all"])
-            .current_dir(makefile_dir)
-            .stdout(os_pipe::dup_stderr().unwrap())
-            .spawn()
-            .expect("Command::spawn failed");
-
-        let make_proc = make_proc.wait().expect("Child::wait failed");
-        if !make_proc.success() {
-            panic!(
-                "[make all] failed; exit code {}",
-                make_proc
-                    .code()
-                    .map_or("unknown".to_string(), |code| code.to_string())
-            );
-        }
-
-        // execute compiledb to make
-    }
-
-    #[cfg(all(windows, target_env = "msvc"))]
-    {
-        use std::os::windows::process::CommandExt;
-
-        static VSWHERE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-            // use vswhere.exe bundled with VS
-            let program_files_x86 = PathBuf::from(std::env::var("ProgramFiles(x86)").unwrap());
-            let vswhere_path =
-                program_files_x86.join("Microsoft Visual Studio\\Installer\\vswhere.exe");
-            assert!(vswhere_path.exists());
-            vswhere_path
-        });
-        static VS_DEVCMD: LazyLock<PathBuf> = LazyLock::new(|| {
-            // invoke vswhere to find the latest VS installation with MSVC
-            let vswhere_invoke = Command::new(VSWHERE_PATH.as_path())
-                .arg("-latest")
-                .args([
-                    "-requires",
-                    "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-                ])
-                .args(["-requires", "Microsoft.Component.MSBuild"])
-                .args(["-property", "installationPath"])
-                .output()
-                .expect("vswhere invoke failed");
-            assert!(vswhere_invoke.status.success());
-            
-            // find the developer prompt batchfile
-            let install_path: PathBuf = String::from_utf8(vswhere_invoke.stdout)
-                .unwrap()
-                .trim()
-                .into();
-            install_path.join("Common7\\Tools\\VsDevCmd.bat")
-        });
-
-        let msbuild_config = {
-            let cargo_profile = std::env::var("PROFILE").unwrap();
-            match cargo_profile.as_str() {
-                "release" => "Release",
-                "debug" => "Debug",
-                _ => panic!("Invalid profile!")
-            }
-        };
-        let msbuild_platform = {
-            let cargo_target = std::env::var("TARGET").unwrap();
-            let target_arch = cargo_target.split('-').nth(0).unwrap();
-
-            match target_arch {
-                "x86_64" => "x64",
-                "i686" | "i586" => "Win32",
-                arch => panic!("Unsupported platform {}", arch)
-            }
-        };
-        let vsdevcmd_arch = {
-            let cargo_target = std::env::var("TARGET").unwrap();
-            let target_arch = cargo_target.split('-').nth(0).unwrap();
-
-            match target_arch {
-                "x86_64" => "amd64",
-                "i686" | "i586" => "x86",
-                arch => panic!("Unsupported platform {}", arch)
-            }
-        };
-
-        // output dir: strip the UNC prefix if it's there
-        let output_unc = String::from(output_dir.as_ref().to_str().unwrap());
-        let output = output_unc.strip_prefix("\\\\?\\").unwrap();
-
-        let cmd_invocation = {
-            // setup the final command to pass to cmd.exe
-            let mut s = OsString::new();
-            s.push("\"\"");
-            s.push(VS_DEVCMD.as_os_str());
-            s.push("\" ");
-            write!(
-                s, 
-                "-arch={} && msbuild /p:Configuration={} /p:Platform={} /p:OutDir=\"{}\" {}",
-                vsdevcmd_arch,
-                msbuild_config,
-                msbuild_platform,
-                output,
-                "mupen64plus-core.vcxproj"
-            ).unwrap();
-            s.push("\"");
-            s
-        };
-        eprintln!("Invoking command: cmd.exe /s /c {}", cmd_invocation.to_string_lossy());
-
-        // working dir: strip the UNC prefix if it's there
-        let pwd_unc = String::from(project_dir.as_ref().join("projects\\msvc\\").to_str().unwrap());
-        let pwd = pwd_unc.strip_prefix("\\\\?\\").unwrap();
-
-        let build_invoke = Command::new("cmd.exe")
-            .args(["/s", "/c"])
-            .raw_arg(cmd_invocation.as_os_str())
-            .current_dir(pwd)
-            .stdout(os_pipe::dup_stderr().unwrap())
-            .status()
-            .expect("build command failed");
-
-        assert!(build_invoke.success());
-
-        // assert!(msbuild_invoke.success());
-    }
-
-    Ok(())
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let native_dir = std::fs::canonicalize(
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../native/"),
-    )
-    .unwrap();
-
-    let core_dir = native_dir.join("mupen64plus-core-tas");
-    let build_dir = native_dir.join("build");
-
-    m64p_compile_project(&core_dir, &build_dir)?;
-    core_bindgen(&core_dir)?;
-
-    Ok(())
+fn main() {
+    core_bindgen(m64prs_native::M64P_CORE_DIR).unwrap();
 }

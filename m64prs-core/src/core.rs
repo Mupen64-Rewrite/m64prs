@@ -11,6 +11,7 @@ use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
 use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
+use num_enum::{FromPrimitive, TryFromPrimitive};
 
 use crate::error::{M64PError, StartupError};
 
@@ -41,7 +42,7 @@ fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
 
 #[allow(unused)]
 unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
-    let log_level = match MsgLevel::try_from(level as u32).unwrap() {
+    let log_level = match MsgLevel::try_from(level as <MsgLevel as TryFromPrimitive>::Primitive).unwrap() {
         MsgLevel::Error => Level::Error,
         MsgLevel::Warning => Level::Warn,
         MsgLevel::Info => Level::Info,
