@@ -1,8 +1,10 @@
-use std::{env, path::{Path, PathBuf}};
+use std::{env, fs, path::{Path, PathBuf}};
 
 mod dirs;
 #[cfg(windows)]
 mod msvc;
+#[cfg(unix)]
+mod make;
 
 pub fn setup_cargo_reruns() {
     fn emit(path: &Path) {
@@ -43,11 +45,17 @@ fn compile_m64p_deps(out_dir: &Path) {
 
 #[cfg(unix)]
 fn compile_m64p_deps(out_dir: &Path) {
+    use std::fs;
 
+    let core_dir = PathBuf::from(dirs::M64P_CORE_DIR);
+    make::make(&core_dir.join("projects/unix"));
+    fs::copy(core_dir.join("projects/unix/libmupen64plus.so.2.0.0"), out_dir.join("libmupen64plus.so")).unwrap();
 }
 
 fn main() {
+    // ./target contains all native outputs
     let out_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("target");
+    fs::create_dir_all(&out_dir).unwrap();
 
     compile_m64p_deps(&out_dir);
 }
