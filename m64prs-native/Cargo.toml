@@ -3,4 +3,9 @@ name = "m64prs-native"
 version = "0.1.0"
 edition = "2021"
 
+build = "build/main.rs"
+
 [dependencies]
+
+[build-dependencies]
+os_pipe = "1.2.1"

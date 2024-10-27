@@ -3,3 +3,5 @@
 /.vscode/
 .vs/
 sweep.timestamp
+
+/m64prs-native/target
