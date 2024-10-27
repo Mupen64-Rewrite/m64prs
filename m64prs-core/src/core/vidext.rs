@@ -1,5 +1,6 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr}, mem
+    ffi::{c_char, c_int, c_void, CStr},
+    mem,
 };
 
 use ash::vk::{self, Handle};
@@ -7,6 +8,7 @@ use m64prs_sys::{
     Error as SysError, GLAttribute, RenderMode, Size2D, VideoExtensionFunctions, VideoFlags,
     VideoMode,
 };
+use num_enum::TryFromPrimitive;
 use std::sync::Mutex;
 
 use crate::{error::M64PError, types::VideoExtension};
@@ -14,12 +16,19 @@ use crate::{error::M64PError, types::VideoExtension};
 use super::{core_fn, Core};
 
 impl Core {
-    pub fn override_vidext<V: VideoExtension + 'static>(&mut self, vidext: V) -> Result<(), M64PError> {
+    pub fn override_vidext<V: VideoExtension + 'static>(
+        &mut self,
+        vidext: V,
+    ) -> Result<(), M64PError> {
         let mut vidext_box = VIDEXT_BOX.lock().unwrap();
         *vidext_box = Some(Box::new(VideoExtensionWrapper(vidext)));
         drop(vidext_box);
 
-        core_fn(unsafe { self.api.base.override_vidext(&VIDEXT_TABLE as *const _ as *mut _) })
+        core_fn(unsafe {
+            self.api
+                .base
+                .override_vidext(&VIDEXT_TABLE as *const _ as *mut _)
+        })
     }
 }
 
@@ -71,7 +80,10 @@ trait VideoExtensionDyn: Send {
     unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> m64prs_sys::Error;
 
     /// Grabs an OpenGL function with the specified name.
-    unsafe fn gl_get_proc_address(&mut self, symbol: *const c_char) -> Option<unsafe extern "C" fn()>;
+    unsafe fn gl_get_proc_address(
+        &mut self,
+        symbol: *const c_char,
+    ) -> Option<unsafe extern "C" fn()>;
     /// Sets an OpenGL attribute. This is called before [`VideoExtension::set_video_mode`].
     unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> m64prs_sys::Error;
     /// Gets an OpenGL attribute. This is generally called after [`VideoExtension::set_video_mode`].
@@ -171,10 +183,11 @@ impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
         screen_mode: c_int,
         flags: c_int,
     ) -> SysError {
-        let screen_mode = match VideoMode::try_from(screen_mode as u32) {
-            Ok(value) => value,
-            Err(_) => return SysError::InputAssert
-        };
+        let screen_mode =
+            match VideoMode::try_from(screen_mode as <VideoMode as TryFromPrimitive>::Primitive) {
+                Ok(value) => value,
+                Err(_) => return SysError::InputAssert,
+            };
         let flags = VideoFlags::from_bits_retain(flags as u32);
 
         match self
@@ -196,10 +209,11 @@ impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
         screen_mode: c_int,
         flags: c_int,
     ) -> SysError {
-        let screen_mode = match VideoMode::try_from(screen_mode as u32) {
-            Ok(value) => value,
-            Err(_) => return SysError::InputAssert
-        };
+        let screen_mode =
+            match VideoMode::try_from(screen_mode as <VideoMode as TryFromPrimitive>::Primitive) {
+                Ok(value) => value,
+                Err(_) => return SysError::InputAssert,
+            };
         let flags = VideoFlags::from_bits_retain(flags as u32);
 
         match self.0.set_video_mode_with_rate(
@@ -240,7 +254,10 @@ impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
     }
 
     #[inline(always)]
-    unsafe fn gl_get_proc_address(&mut self, symbol: *const c_char) -> Option<unsafe extern "C" fn()> {
+    unsafe fn gl_get_proc_address(
+        &mut self,
+        symbol: *const c_char,
+    ) -> Option<unsafe extern "C" fn()> {
         mem::transmute(self.0.gl_get_proc_address(CStr::from_ptr(symbol)))
     }
 
@@ -350,7 +367,7 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
         VIDEXT_BOX.lock().unwrap().as_mut().unwrap().quit()
     })),
     VidExtFuncListModes: Some(extern_c_fn!(|modes: *mut Size2D,
-                                          count: *mut c_int|
+                                            count: *mut c_int|
      -> SysError {
         VIDEXT_BOX
             .lock()
@@ -360,8 +377,8 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
             .list_fullscreen_modes(modes, count)
     })),
     VidExtFuncListRates: Some(extern_c_fn!(|size: Size2D,
-                                          rates: *mut c_int,
-                                          count: *mut c_int|
+                                            rates: *mut c_int,
+                                            count: *mut c_int|
      -> SysError {
         VIDEXT_BOX
             .lock()
@@ -371,13 +388,11 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
             .list_fullscreen_rates(size, rates, count)
     })),
     VidExtFuncSetMode: Some(extern_c_fn!(|width: c_int,
-                                        height: c_int,
-                                        bits_per_pixel: c_int,
-                                        screen_mode: c_int,
-                                        flags: c_int|
+                                          height: c_int,
+                                          bits_per_pixel: c_int,
+                                          screen_mode: c_int,
+                                          flags: c_int|
      -> SysError {
-        
-
         VIDEXT_BOX.lock().unwrap().as_mut().unwrap().set_video_mode(
             width,
             height,
@@ -387,11 +402,11 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
         )
     })),
     VidExtFuncSetModeWithRate: Some(extern_c_fn!(|width: c_int,
-                                                height: c_int,
-                                                refresh_rate: c_int,
-                                                bits_per_pixel: c_int,
-                                                screen_mode: c_int,
-                                                flags: c_int|
+                                                  height: c_int,
+                                                  refresh_rate: c_int,
+                                                  bits_per_pixel: c_int,
+                                                  screen_mode: c_int,
+                                                  flags: c_int|
      -> SysError {
         VIDEXT_BOX
             .lock()
@@ -407,15 +422,19 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
                 flags,
             )
     })),
-    VidExtFuncGLGetProc: Some(extern_c_fn!(|symbol: *const c_char| -> Option<unsafe extern "C" fn()> {
-        VIDEXT_BOX
-            .lock()
-            .unwrap()
-            .as_mut()
-            .unwrap()
-            .gl_get_proc_address(symbol)
-    })),
-    VidExtFuncGLSetAttr: Some(extern_c_fn!(|attr: GLAttribute, value: c_int| -> SysError {
+    VidExtFuncGLGetProc: Some(extern_c_fn!(
+        |symbol: *const c_char| -> Option<unsafe extern "C" fn()> {
+            VIDEXT_BOX
+                .lock()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .gl_get_proc_address(symbol)
+        }
+    )),
+    VidExtFuncGLSetAttr: Some(extern_c_fn!(|attr: GLAttribute,
+                                            value: c_int|
+     -> SysError {
         VIDEXT_BOX
             .lock()
             .unwrap()
@@ -424,7 +443,7 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
             .gl_set_attribute(attr, value)
     })),
     VidExtFuncGLGetAttr: Some(extern_c_fn!(|attr: GLAttribute,
-                                          value: *mut c_int|
+                                            value: *mut c_int|
      -> SysError {
         VIDEXT_BOX
             .lock()
@@ -482,7 +501,7 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
             .init_with_render_mode(render_mode)
     })),
     VidExtFuncVKGetSurface: Some(extern_c_fn!(|surface: *mut *mut c_void,
-                                             instance: *mut c_void|
+                                               instance: *mut c_void|
      -> SysError {
         VIDEXT_BOX
             .lock()
@@ -492,7 +511,7 @@ static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
             .vk_get_surface(surface, instance)
     })),
     VidExtFuncVKGetInstanceExtensions: Some(extern_c_fn!(|extensions: *mut *mut *const c_char,
-                                                        count: *mut u32|
+                                                          count: *mut u32|
      -> SysError {
         VIDEXT_BOX
             .lock()

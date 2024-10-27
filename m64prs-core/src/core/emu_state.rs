@@ -50,7 +50,7 @@ impl Core {
         command: Command,
         value: EmuState,
     ) -> impl Future<Output = Result<(), M64PError>> {
-        let (mut future, waiter) = emu_pair(u32::from(value) as i32);
+        let (mut future, waiter) = emu_pair(value as i32);
         self.emu_sender
             .send(waiter)
             .expect("emu waiter queue disconnected");
@@ -68,7 +68,7 @@ impl Core {
         unsafe {
             self.do_command_ip(
                 Command::CoreStateSet,
-                u32::from(CoreParam::VideoSize) as c_int,
+                CoreParam::VideoSize as c_int,
                 &size_packed as *const c_int as *mut c_void,
             )
         }

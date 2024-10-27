@@ -90,14 +90,14 @@ impl Core {
         core_fn(unsafe {
             self.api
                 .base
-                .attach_plugin(PluginType::Graphics, gfx_plugin.api.into_raw())
+                .attach_plugin(PluginType::Graphics, gfx_plugin.api.into_raw() as *mut _)
         })
         .and_then(|_| {
             init_state = 1;
             core_fn(unsafe {
                 self.api
                     .base
-                    .attach_plugin(PluginType::Audio, audio_plugin.api.into_raw())
+                    .attach_plugin(PluginType::Audio, audio_plugin.api.into_raw() as *mut _)
             })
         })
         .and_then(|_| {
@@ -105,7 +105,7 @@ impl Core {
             core_fn(unsafe {
                 self.api
                     .base
-                    .attach_plugin(PluginType::Input, input_plugin.api.into_raw())
+                    .attach_plugin(PluginType::Input, input_plugin.api.into_raw() as *mut _)
             })
         })
         .and_then(|_| {
@@ -113,7 +113,7 @@ impl Core {
             core_fn(unsafe {
                 self.api
                     .base
-                    .attach_plugin(PluginType::Rsp, rsp_plugin.api.into_raw())
+                    .attach_plugin(PluginType::Rsp, rsp_plugin.api.into_raw() as *mut _)
             })
         })
         .map_err(|err| {
