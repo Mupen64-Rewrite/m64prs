@@ -24,6 +24,7 @@ use m64prs_core::{
     Core,
 };
 use m64prs_sys::{GLAttribute, GLContextType, VideoFlags, VideoMode};
+use num_enum::TryFromPrimitive;
 use raw_window_handle::HasWindowHandle;
 use std::sync::RwLock;
 use winit::{
@@ -124,7 +125,7 @@ impl OpenGlInitState {
                 self.gl_minor_version = value.try_into().map_err(|_| M64PError::InputAssert)?
             }
             GLAttribute::ContextProfileMask => {
-                self.gl_context_type = (value as u32)
+                self.gl_context_type = (value as <GLContextType as TryFromPrimitive>::Primitive)
                     .try_into()
                     .map_err(|_| M64PError::InputAssert)?
             }
