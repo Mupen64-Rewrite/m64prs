@@ -36,7 +36,7 @@ fn main() {
         cfg_sect.set(c"ScreenWidth", 960).unwrap();
         cfg_sect.set(c"ScreenHeight", 720).unwrap();
 
-        // #[cfg(any())]
+        #[cfg(any())]
         {
             let (_, inputs) = m64prs_movie::load_m64(&args[3]);
             let mut counter: usize = 0;

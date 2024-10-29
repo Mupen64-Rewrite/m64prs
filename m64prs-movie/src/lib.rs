@@ -1,393 +1,324 @@
-//! M64 parsing library, adapted from [Wafel](https://github.com/branpk/wafel/tree/main).
-
+use helpers::fix_buttons_order;
+use m64prs_sys::Buttons;
 use std::{
-    fmt, fs,
-    io::{self, BufWriter, Write},
-    path::Path,
-    str,
-    sync::Arc,
+    fmt::Debug,
+    io::{self, BufReader, ErrorKind, IoSliceMut, Read, Seek, Write},
+    mem::{self, MaybeUninit},
+    ptr, u32,
 };
 
-mod error;
+pub mod error;
+mod helpers;
 
-pub use error::Error;
-use m64prs_sys::{ButtonFlags, Buttons};
+pub use helpers::StringField;
 
-/// SM64 game versions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SM64Version {
-    /// The original Japanese release.
-    JP,
-    /// US version.
-    US,
-    /// PAL version.
-    EU,
-    /// Shindou version.
-    SH,
+pub const M64_MAGIC: [u8; 4] = [b'M', b'6', b'4', 0x1Au8];
+
+#[repr(C)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct M64Header {
+    /// The signature of the .m64 file.
+    magic: [u8; 4],
+    version: u32,
+    /// A unique UID associated with the movie. Generally equal to the Unix timestamp of its creation,
+    /// though that will overflow in 2106.
+    pub uid: u32,
+    /// Time needed to play the movie, in VIs (vertical interrupts).
+    pub length_vis: u32,
+    /// Number of rerecords for this movie.
+    pub rerecord_count: u32,
+    /// Framerate of the console. Generally 60 on NTSC consoles and 50 on PAL.
+    pub vis_per_second: u8,
+    /// Number of controllers connected for this.
+    pub num_controllers: u8,
+    _reserved1: u16,
+    /// Number of input frames in the movie.
+    pub length_samples: u32,
+    /// How the movie should be started.
+    pub start_flags: StartMethod,
+    _reserved2: u16,
+    /// Flags specifying which controllers and which attachments are connected.
+    pub controller_flags: ControllerFlags,
+    _reserved3: [u8; 160],
+    /// Internal name of the ROM used to record this movie.
+    pub rom_name: StringField<32>,
+    /// ROM's CRC32, ripped from its header.
+    pub rom_crc: u32,
+    /// ROM's country code, ripped from its header.
+    pub rom_cc: u16,
+    _reserved4: [u8; 56],
+    /// Internal name of the video plugin used to record this movie.
+    pub graphics_plugin: StringField<64>,
+    /// Internal name of the audio plugin used to record this movie.
+    pub audio_plugin: StringField<64>,
+    /// Internal name of the input plugin used to record this movie.
+    pub input_plugin: StringField<64>,
+    /// Internal name of the RSP plugin used to record this movie.
+    pub rsp_plugin: StringField<64>,
+    /// Info on the movie's authors.
+    pub author: StringField<222>,
+    /// Description of the movie.
+    pub description: StringField<256>,
 }
 
-impl SM64Version {
-    /// Return all game versions.
-    pub fn all() -> &'static [SM64Version] {
-        &[Self::JP, Self::US, Self::EU, Self::SH]
-    }
+// Check that struct conforms to spec (even with alignment)
+const _: () = {
+    use std::mem;
+    assert!(mem::size_of::<M64Header>() == 1024);
+    assert!(mem::offset_of!(M64Header, magic) == 0x000);
+    assert!(mem::offset_of!(M64Header, version) == 0x004);
+    assert!(mem::offset_of!(M64Header, uid) == 0x008);
+    assert!(mem::offset_of!(M64Header, length_vis) == 0x00C);
+    assert!(mem::offset_of!(M64Header, rerecord_count) == 0x010);
+    assert!(mem::offset_of!(M64Header, vis_per_second) == 0x014);
+    assert!(mem::offset_of!(M64Header, num_controllers) == 0x015);
+    assert!(mem::offset_of!(M64Header, length_samples) == 0x018);
+    assert!(mem::offset_of!(M64Header, start_flags) == 0x01C);
+    assert!(mem::offset_of!(M64Header, controller_flags) == 0x020);
+    assert!(mem::offset_of!(M64Header, rom_name) == 0x0C4);
+    assert!(mem::offset_of!(M64Header, rom_crc) == 0x0E4);
+    assert!(mem::offset_of!(M64Header, rom_cc) == 0x0E8);
+    assert!(mem::offset_of!(M64Header, graphics_plugin) == 0x122);
+    assert!(mem::offset_of!(M64Header, audio_plugin) == 0x162);
+    assert!(mem::offset_of!(M64Header, input_plugin) == 0x1A2);
+    assert!(mem::offset_of!(M64Header, rsp_plugin) == 0x1E2);
+    assert!(mem::offset_of!(M64Header, author) == 0x222);
+    assert!(mem::offset_of!(M64Header, description) == 0x300);
+};
 
-    fn crc_code(self) -> u32 {
-        match self {
-            SM64Version::JP => 0x0e3daa4e,
-            SM64Version::US => 0xff2b5a63,
-            SM64Version::EU => 0x36f03ca0,
-            SM64Version::SH => 0xa8a4fbd6,
-        }
-    }
-
-    fn country_code(self) -> u8 {
-        match self {
-            SM64Version::JP => b'J',
-            SM64Version::US => b'E',
-            SM64Version::EU => b'P',
-            SM64Version::SH => b'J',
-        }
-    }
-}
-
-impl fmt::Display for SM64Version {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SM64Version::JP => write!(f, "JP"),
-            SM64Version::US => write!(f, "US"),
-            SM64Version::EU => write!(f, "EU"),
-            SM64Version::SH => write!(f, "SH"),
-        }
-    }
-}
-
-/// Metadata for a .m64 TAS.
-#[derive(Debug, Clone)]
-pub struct M64Metadata {
-    /// The rom CRC code.
-    crc_code: u32,
-    /// The game country code.
-    country_code: u8,
-    /// The TAS authors - UTF-8 with max size 222 bytes.
-    author: String,
-    /// The TAS description - UTF-8 with max size 256 bytes.
-    description: String,
-    /// The number of rerecords.
-    rerecords: u32,
-}
-
-impl M64Metadata {
-    /// Create a new metadata object with the given CRC and country code.
-    pub fn new(crc_code: u32, country_code: u8) -> Self {
+impl Default for M64Header {
+    fn default() -> Self {
         Self {
-            crc_code,
-            country_code,
-            author: String::new(),
-            description: String::new(),
-            rerecords: 0,
+            magic: M64_MAGIC,
+            version: 3,
+            uid: 0,
+            length_vis: u32::MAX,
+            rerecord_count: u32::MAX,
+            vis_per_second: 60,
+            num_controllers: 1,
+            _reserved1: 0,
+            length_samples: 0,
+            start_flags: StartMethod::FROM_SNAPSHOT,
+            _reserved2: 0,
+            controller_flags: ControllerFlags::P1_PRESENT,
+            _reserved3: [0; 160],
+            rom_name: Default::default(),
+            rom_crc: 0,
+            rom_cc: 0,
+            _reserved4: [0; 56],
+            graphics_plugin: Default::default(),
+            audio_plugin: Default::default(),
+            input_plugin: Default::default(),
+            rsp_plugin: Default::default(),
+            author: Default::default(),
+            description: Default::default(),
         }
-    }
-
-    /// Create a new metadata object using the CRC and country code for the given SM64
-    /// version.
-    pub fn with_version(version: SM64Version) -> Self {
-        Self::new(version.crc_code(), version.country_code())
-    }
-
-    /// Get the CRC code.
-    pub fn crc_code(&self) -> u32 {
-        self.crc_code
-    }
-
-    /// Set the CRC code.
-    pub fn set_crc_code(&mut self, crc_code: u32) -> &mut Self {
-        self.crc_code = crc_code;
-        self
-    }
-
-    /// Get the country code.
-    pub fn country_code(&self) -> u8 {
-        self.country_code
-    }
-
-    /// Set the country code.
-    pub fn set_country_code(&mut self, country_code: u8) -> &mut Self {
-        self.country_code = country_code;
-        self
-    }
-
-    /// Return the SM64 version with matching CRC and country code, if it exists.
-    pub fn version(&self) -> Option<SM64Version> {
-        SM64Version::all().iter().copied().find(|version| {
-            version.crc_code() == self.crc_code && version.country_code() == self.country_code
-        })
-    }
-
-    /// Set the CRC and country code to match the given SM64 version.
-    pub fn set_version(&mut self, version: SM64Version) -> &mut Self {
-        self.crc_code = version.crc_code();
-        self.country_code = version.country_code();
-        self
-    }
-
-    /// Get the author field.
-    pub fn author(&self) -> &str {
-        &self.author
-    }
-
-    /// Set the author field (max 222 bytes).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given string is longer than 222 bytes.
-    #[track_caller]
-    pub fn set_author(&mut self, author: &str) -> &mut Self {
-        match self.try_set_author(author) {
-            Ok(this) => this,
-            Err(error) => panic!("Error:\n  {}\n", error),
-        }
-    }
-
-    /// Set the author field (max 222 bytes).
-    ///
-    /// Returns an error if the given string is longer than 222 bytes.
-    pub fn try_set_author(&mut self, author: &str) -> Result<&mut Self, Error> {
-        if author.len() > 222 {
-            return Err(Error::M64AuthorTooLong);
-        }
-        self.author = author.to_string();
-        Ok(self)
-    }
-
-    /// Get the description field.
-    pub fn description(&self) -> &str {
-        &self.description
-    }
-
-    /// Set the description field (max 256 bytes).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given string is longer than 256 bytes.
-    #[track_caller]
-    pub fn set_description(&mut self, description: &str) -> &mut Self {
-        match self.try_set_description(description) {
-            Ok(this) => this,
-            Err(error) => panic!("Error:\n  {}\n", error),
-        }
-    }
-
-    /// Set the description field (max 256 bytes).
-    ///
-    /// Returns an error if the given string is longer than 256 bytes.
-    pub fn try_set_description(&mut self, description: &str) -> Result<&mut Self, Error> {
-        if description.len() > 256 {
-            return Err(Error::M64DescriptionTooLong);
-        }
-        self.description = description.to_string();
-        Ok(self)
-    }
-
-    /// Get the number of rerecords.
-    pub fn rerecords(&self) -> u32 {
-        self.rerecords
-    }
-
-    /// Set the number of rerecords.
-    pub fn set_rerecords(&mut self, rerecords: u32) -> &mut Self {
-        self.rerecords = rerecords;
-        self
-    }
-
-    /// Add a number of rerecords, saturating on overflow.
-    pub fn add_rerecords(&mut self, rerecords: u32) -> &mut Self {
-        self.rerecords = self.rerecords.saturating_add(rerecords);
-        self
     }
 }
 
-impl fmt::Display for M64Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "M64Metadata(")?;
-        writeln!(f, "  crc_code = {:#010X},", self.crc_code)?;
-        writeln!(f, "  country_code = {:?},", self.country_code as char)?;
-        writeln!(f, "  author = {:?},", self.author)?;
-        writeln!(f, "  description = {:?},", self.description)?;
-        writeln!(f, "  rerecords = {},", self.rerecords)?;
-        write!(f, ")")?;
+impl M64Header {
+    fn from_bytes(slice: [u8; 1024]) -> Self {
+        // SAFETY: All fields, including padding, do not technically have invalid values.
+        let mut result = unsafe { mem::transmute::<_, Self>(slice) };
+
+        // Fix endianness of integer fields
+        macro_rules! fix_field {
+            ($name:ident) => {
+                result.$name = result.$name.to_le()
+            };
+            (newtype $name:ident) => {
+                result.$name.0 = result.$name.0.to_le()
+            };
+            (bitflag $name:ident) => {
+                result.$name.0 .0 = result.$name.0 .0.to_le()
+            };
+        }
+
+        fix_field!(version);
+        fix_field!(uid);
+        fix_field!(length_vis);
+        fix_field!(rerecord_count);
+        fix_field!(length_samples);
+        fix_field!(newtype start_flags);
+        fix_field!(bitflag controller_flags);
+        fix_field!(rom_crc);
+        fix_field!(rom_cc);
+
+        result
+    }
+
+    fn into_bytes(mut self) -> [u8; 1024] {
+        // Un-fix endianness of integer fields.
+        macro_rules! fix_field {
+            ($name:ident) => {
+                self.$name = self.$name.to_le()
+            };
+            (newtype $name:ident) => {
+                self.$name.0 = self.$name.0.to_le()
+            };
+            (bitflag $name:ident) => {
+                self.$name.0 .0 = self.$name.0 .0.to_le()
+            };
+        }
+
+        fix_field!(version);
+        fix_field!(uid);
+        fix_field!(length_vis);
+        fix_field!(rerecord_count);
+        fix_field!(length_samples);
+        fix_field!(newtype start_flags);
+        fix_field!(bitflag controller_flags);
+        fix_field!(rom_crc);
+        fix_field!(rom_cc);
+
+        unsafe { mem::transmute(self) }
+    }
+}
+
+impl Debug for M64Header {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("M64Header")
+            .field("magic", &self.magic)
+            .field("version", &self.version)
+            .field("uid", &self.uid)
+            .field("length_vis", &self.length_vis)
+            .field("rerecord_count", &self.rerecord_count)
+            .field("vis_per_second", &self.vis_per_second)
+            .field("num_controllers", &self.num_controllers)
+            .field("length_samples", &self.length_samples)
+            .field("start_flags", &self.start_flags)
+            .field("controller_flags", &self.controller_flags)
+            .field("rom_name", &self.rom_name)
+            .field("rom_crc", &self.rom_crc)
+            .field("rom_cc", &self.rom_cc)
+            .field("video_plugin", &self.graphics_plugin)
+            .field("audio_plugin", &self.audio_plugin)
+            .field("input_plugin", &self.input_plugin)
+            .field("rsp_plugin", &self.rsp_plugin)
+            .field("author", &self.author)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+/// Value indicating how the .m64 file is to be started.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StartMethod(pub u16);
+
+impl StartMethod {
+    /// Indicates that a savestate associated with the .m64 file should be loaded.
+    pub const FROM_SNAPSHOT: StartMethod = StartMethod(1 << 0);
+    /// Indicates that the game should be reset.
+    pub const FROM_RESET: StartMethod = StartMethod(1 << 1);
+    /// Indicates that an EEPROM dump associated with the .m64 file
+    pub const FROM_EEPROM: StartMethod = StartMethod(1 << 2);
+}
+
+bitflags::bitflags! {
+    /// Flags indicating which controllers are present and what attachments they have.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct ControllerFlags: u32 {
+        const NONE = 0;
+
+        /// Port 1 has a controller connected.
+        const P1_PRESENT = 1 << 0;
+        /// Port 2 has a controller connected.
+        const P2_PRESENT = 1 << 1;
+        /// Port 3 has a controller connected.
+        const P3_PRESENT = 1 << 2;
+        /// Port 4 has a controller connected.
+        const P4_PRESENT = 1 << 3;
+
+        /// Port 1 has a Memory Pak attached to the controller.
+        const P1_MEM_PAK = 1 << 4;
+        /// Port 2 has a Memory Pak attached to the controller.
+        const P2_MEM_PAK = 1 << 5;
+        /// Port 3 has a Memory Pak attached to the controller.
+        const P3_MEM_PAK = 1 << 6;
+        /// Port 4 has a Memory Pak attached to the controller.
+        const P4_MEM_PAK = 1 << 7;
+
+        /// Port 1 has a Rumble Pak attached to the controller.
+        const P1_RUMBLE_PAK = 1 << 8;
+        /// Port 2 has a Rumble Pak attached to the controller.
+        const P2_RUMBLE_PAK = 1 << 9;
+        /// Port 3 has a Rumble Pak attached to the controller.
+        const P3_RUMBLE_PAK = 1 << 10;
+        /// Port 4 has a Rumble Pak attached to the controller.
+        const P4_RUMBLE_PAK = 1 << 11;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct M64File {
+    pub header: M64Header,
+    pub inputs: Vec<Buttons>,
+}
+
+impl M64File {
+    pub fn read_from<R: Read>(mut reader: R) -> io::Result<Self> {
+        let header = {
+            // Try to read the header (exactly 1024 bytes)
+            let mut buffer = [0u8; mem::size_of::<M64Header>()];
+            reader.read_exact(&mut buffer)?;
+            // Check signature
+            if buffer[0..3] != M64_MAGIC {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    ".m64: signature not present",
+                ));
+            }
+            // Parse the header
+            M64Header::from_bytes(buffer)
+        };
+        let inputs = {
+            // Compute buffer sizes
+            let buffer_size: usize = header.length_samples.try_into().unwrap();
+            let buffer_byte_size: usize =
+                buffer_size.checked_mul(mem::size_of::<Buttons>()).unwrap();
+
+            // Read remaining bytes, it should all be input data
+            let input_bytes = {
+                let mut buffer = Vec::<u8>::new();
+                reader.read_to_end(&mut buffer)?;
+                buffer.into_boxed_slice()
+            };
+
+            // Ensure we have as many samples as the header says we do
+            if input_bytes.len() < buffer_byte_size {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    ".m64: not enough input frames",
+                ));
+            }
+            // Setup the input vector. Ideally it should not need to be zeroed.
+            let mut buffer = vec![Buttons::BLANK; buffer_size];
+
+            // Copy the input bytes directly into the buttons and fix any endianness issues.
+            unsafe {
+                // SAFETY: Buttons has no invalid values.
+                let bytes = buffer.align_to_mut::<u8>().1;
+                bytes.copy_from_slice(&input_bytes[0..buffer_byte_size]);
+            }
+            fix_buttons_order(&mut buffer);
+
+            buffer
+        };
+
+        Ok(Self { header, inputs })
+    }
+
+    pub fn write_into<W: Write>(self, writer: &mut W) -> io::Result<()> {
+        let Self { header, mut inputs } = self;
+        writer.write_all(&header.into_bytes())?;
+
+        fix_buttons_order(&mut inputs);
+        unsafe {
+            // SAFETY: Buttons is a POD type and can be directly written.
+            let bytes = inputs.align_to_mut::<u8>().1;
+            writer.write_all(&bytes)?;
+        }
+
         Ok(())
     }
-}
-
-/// A set of inputs for a given frame.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct Input {
-    /// The standard button bit flags.
-    pub buttons: u16,
-    /// The joystick x coordinate.
-    pub stick_x: i8,
-    /// The joystick y coordinate.
-    pub stick_y: i8,
-}
-
-impl fmt::Display for Input {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Input(buttons = {:#04X}, stick_x = {}, stick_y = {})",
-            self.buttons, self.stick_x, self.stick_y
-        )
-    }
-}
-
-/// Load an m64 TAS from a file.
-///
-/// # Panics
-///
-/// Panics if:
-/// - The file doesn't exist or can't be read
-/// - The file is an invalid .m64 file
-#[track_caller]
-pub fn load_m64(filename: &str) -> (M64Metadata, Vec<Buttons>) {
-    match try_load_m64(filename) {
-        Ok(result) => result,
-        Err(error) => panic!("Error:\n  {}\n", error),
-    }
-}
-
-/// Load an m64 TAS from a file.
-///
-/// Returns an error if:
-/// - The file doesn't exist or can't be read
-/// - The file is an invalid .m64 file
-pub fn try_load_m64(filename: &str) -> Result<(M64Metadata, Vec<Buttons>), Error> {
-    let f = fs::read(filename).map_err(|error| Error::M64ReadError {
-        filename: filename.to_string(),
-        error: Arc::new(error),
-    })?;
-    if f.len() < 0x400 {
-        return Err(Error::InvalidM64Error {
-            filename: filename.to_string(),
-        });
-    }
-
-    let rerecords = u32::from_le_bytes([f[0x10], f[0x11], f[0x12], f[0x13]]);
-
-    let crc_code = u32::from_le_bytes([f[0xe4], f[0xe5], f[0xe6], f[0xe7]]);
-    let country_code = f[0xe8];
-
-    let author = String::from_utf8(f[0x222..0x222 + 222].to_vec())
-        .map_err(|_| Error::InvalidM64Error {
-            filename: filename.to_string(),
-        })?
-        .trim_end_matches('\x00')
-        .to_string();
-
-    let description = String::from_utf8(f[0x300..0x300 + 256].to_vec())
-        .map_err(|_| Error::InvalidM64Error {
-            filename: filename.to_string(),
-        })?
-        .trim_end_matches('\x00')
-        .to_string();
-
-    let metadata = M64Metadata {
-        crc_code,
-        country_code,
-        author,
-        description,
-        rerecords,
-    };
-
-    let mut inputs: Vec<Buttons> = Vec::with_capacity(f[0x400..].len() / 4);
-    for chunk in f[0x400..].chunks_exact(4) {
-        inputs.push(Buttons {
-            button_bits: ButtonFlags::from_bits_retain(u16::from_le_bytes([chunk[0], chunk[1]])),
-            x_axis: chunk[2] as i8,
-            y_axis: chunk[3] as i8,
-        });
-    }
-
-    Ok((metadata, inputs))
-}
-
-/// Save an m64 TAS to a file.
-///
-/// # Panics
-///
-/// Panics if the file can't be written.
-#[track_caller]
-pub fn save_m64(filename: &str, metadata: &M64Metadata, inputs: &[Buttons]) {
-    if let Err(error) = try_save_m64(filename, metadata, inputs) {
-        panic!("Error:\n  {}\n", error);
-    }
-}
-
-/// Save an m64 TAS to a file.
-///
-/// Returns an error if the file can't be written.
-pub fn try_save_m64(
-    filename: &str,
-    metadata: &M64Metadata,
-    inputs: &[Buttons],
-) -> Result<(), Error> {
-    save_m64_impl(filename, metadata, inputs).map_err(|error| Error::M64WriteError {
-        filename: filename.to_string(),
-        error: Arc::new(error),
-    })
-}
-
-fn save_m64_impl(filename: &str, metadata: &M64Metadata, inputs: &[Buttons]) -> io::Result<()> {
-    if let Some(dir) = Path::new(filename).parent() {
-        fs::create_dir_all(dir)?;
-    }
-    let mut f = BufWriter::new(fs::File::create(filename)?);
-
-    f.write_all(&[b'M', b'6', b'4', 0x1a])?; // magic number
-    f.write_all(&[0x03, 0x00, 0x00, 0x00])?; // version number
-    f.write_all(&[0x00, 0x00, 0x00, 0x00])?; // movie uid
-    f.write_all(&[0xff, 0xff, 0xff, 0xff])?; // VI count
-
-    f.write_all(&metadata.rerecords.to_le_bytes())?; // rerecords
-
-    f.write_all(&[0x3c])?; // VIs per second
-    f.write_all(&[0x01])?; // num controllers
-    f.write_all(&[0x00, 0x00])?; // reserved
-
-    f.write_all(&(inputs.len() as u32).to_le_bytes())?; // num input samples
-
-    f.write_all(&[0x02, 0x00])?; // movie start type = power-on
-    f.write_all(&[0x00, 0x00])?; // reserved
-    f.write_all(&[0x01, 0x00, 0x00, 0x00])?; // controller flags = controller 1 present
-    f.write_all(&[0x00; 160])?; // reserved
-
-    let mut game_name = b"SUPER MARIO 64".to_vec();
-    game_name.resize(32, 0x00);
-    f.write_all(&game_name)?; // internal name of ROM
-
-    f.write_all(&metadata.crc_code.to_le_bytes())?; // CRC code
-    f.write_all(&[metadata.country_code, 0x00])?; // country code
-
-    f.write_all(&[0x00; 56])?; // reserved
-
-    f.write_all(&[0x00; 64])?; // video plugin
-    f.write_all(&[0x00; 64])?; // sound plugin
-    f.write_all(&[0x00; 64])?; // input plugin
-    f.write_all(&[0x00; 64])?; // rsp plugin
-
-    let mut author = metadata.author.as_bytes().to_vec();
-    author.resize(222, 0x00);
-    f.write_all(&author)?; // author name
-
-    let mut description = metadata.description.as_bytes().to_vec();
-    description.resize(256, 0x00);
-    f.write_all(&description)?; // description
-
-    for &input in inputs {
-        f.write_all(&input.button_bits.bits().to_le_bytes())?;
-        f.write_all(&[input.x_axis as u8])?;
-        f.write_all(&[input.y_axis as u8])?;
-    }
-
-    Ok(())
 }

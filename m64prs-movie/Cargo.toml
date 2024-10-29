@@ -7,4 +7,5 @@ edition = "2021"
 m64prs-core = { path = "../m64prs-core" }
 m64prs-sys = { path = "../m64prs-sys" }
 
+bitflags = "2.6.0"
 thiserror = "1.0.56"

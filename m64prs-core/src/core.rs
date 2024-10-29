@@ -11,7 +11,7 @@ use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
 use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
-use num_enum::{FromPrimitive, TryFromPrimitive};
+use num_enum::TryFromPrimitive;
 
 use crate::error::{M64PError, StartupError};
 

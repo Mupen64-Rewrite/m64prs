@@ -14,7 +14,7 @@ bitflags = "2.5.0"
 [build-dependencies]
 m64prs-native = { path = "../m64prs-native" }
 
-bindgen = "0.69.4"
+bindgen = "0.70.1"
 # gix = "0.66.0"
 heck = "0.4.1"
 os_pipe = "1.2.1"
