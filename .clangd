@@ -1,4 +1,4 @@
 If:
-  PathMatch: "mupen64plus-core-tas/.+"
+  PathMatch: "m64prs-native/mupen64plus-core-tas/.+"
 CompileFlags:
-  CompilationDatabase: "mupen64plus-core-tas/projects/unix"
+  CompilationDatabase: "m64prs-native/mupen64plus-core-tas/projects/unix/"

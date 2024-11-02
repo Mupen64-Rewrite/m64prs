@@ -2,9 +2,8 @@ use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
     fmt::Debug,
-    io::{self, BufReader, ErrorKind, IoSliceMut, Read, Seek, Write},
-    mem::{self, MaybeUninit},
-    ptr, u32,
+    io::{self, Read, Write},
+    mem::{self},
 };
 
 pub mod error;

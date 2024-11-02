@@ -116,23 +116,23 @@ pub struct CoreConfigApi {
         param_value: *const c_void,
     ) -> Error,
     #[dlopen2_name = "ConfigSetParameterHelp"]
-    set_parameter_help:
-        unsafe extern "C" fn(handle: Handle, param_name: *const c_char, param_help: *const c_char) -> Error,
+    set_parameter_help: unsafe extern "C" fn(
+        handle: Handle,
+        param_name: *const c_char,
+        param_help: *const c_char,
+    ) -> Error,
 }
 
 #[derive(WrapperApi)]
 pub struct CoreTasApi {
-    #[dlopen2_name = "CoreTAS_SetInputFilterCallback"]
-    set_input_callback:
-        unsafe extern "C" fn(context: *mut c_void, callback: InputFilterCallback) -> Error,
-    #[dlopen2_name = "CoreTAS_SetAudioCallbacks"]
-    set_audio_callbacks: unsafe extern "C" fn(
-        context: *mut c_void,
-        rate_callback: AudioRateCallbck,
-        sample_callback: AudioSampleCallback,
-    ),
+    #[dlopen2_name = "CoreTAS_SetInputHandler"]
+    set_input_handler: unsafe extern "C" fn(new_input_handler: *const TasInputHandler) -> Error,
+    #[dlopen2_name = "CoreTAS_SetAudioHandler"]
+    set_audio_handler: unsafe extern "C" fn(new_audio_handler: *const TasAudioHandler) -> Error,
     #[dlopen2_name = "CoreTAS_SetAudioTapEnabled"]
     set_audio_tap_enabled: unsafe extern "C" fn(value: bool) -> Error,
+    #[dlopen2_name = "CoreTAS_SetSavestateHandler"]
+    set_savestate_handler: unsafe extern "C" fn(new_save_handler: *const TasSaveHandler) -> Error,
 }
 
 #[derive(WrapperApi)]

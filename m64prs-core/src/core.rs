@@ -21,12 +21,12 @@ use m64prs_sys::{
 
 use self::save::{SavestateWaitManager, SavestateWaiter};
 
-mod config;
-mod emu_state;
-mod plugin;
-mod save;
-mod tas_callbacks;
-mod vidext;
+pub mod config;
+pub mod emu_state;
+pub mod plugin;
+pub mod save;
+pub mod tas_callbacks;
+pub mod vidext;
 
 pub use plugin::Plugin;
 pub use config::ConfigSection;
@@ -74,7 +74,6 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
 struct PinnedCoreState {
     st_wait_mgr: SavestateWaitManager,
     emu_wait_mgr: EmulatorWaitManager,
-    input_filter_callback: Option<Box<dyn FnMut(u32, Buttons) -> Buttons + Send + Sync>>
 }
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
@@ -133,7 +132,6 @@ impl Core {
             pin_state: Box::pin(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
                 emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
-                input_filter_callback: None,
             }),
             save_sender: save_tx,
             save_mutex: AsyncMutex::new(()),
@@ -239,4 +237,28 @@ impl Core {
     pub fn execute(&self) -> Result<(), M64PError> {
         self.do_command(Command::Execute)
     }
+}
+
+/// Represents the full set of version data obtainable from Mupen64Plus.
+#[derive(Clone, PartialEq, Eq)]
+pub struct APIVersion {
+    /// The API data exposed.
+    pub api_type: m64prs_sys::PluginType,
+    /// The plugin's current numerical version, represented as a packed bytefield.
+    /// Taking the least-significant byte as byte 0:
+    /// - byte 2 contains the major version
+    /// - byte 1 contains the minor version
+    /// - byte 0 contains the patch version
+    pub plugin_version: c_int,
+    /// The plugin's supported API version represented as a packed bytefield.
+    /// Taking the least-significant byte as byte 0:
+    /// - byte 2 contains the major version
+    /// - byte 1 contains the minor version
+    /// - byte 0 contains the patch version
+    pub api_version: c_int,
+    /// The plugin's name.
+    pub plugin_name: &'static CStr,
+    /// A bitflag listing capabilities. For the core, available capabilities
+    /// are enumerated by [`CoreCaps`][`::m64prs_sys::CoreCaps`].
+    pub capabilities: c_int,
 }

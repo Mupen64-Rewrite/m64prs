@@ -11,7 +11,7 @@ use m64prs_sys::{
 use num_enum::TryFromPrimitive;
 use std::sync::Mutex;
 
-use crate::{error::M64PError, types::VideoExtension};
+use crate::error::M64PError;
 
 use super::{core_fn, Core};
 
@@ -32,6 +32,67 @@ impl Core {
     }
 }
 
+/// Result type for callbacks into Mupen64Plus.
+pub type VidextResult<T> = Result<T, M64PError>;
+
+/// Trait for implementing the video extension. The function APIs have been Rustified for convenience.
+/// The functions in this trait are unsafe, as there are some thread-safety guarantees that need to be upheld from Mupen's side.
+pub trait VideoExtension {
+    /// Initializes the video extension with the specified graphics API.
+    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> VidextResult<()>;
+    /// Shuts down the video extension.
+    unsafe fn quit(&mut self) -> VidextResult<()>;
+
+    /// Lists the available resolutions when rendering in full screen.
+    unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl Iterator<Item = Size2D>>;
+    /// Lists the available refresh rates for a specific fullscreen resolution.
+    unsafe fn list_fullscreen_rates(&mut self, size: Size2D) -> VidextResult<impl Iterator<Item = c_int>>;
+
+    /// Sets up a render context with the specified dimensions and current OpenGL attributes.
+    unsafe fn set_video_mode(
+        &mut self,
+        width: c_int,
+        height: c_int,
+        bits_per_pixel: c_int,
+        screen_mode: VideoMode,
+        flags: VideoFlags,
+    ) -> VidextResult<()>;
+    /// Sets up a render context with the specified dimensions, refresh rate, and current OpenGL attributes.
+    unsafe fn set_video_mode_with_rate(
+        &mut self,
+        width: c_int,
+        height: c_int,
+        refresh_rate: c_int,
+        bits_per_pixel: c_int,
+        screen_mode: VideoMode,
+        flags: VideoFlags,
+    ) -> VidextResult<()>;
+
+    /// Sets the window title.
+    unsafe fn set_caption(&mut self, title: &CStr) -> VidextResult<()>;
+    /// Toggles fullscreen.
+    unsafe fn toggle_full_screen(&mut self) -> VidextResult<()>;
+    /// Resizes the render context to the specified width and height.
+    unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> VidextResult<()>;
+
+    /// Grabs an OpenGL function with the specified name.
+    unsafe fn gl_get_proc_address(&mut self, symbol: &CStr) -> *mut c_void;
+    /// Sets an OpenGL attribute. This is called before [`VideoExtension::set_video_mode`].
+    unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> VidextResult<()>;
+    /// Gets an OpenGL attribute. This is generally called after [`VideoExtension::set_video_mode`].
+    unsafe fn gl_get_attribute(&mut self, attr: GLAttribute) -> VidextResult<c_int>;
+    /// Swaps buffers on the current render context.
+    unsafe fn gl_swap_buffers(&mut self) -> VidextResult<()>;
+    /// Gets the default FBO for this render context.
+    unsafe fn gl_get_default_framebuffer(&mut self) -> u32;
+
+    /// Acquires a Vulkan surface from the window.
+    unsafe fn vk_get_surface(&mut self, inst: vk::Instance) -> VidextResult<vk::SurfaceKHR>;
+    /// Lists the extensions needed to use [`VideoExtension::vk_get_surface`]
+    unsafe fn vk_get_instance_extensions(&mut self) -> VidextResult<&'static [*const c_char]>;
+}
+
+/// FFI-safe trait-object wrapping the video extension.
 trait VideoExtensionDyn: Send {
     /// Initializes the video extension with the specified graphics API.
     unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> m64prs_sys::Error;
@@ -111,8 +172,10 @@ trait VideoExtensionDyn: Send {
     ) -> m64prs_sys::Error;
 }
 
+/// Object that translates generics to FFI interface.
 struct VideoExtensionWrapper<V: VideoExtension>(V);
 
+// SAFETY: we are assuming that Mupen is responsible enough to call the graphics function from one thread only.
 unsafe impl<V: VideoExtension> Send for VideoExtensionWrapper<V> {}
 
 impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
@@ -327,8 +390,11 @@ impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
     }
 }
 
+/// Static instance of the video extension. This should be safe as there's only one
+/// instance of the core at any given time.
 static VIDEXT_BOX: Mutex<Option<Box<dyn VideoExtensionDyn>>> = Mutex::new(None);
 
+/// Helper macro for implementing FFI-facing functions.
 macro_rules! extern_c_fn {
     ( | $($param:ident : $ptype:ty),* $(,)? | $(-> $rtype:ty)? { $($code:tt)* } ) => {
         {
@@ -353,6 +419,7 @@ macro_rules! extern_c_fn {
     };
 }
 
+/// Video extension table accessing an internal static value.
 static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {
     Functions: 17,
     VidExtFuncInit: Some(extern_c_fn!(|| -> SysError {

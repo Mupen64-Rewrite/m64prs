@@ -9,7 +9,7 @@ use m64prs_sys::{api::BasePluginApi, PluginType};
 
 use crate::{
     error::{M64PError, PluginLoadError},
-    types::APIVersion,
+    core::APIVersion,
 };
 
 use super::{core_fn, debug_callback, Core};

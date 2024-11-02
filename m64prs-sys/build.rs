@@ -23,6 +23,7 @@ impl ParseCallbacks for M64PParseCallbacks {
             "m64p_type" => Some("ConfigType".to_owned()),
             // other items
             item if item.starts_with("m64p_") => Some(original_item_name[5..].to_pascal_case()),
+            item if item.starts_with("m64ptas_") => Some(format!("Tas{}", original_item_name[8..].to_pascal_case())),
             _ => None,
         }
     }

@@ -20,7 +20,7 @@ use glutin::{
 use glutin_winit::{DisplayBuilder, GlWindow};
 use m64prs_core::{
     error::M64PError,
-    types::FFIResult,
+    core::vidext::VidextResult,
     Core,
 };
 use m64prs_sys::{GLAttribute, GLContextType, VideoFlags, VideoMode};
@@ -362,7 +362,7 @@ impl OpenGlActiveState {
         Ok(())
     }
 
-    fn request_redraw(&mut self) -> FFIResult<()> {
+    fn request_redraw(&mut self) -> VidextResult<()> {
         self.window.request_redraw();
         Ok(())
     }
@@ -524,7 +524,7 @@ impl OpenGlState {
         while let PumpStatus::Continue = event_loop.pump_app_events(None, self) {}
     }
 
-    pub fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> FFIResult<()> {
+    pub fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> VidextResult<()> {
         match self {
             Self::Init(init_state) => {
                 log::debug!("Setting OpenGL attribute {:?} to {}", attr, value);
@@ -544,7 +544,7 @@ impl OpenGlState {
         _bits_per_pixel: c_int,
         screen_mode: VideoMode,
         flags: VideoFlags,
-    ) -> FFIResult<()> {
+    ) -> VidextResult<()> {
         match self {
             Self::Init(init_state) => {
                 log::info!(
@@ -587,7 +587,7 @@ impl OpenGlState {
         Ok(())
     }
 
-    pub fn gl_get_attribute(&mut self, attr: GLAttribute) -> FFIResult<c_int> {
+    pub fn gl_get_attribute(&mut self, attr: GLAttribute) -> VidextResult<c_int> {
         match self {
             Self::Active(active_state) => active_state.gl_get_attribute(attr),
             Self::FatalError(error) => Err(*error),
@@ -602,7 +602,7 @@ impl OpenGlState {
         }
     }
 
-    pub fn gl_swap_buffers(&mut self, event_loop: &mut EventLoop<VideoUserEvent>) -> FFIResult<()> {
+    pub fn gl_swap_buffers(&mut self, event_loop: &mut EventLoop<VideoUserEvent>) -> VidextResult<()> {
         match self {
             Self::Active(active_state) => {
                 // Perform actions necessary to trigger buffer swap
@@ -616,7 +616,7 @@ impl OpenGlState {
         Ok(())
     }
 
-    pub fn resize_window(&mut self, width: c_int, height: c_int) -> FFIResult<()> {
+    pub fn resize_window(&mut self, width: c_int, height: c_int) -> VidextResult<()> {
         match self {
             Self::Active(active_state) => active_state.resize_window(
                 u32::try_from(width)

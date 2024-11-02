@@ -1,16 +1,14 @@
 use m64prs_core::{
     error::M64PError,
-    types::{FFIResult, VideoExtension},
+    vidext::{VidextResult, VideoExtension},
     Core,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
-use send_wrapper::SendWrapper;
 use std::{iter, ptr::null_mut, sync::RwLock};
 
 use std::{
-    cell::{RefCell, RefMut},
     ffi::{c_char, c_int, c_void, CStr},
-    sync::{Arc, OnceLock},
+    sync::Arc,
 };
 use winit::event_loop::{EventLoop, EventLoopProxy};
 
@@ -49,7 +47,7 @@ impl Default for RenderState {
 }
 
 impl VideoExtension for VideoState {
-    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> FFIResult<()> {
+    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> VidextResult<()> {
         match self.render {
             RenderState::Uninit => {
                 match mode {
@@ -62,7 +60,7 @@ impl VideoExtension for VideoState {
         }
     }
 
-    unsafe fn quit(&mut self) -> FFIResult<()> {
+    unsafe fn quit(&mut self) -> VidextResult<()> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => {
@@ -75,11 +73,11 @@ impl VideoExtension for VideoState {
         }
     }
     
-    unsafe fn list_fullscreen_modes(&mut self) -> FFIResult<impl Iterator<Item = Size2D>> {
+    unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl Iterator<Item = Size2D>> {
         Result::<iter::Empty<Size2D>, M64PError>::Err(M64PError::Unsupported)
     }
 
-    unsafe fn list_fullscreen_rates(&mut self, _size: Size2D) -> FFIResult<impl Iterator<Item = c_int>> {
+    unsafe fn list_fullscreen_rates(&mut self, _size: Size2D) -> VidextResult<impl Iterator<Item = c_int>> {
         Result::<iter::Empty<c_int>, M64PError>::Err(M64PError::Unsupported)
     }
 
@@ -90,7 +88,7 @@ impl VideoExtension for VideoState {
         bits_per_pixel: c_int,
         screen_mode: VideoMode,
         flags: VideoFlags,
-    ) -> FFIResult<()> {
+    ) -> VidextResult<()> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.set_video_mode(
@@ -113,19 +111,19 @@ impl VideoExtension for VideoState {
         bits_per_pixel: c_int,
         screen_mode: VideoMode,
         flags: VideoFlags,
-    ) -> FFIResult<()> {
+    ) -> VidextResult<()> {
         Err(M64PError::Unsupported)
     }
 
-    unsafe fn set_caption(&mut self, title: &CStr) -> FFIResult<()> {
+    unsafe fn set_caption(&mut self, title: &CStr) -> VidextResult<()> {
         Ok(())
     }
 
-    unsafe fn toggle_full_screen(&mut self) -> FFIResult<()> {
+    unsafe fn toggle_full_screen(&mut self) -> VidextResult<()> {
         Err(M64PError::Unsupported)
     }
 
-    unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> FFIResult<()> {
+    unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> VidextResult<()> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.resize_window(width, height),
@@ -139,21 +137,21 @@ impl VideoExtension for VideoState {
         }
     }
 
-    unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> FFIResult<()> {
+    unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> VidextResult<()> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_set_attribute(attr, value),
         }
     }
 
-    unsafe fn gl_get_attribute(&mut self, attr: GLAttribute) -> FFIResult<c_int> {
+    unsafe fn gl_get_attribute(&mut self, attr: GLAttribute) -> VidextResult<c_int> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_get_attribute(attr),
         }
     }
 
-    unsafe fn gl_swap_buffers(&mut self) -> FFIResult<()> {
+    unsafe fn gl_swap_buffers(&mut self) -> VidextResult<()> {
         match &mut self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_swap_buffers(&mut self.event_loop),
@@ -164,11 +162,11 @@ impl VideoExtension for VideoState {
         0
     }
 
-    unsafe fn vk_get_surface(&mut self, inst: ash::vk::Instance) -> FFIResult<ash::vk::SurfaceKHR> {
+    unsafe fn vk_get_surface(&mut self, inst: ash::vk::Instance) -> VidextResult<ash::vk::SurfaceKHR> {
         Err(M64PError::Unsupported)
     }
 
-    unsafe fn vk_get_instance_extensions(&mut self) -> FFIResult<&'static [*const c_char]> {
+    unsafe fn vk_get_instance_extensions(&mut self) -> VidextResult<&'static [*const c_char]> {
         Err(M64PError::Unsupported)
     }
 }
