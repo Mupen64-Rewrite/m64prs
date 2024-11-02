@@ -1,10 +1,11 @@
 use m64prs_core::{
     error::M64PError,
-    vidext::{VidextResult, VideoExtension},
+    vidext::{VideoExtension, VidextResult},
     Core,
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
-use std::{iter, ptr::null_mut, sync::RwLock};
+use send_wrapper::SendWrapper;
+use std::{iter, ops::DerefMut, ptr::null_mut, sync::RwLock};
 
 use std::{
     ffi::{c_char, c_int, c_void, CStr},
@@ -21,9 +22,9 @@ enum VideoUserEvent {
 
 pub struct VideoState {
     core: Arc<RwLock<Core>>,
-    event_loop: EventLoop<VideoUserEvent>,
+    event_loop: SendWrapper<EventLoop<VideoUserEvent>>,
     event_proxy: EventLoopProxy<VideoUserEvent>,
-    render: RenderState,
+    render: SendWrapper<RenderState>,
 }
 
 impl VideoState {
@@ -31,7 +32,12 @@ impl VideoState {
         let event_loop = EventLoop::with_user_event().build().unwrap();
         let event_proxy = event_loop.create_proxy();
 
-        Self { core, event_loop, event_proxy, render: RenderState::Uninit }
+        Self {
+            core,
+            event_loop: SendWrapper::new(event_loop),
+            event_proxy,
+            render: SendWrapper::new(RenderState::Uninit),
+        }
     }
 }
 
@@ -48,10 +54,10 @@ impl Default for RenderState {
 
 impl VideoExtension for VideoState {
     unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> VidextResult<()> {
-        match self.render {
+        match &mut *self.render {
             RenderState::Uninit => {
                 match mode {
-                    RenderMode::OpenGl => self.render = RenderState::OpenGl(OpenGlState::init()),
+                    RenderMode::OpenGl => *self.render = RenderState::OpenGl(OpenGlState::init()),
                     RenderMode::Vulkan => return Err(M64PError::Unsupported),
                 }
                 Ok(())
@@ -61,7 +67,7 @@ impl VideoExtension for VideoState {
     }
 
     unsafe fn quit(&mut self) -> VidextResult<()> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => {
                 self.event_proxy
@@ -72,12 +78,15 @@ impl VideoExtension for VideoState {
             }
         }
     }
-    
+
     unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl Iterator<Item = Size2D>> {
         Result::<iter::Empty<Size2D>, M64PError>::Err(M64PError::Unsupported)
     }
 
-    unsafe fn list_fullscreen_rates(&mut self, _size: Size2D) -> VidextResult<impl Iterator<Item = c_int>> {
+    unsafe fn list_fullscreen_rates(
+        &mut self,
+        _size: Size2D,
+    ) -> VidextResult<impl Iterator<Item = c_int>> {
         Result::<iter::Empty<c_int>, M64PError>::Err(M64PError::Unsupported)
     }
 
@@ -89,7 +98,7 @@ impl VideoExtension for VideoState {
         screen_mode: VideoMode,
         flags: VideoFlags,
     ) -> VidextResult<()> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.set_video_mode(
                 Arc::clone(&self.core),
@@ -124,35 +133,35 @@ impl VideoExtension for VideoState {
     }
 
     unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> VidextResult<()> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.resize_window(width, height),
         }
     }
 
     unsafe fn gl_get_proc_address(&mut self, symbol: &CStr) -> *mut c_void {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => null_mut(),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_get_proc_address(symbol),
         }
     }
 
     unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> VidextResult<()> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_set_attribute(attr, value),
         }
     }
 
     unsafe fn gl_get_attribute(&mut self, attr: GLAttribute) -> VidextResult<c_int> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_get_attribute(attr),
         }
     }
 
     unsafe fn gl_swap_buffers(&mut self) -> VidextResult<()> {
-        match &mut self.render {
+        match &mut *self.render {
             RenderState::Uninit => Err(M64PError::NotInit),
             RenderState::OpenGl(opengl_state) => opengl_state.gl_swap_buffers(&mut self.event_loop),
         }
@@ -162,7 +171,10 @@ impl VideoExtension for VideoState {
         0
     }
 
-    unsafe fn vk_get_surface(&mut self, inst: ash::vk::Instance) -> VidextResult<ash::vk::SurfaceKHR> {
+    unsafe fn vk_get_surface(
+        &mut self,
+        inst: ash::vk::Instance,
+    ) -> VidextResult<ash::vk::SurfaceKHR> {
         Err(M64PError::Unsupported)
     }
 

@@ -48,6 +48,7 @@ fn compile_m64p_deps(out_dir: &Path) {
     use std::fs;
 
     let core_dir = PathBuf::from(dirs::M64P_CORE_DIR);
+    // makefile no work??
     make::make(&core_dir.join("projects/unix"));
     fs::copy(core_dir.join("projects/unix/libmupen64plus.so.2.0.0"), out_dir.join("libmupen64plus.so")).unwrap();
 }
