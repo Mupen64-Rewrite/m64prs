@@ -8,14 +8,14 @@ use std::{
 
 use m64prs_sys::ConfigType;
 
-use crate::error::{M64PError, WrongConfigType, WrongPluginType};
+use crate::error::{M64PError, WrongConfigType};
 
 use super::{core_fn, Core};
 
 /// Functions for the configuration system.
 impl Core {
     /// Runs the provided callback once per available config section.
-    pub fn cfg_for_each_section<F: FnMut(&CStr)>(&self, mut callback: F) -> Result<(), M64PError> {
+    pub fn cfg_for_each_section<F: FnMut(&CStr)>(&mut self, mut callback: F) -> Result<(), M64PError> {
         unsafe extern "C" fn run_callback<F: FnMut(&CStr)>(
             context: *mut c_void,
             name: *const c_char,
@@ -36,6 +36,7 @@ impl Core {
     }
     /// Opens the config section with the given name.
     pub fn cfg_open(&self, name: &CStr) -> Result<ConfigSection, M64PError> {
+
         let mut handle: m64prs_sys::Handle = null_mut();
         core_fn(unsafe {
             self.api

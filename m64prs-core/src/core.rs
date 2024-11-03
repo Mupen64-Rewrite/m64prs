@@ -1,9 +1,8 @@
 use std::{
-    ffi::{c_char, c_int, c_uint, c_void, CStr},
+    ffi::{c_char, c_int, c_void, CStr},
     fmt::Debug,
     path::Path,
-    pin::Pin,
-    ptr::{null, null_mut, NonNull},
+    ptr::{null, null_mut},
     sync::{mpsc, Mutex},
 };
 
@@ -17,7 +16,7 @@ use plugin::PluginSet;
 use crate::error::{M64PError, StartupError};
 
 use m64prs_sys::{
-    api::FullCoreApi, Buttons, Command, CoreParam, MsgLevel
+    api::FullCoreApi, Command, CoreParam, MsgLevel
 };
 
 use self::save::{SavestateWaitManager, SavestateWaiter};

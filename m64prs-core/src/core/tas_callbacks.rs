@@ -1,7 +1,4 @@
-use std::{
-    ffi::{c_int, c_uint, c_void},
-    sync::OnceLock,
-};
+use std::ffi::{c_int, c_uint, c_void};
 
 use ffi::InputHandlerFFI;
 use m64prs_sys::Buttons;
@@ -48,7 +45,7 @@ pub trait SaveHandler: Send + 'static {
 pub mod ffi {
 
     use std::mem;
-    use m64prs_sys::Error as SysError;
+    
 
     use super::*;
 

@@ -5,7 +5,7 @@ use m64prs_core::{
 };
 use m64prs_sys::{GLAttribute, RenderMode, Size2D, VideoFlags, VideoMode};
 use send_wrapper::SendWrapper;
-use std::{iter, ops::DerefMut, ptr::null_mut, sync::RwLock};
+use std::{iter, ptr::null_mut, sync::RwLock};
 
 use std::{
     ffi::{c_char, c_int, c_void, CStr},

@@ -1,10 +1,8 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{fs, thread};
+use std::fs;
 use std::{path::PathBuf, sync::Arc};
 
 use m64prs_core::plugin::PluginSet;
 use m64prs_core::{Core, Plugin};
-use m64prs_sys::{Buttons, EmuState};
 use movie::MovieInputFilter;
 use std::sync::RwLock;
 use vidext::VideoState;
@@ -36,9 +34,10 @@ fn main() {
         })
         .unwrap();
 
-        let cfg_sect = core.cfg_open(c"Video-General").unwrap();
+        let mut cfg_sect = core.cfg_open(c"Video-General").unwrap();
         cfg_sect.set(c"ScreenWidth", 960).unwrap();
         cfg_sect.set(c"ScreenHeight", 720).unwrap();
+        std::mem::drop(cfg_sect);
 
         let input_handler = MovieInputFilter::from_file(PathBuf::from(&args[3]));
         core.set_input_handler(input_handler).unwrap();

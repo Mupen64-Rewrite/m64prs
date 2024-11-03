@@ -326,7 +326,7 @@ impl AnyPlugin {
     /// - The plugin's type is not a valid plugin type.
     ///
     /// If you need to load a plugin of a specific type, use [`Plugin<T>::load`].
-    fn load<P: AsRef<Path>>(path: P) -> Result<Self, PluginLoadError> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, PluginLoadError> {
         let api: Container<BasePluginApi> = unsafe { Container::load(path.as_ref()) }
             .map_err(|err| PluginLoadError::Library(err))?;
 

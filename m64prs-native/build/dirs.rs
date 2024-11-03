@@ -1,5 +1,3 @@
-use std::path::Path;
-
 #[cfg(unix)]
 macro_rules! path_sep {
     () => {
