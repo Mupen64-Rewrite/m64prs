@@ -24,6 +24,8 @@ impl Core {
             function(CStr::from_ptr(name));
         }
 
+        // SAFETY: the reference to the callback should only be used 
+        // during the function, it is not stored.
         core_fn(unsafe {
             self.api
                 .config
@@ -41,6 +43,8 @@ impl Core {
                 .open_section(name.as_ptr(), &mut handle as *mut m64prs_sys::Handle)
         })?;
 
+        // SAFETY: the lifetime of a ConfigSection cannot exceed that of the core it
+        // references. This means that all functions should be callable during that time.
         Ok(ConfigSection {
             core: self,
             name: name.to_owned(),
@@ -64,12 +68,16 @@ impl<'a> ConfigSection<'a> {
     }
 
     /// Saves the current section to disk.
-    pub fn save(&self) -> Result<(), M64PError> {
+    pub fn save(&mut self) -> Result<(), M64PError> {
+        // SAFETY: the reference to the name should only be used
+        // within the function, it is not stored.
         core_fn(unsafe { self.core.api.config.save_section(self.name.as_ptr()) })
     }
 
     /// Reverts any unsaved changes in this section.
-    pub fn revert(&self) -> Result<(), M64PError> {
+    pub fn revert(&mut self) -> Result<(), M64PError> {
+        // SAFETY: the reference to the name should only be used
+        // within the function, it is not stored.
         core_fn(unsafe { self.core.api.config.revert_section(self.name.as_ptr()) })
     }
 
@@ -102,6 +110,8 @@ impl<'a> ConfigSection<'a> {
     /// Gets the type of a parameter.
     pub fn get_type(&self, param: &CStr) -> Result<ConfigType, M64PError> {
         let mut param_type = ConfigType::Int;
+        // SAFETY: the reference to the callback should only be used 
+        // during the function, it is not stored.
         core_fn(unsafe {
             self.core
                 .api
@@ -115,6 +125,8 @@ impl<'a> ConfigSection<'a> {
     /// Gets the help string for a parameter.
     pub fn get_help(&self, param: &CStr) -> Result<CString, M64PError> {
         unsafe {
+            // SAFETY: the CString passed here is only used within
+            // the function.
             let help_ptr = self
                 .core
                 .api
@@ -124,6 +136,8 @@ impl<'a> ConfigSection<'a> {
             if help_ptr == null() {
                 return Err(M64PError::InputNotFound);
             } else {
+                // SAFETY: the CString returned by Mupen should last
+                // as long as it isn't overwritten.
                 return Ok(CStr::from_ptr(help_ptr).to_owned());
             }
         }
@@ -135,24 +149,30 @@ impl<'a> ConfigSection<'a> {
 
         match param_type {
             ConfigType::Int => Ok(ConfigValue::Int(unsafe {
+                // SAFETY: No values are borrowed.
                 self.core
                     .api
                     .config
                     .get_param_int(self.handle, param.as_ptr())
             })),
             ConfigType::Float => Ok(ConfigValue::Float(unsafe {
+                // SAFETY: No values are borrowed.
                 self.core
                     .api
                     .config
                     .get_param_float(self.handle, param.as_ptr())
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
+                // SAFETY: No values are borrowed.
                 self.core
                     .api
                     .config
                     .get_param_bool(self.handle, param.as_ptr())
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
+                // SAFETY: the pointer returned by ConfigGetParamString
+                // is valid for an uncertain period of time. It is copied
+                // to ensure that it won't be freed in that time.
                 CStr::from_ptr(
                     self.core
                         .api
@@ -166,13 +186,15 @@ impl<'a> ConfigSection<'a> {
 
     /// Sets the value of a parameter. For convenience, you may pass in a value
     /// convertible to [`ConfigValue`].
-    pub fn set<T: Into<ConfigValue>>(&self, param: &CStr, value: T) -> Result<(), M64PError> {
+    pub fn set<T: Into<ConfigValue>>(&mut self, param: &CStr, value: T) -> Result<(), M64PError> {
         let cfg_value: ConfigValue = value.into();
 
         unsafe {
             let param_type = cfg_value.cfg_type();
             let param_value = cfg_value.as_ptr();
 
+            // SAFETY: the parameter value pointer is valid during this call,
+            // it should also point to a valid value of cfg_type.
             core_fn(self.core.api.config.set_parameter(
                 self.handle,
                 param.as_ptr(),
@@ -185,8 +207,10 @@ impl<'a> ConfigSection<'a> {
     }
 
     /// Sets or unsets the help text of a parameter.
-    pub fn set_help(&self, param: &CStr, help: Option<&CStr>) -> Result<(), M64PError> {
+    pub fn set_help(&mut self, param: &CStr, help: Option<&CStr>) -> Result<(), M64PError> {
         core_fn(unsafe {
+            // SAFETY: the two string pointers passed here are only used within
+            // the function, they are not stored beyond that.
             self.core.api.config.set_parameter_help(
                 self.handle,
                 param.as_ptr(),

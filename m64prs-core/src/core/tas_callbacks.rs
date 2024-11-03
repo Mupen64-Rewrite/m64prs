@@ -14,8 +14,9 @@ impl Core {
     pub fn set_input_handler<I: InputHandler>(&mut self, handler: I) -> Result<(), M64PError> {
         let mut input_handler = InputHandlerFFI::new(handler);
 
-        // safety: the FFI handler will live as long as it isn't replaced.
+        // SAFETY: the FFI handler is safe to use as long as the context isn't moved.
         core_fn(unsafe { self.api.tas.set_input_handler(&mut input_handler.create_ffi_handler()) })?;
+        // This reference keeps the context from being moved or deleted.
         let _ = self.input_handler.replace(Box::new(input_handler));
 
         Ok(())

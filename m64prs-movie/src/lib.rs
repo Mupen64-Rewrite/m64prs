@@ -170,6 +170,8 @@ impl M64Header {
         fix_field!(rom_crc);
         fix_field!(rom_cc);
 
+        // SAFETY: M64Header is a POD type and can validly be converted
+        // to and from its byte representation.
         unsafe { mem::transmute(self) }
     }
 }

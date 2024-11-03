@@ -59,6 +59,14 @@ pub struct Buttons {
     pub x_axis: i8,
     pub y_axis: i8,
 }
+const _: () = {
+    assert!(std::mem::size_of::<Buttons>() == 4);
+    assert!(std::mem::align_of::<Buttons>() == 4);
+
+    assert!(std::mem::offset_of!(Buttons, button_bits) == 0);
+    assert!(std::mem::offset_of!(Buttons, x_axis) == 2);
+    assert!(std::mem::offset_of!(Buttons, y_axis) == 3);
+};
 
 impl Buttons {
     pub const BLANK: Buttons = Buttons { button_bits: ButtonFlags::NONE, x_axis: 0, y_axis: 0 };
@@ -66,11 +74,13 @@ impl Buttons {
 
 impl From<u32> for Buttons {
     fn from(value: u32) -> Self {
+        // All values of Buttons are valid byte representations of u32.
         unsafe { mem::transmute(value) }
     }
 }
 impl From<Buttons> for u32 {
     fn from(value: Buttons) -> Self {
+        // All values of Buttons are valid byte representations of u32.
         unsafe { mem::transmute(value) }
     }
 }
@@ -109,36 +119,6 @@ mod tests {
         types::{Buttons, Error},
         ButtonFlags,
     };
-
-    #[test]
-    fn test_button_layout() {
-        const UNINIT: MaybeUninit<Buttons> = MaybeUninit::uninit();
-        let ptr = UNINIT.as_ptr();
-
-        assert_eq!(std::mem::size_of::<Buttons>(), 4usize, "sizeof(Buttons)");
-        assert_eq!(std::mem::align_of::<Buttons>(), 4usize, "alignof(Buttons)");
-
-        unsafe { test_button_fields(ptr) };
-    }
-
-    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
-    unsafe fn test_button_fields(ptr: *const Buttons) {
-        assert_eq!(
-            addr_of!((*ptr).button_bits) as usize - ptr as usize,
-            0usize,
-            "offsetof(Buttons, button_bits)"
-        );
-        assert_eq!(
-            addr_of!((*ptr).x_axis) as usize - ptr as usize,
-            2usize,
-            "offsetof(Buttons, x_axis)"
-        );
-        assert_eq!(
-            addr_of!((*ptr).y_axis) as usize - ptr as usize,
-            3usize,
-            "offsetof(Buttons, y_axis)"
-        );
-    }
 
     #[test]
     fn test_error() {

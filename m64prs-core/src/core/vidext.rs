@@ -24,6 +24,9 @@ impl Core {
         *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper(vidext)));
         drop(vidext_box);
 
+        // SAFETY: VIDEXT_TABLE is 'static, so it should outlive the core.
+        // In addition, it is only used during the duration of the function.
+        // Mupen64Plus copies the table.
         core_fn(unsafe {
             self.api
                 .base

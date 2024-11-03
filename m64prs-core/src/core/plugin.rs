@@ -16,24 +16,24 @@ use super::{core_fn, debug_callback, Core};
 
 /// Extension points for the core.
 impl Core {
-    /// Attaches a set of plugins to the core.
+    /// Attaches a set of plugins to the core. Note that the plugins will *not* be returned
+    /// in case of failure, as they will be partially initialized and cannot be reset.
     ///
     /// # Errors
     /// This function can error if:
-    /// - The plugins passed in do not match their supposed type (e.g. `gfx_plugin` expects a graphics plugin)
     /// - Starting up any of the plugins fails
     /// - Attaching any of the plugins fails
     /// - A ROM is not open (yes, this may seem stupid, but it is what it is)
     /// 
     /// # Panics
-    /// This function will panic if the plugins are already attached.
+    /// This function will panic if there are plugins are already attached.
     pub fn attach_plugins(&mut self, mut plugins: PluginSet) -> Result<(), PluginLoadError> {
         if self.plugins.is_some() {
             panic!("Plugins have already been attached")
         }
 
         // startup the four plugins
-        let core_ptr = unsafe { std::mem::transmute::<_, *mut c_void>(self.api.into_raw()) };
+        let core_ptr = unsafe { self.api.into_raw() };
         plugins
             .graphics
             .startup(core_ptr)
@@ -62,6 +62,8 @@ impl Core {
         // since each one requires the previous to finish. The final map_err
         // catches any error that occurred during the pipeline and detaches
         // any plugins that were already attached.
+        // SAFETY: the library handles passed to C live only as long as the core
+        // does, and will be safe to close after shutdown.
         core_fn(unsafe {
             self.api.base.attach_plugin(
                 m64prs_sys::PluginType::Graphics,
@@ -96,6 +98,7 @@ impl Core {
             })
         })
         .map_err(|err| {
+            // SAFETY: detach_plugin does not use any data and is safe to call at any time.
             if init_state >= 3 {
                 unsafe { self.api.base.detach_plugin(m64prs_sys::PluginType::Rsp) };
             }
@@ -128,7 +131,7 @@ impl Core {
             panic!("Plugins are not attached")
         }
 
-        // detach plugins from core.
+        // SAFETY: detach_plugin does not use any data and is safe to call at any time.
         unsafe {
             self.api
                 .base
@@ -224,11 +227,16 @@ impl<T: PluginTypeTrait> Plugin<T> {
     ///
     /// If you need to load a plugin of arbitrary type, use [`AnyPlugin::load`].
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, PluginLoadError> {
+        // SAFETY: we assume the dynamic library loaded here is a plugin. We have
+        // no way to tell whether this is malicious, but unfortunately this is by
+        // the nature of Mupen64Plus's plugin system.
         let api: Container<BasePluginApi> = unsafe { Container::load(path.as_ref()) }
             .map_err(|err| PluginLoadError::Library(err))?;
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
+            // SAFETY: this function should only use the borrowed value; it 
+            // shouldn't store any references.
             core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
                 .map_err(|err| PluginLoadError::M64P(err))?;
             value
@@ -252,6 +260,8 @@ impl<T: PluginTypeTrait> Plugin<T> {
             let mut plugin_name: *const c_char = null();
             let mut capabilites: c_int = 0;
 
+            // SAFETY: this function should only use the borrowed value; it 
+            // shouldn't store any references.
             core_fn(self.api.get_version(
                 &mut plugin_type,
                 &mut plugin_version,
@@ -278,6 +288,8 @@ impl<T: PluginTypeTrait> Plugin<T> {
             PluginType::Input => c"m64p(input)",
         };
 
+        // SAFETY: We assume the plugin is valid. In addition, the debug ID is a 
+        // &'static CStr, meaning it will never be freed unexpectedly.
         core_fn(unsafe {
             self.api
                 .startup(core_ptr, debug_id.as_ptr() as *mut c_void, debug_callback)
@@ -286,6 +298,8 @@ impl<T: PluginTypeTrait> Plugin<T> {
 }
 
 impl<T: PluginTypeTrait> Drop for Plugin<T> {
+    // SAFETY: The plugin can be shut down at any time, and generally fails
+    // fast if it hasn't been started up.
     fn drop(&mut self) {
         unsafe {
             self.api.shutdown();

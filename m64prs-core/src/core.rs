@@ -81,7 +81,7 @@ struct PinnedCoreState {
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
-    pin_state: Pin<Box<PinnedCoreState>>,
+    pin_state: Box<PinnedCoreState>,
 
     plugins: Option<PluginSet>,
     
@@ -128,6 +128,7 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
+        // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
         let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
             .map_err(StartupError::Library)?;
 
@@ -135,9 +136,8 @@ impl Core {
         let (emu_tx, emu_rx) = mpsc::channel();
 
         let mut core = Self {
-            api,
             plugins: None,
-            pin_state: Box::pin(PinnedCoreState {
+            pin_state: Box::new(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
                 emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
             }),
@@ -148,10 +148,15 @@ impl Core {
             emu_sender: emu_tx,
             emu_mutex: AsyncMutex::new(()),
             // frontend hooks
-            input_handler: None
+            input_handler: None,
+            api,
         };
 
         unsafe {
+            // SAFETY: The core has yet to be initialized. The debug callback
+            // context is an &'static CStr, and is guaranteed to outlive the core.
+            // The state callback state is guaranteed to live at least as long
+            // as the core due to the initialization order of this struct.
             core_fn(core.api.base.startup(
                 0x02_01_00,
                 null(),
@@ -189,17 +194,19 @@ impl Core {
 
     #[inline(always)]
     fn do_command_i(&self, command: Command, int_param: c_int) -> Result<(), M64PError> {
+        // SAFETY: Commands called in this form generally don't borrow any data.
         unsafe { self.do_command_ip(command, int_param, null_mut()) }
     }
 
     #[inline(always)]
     fn do_command(&self, command: Command) -> Result<(), M64PError> {
+        // SAFETY: Commands called in this form generally don't borrow any data.
         unsafe { self.do_command_ip(command, 0, null_mut()) }
     }
 }
 impl Drop for Core {
     fn drop(&mut self) {
-        // shutdown the core before it's freed
+        // SAFETY: the core can be shut down at any time.
         unsafe { self.api.base.shutdown() };
         // drop the guard so that another core can be constructed
         {
@@ -215,6 +222,9 @@ impl Core {
     /// Opens a ROM that is pre-loaded into memory.
     pub fn open_rom(&mut self, rom_data: &[u8]) -> Result<(), M64PError> {
         unsafe {
+            // SAFETY: Mupen64Plus copies the ROM data passed into this function.
+            // This means that it won't be invalidated if the ROM data borrowed here
+            // goes out of scope.
             self.do_command_ip(
                 Command::RomOpen,
                 rom_data.len() as c_int,
@@ -226,22 +236,6 @@ impl Core {
     /// Closes a currently open ROM.
     pub fn close_rom(&mut self) -> Result<(), M64PError> {
         self.do_command(Command::RomClose)
-    }
-
-    pub fn set_frame_callback(
-        &mut self,
-        callback: unsafe extern "C" fn(c_uint),
-    ) -> Result<(), M64PError> {
-        unsafe {
-            self.do_command_p(
-                Command::SetFrameCallback,
-                callback as *const c_void as *mut c_void,
-            )
-        }
-    }
-
-    pub fn clear_frame_callback(&mut self) -> Result<(), M64PError> {
-        unsafe { self.do_command_p(Command::SetFrameCallback, null_mut()) }
     }
 
     /// Executes the currently-open ROM.

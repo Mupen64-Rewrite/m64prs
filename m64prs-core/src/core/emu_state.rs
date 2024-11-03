@@ -66,6 +66,8 @@ impl Core {
     pub fn notify_resize(&self, width: u16, height: u16) -> Result<(), M64PError> {
         let size_packed = (((width as u32) << 16) | (height as u32)) as c_int;
         unsafe {
+            // SAFETY: The pointer to the 32-bit size passed here is only 
+            // used during the call to CoreStateSet.
             self.do_command_ip(
                 Command::CoreStateSet,
                 CoreParam::VideoSize as c_int,
