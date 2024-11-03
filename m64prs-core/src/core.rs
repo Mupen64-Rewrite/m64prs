@@ -12,6 +12,7 @@ use dlopen2::wrapper::Container;
 use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
+use plugin::PluginSet;
 
 use crate::error::{M64PError, StartupError};
 
@@ -33,6 +34,7 @@ pub use config::ConfigSection;
 
 /// Internal helper function to convert C results to Rust errors.
 #[inline(always)]
+#[must_use]
 fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
     match err {
         m64prs_sys::Error::Success => Ok(()),
@@ -81,7 +83,7 @@ static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 pub struct Core {
     pin_state: Pin<Box<PinnedCoreState>>,
 
-    plugins: Option<[Plugin; 4]>,
+    plugins: Option<PluginSet>,
     
     save_sender: mpsc::Sender<SavestateWaiter>,
     save_mutex: AsyncMutex<()>,
@@ -248,26 +250,3 @@ impl Core {
     }
 }
 
-/// Represents the full set of version data obtainable from Mupen64Plus.
-#[derive(Clone, PartialEq, Eq)]
-pub struct APIVersion {
-    /// The API data exposed.
-    pub api_type: m64prs_sys::PluginType,
-    /// The plugin's current numerical version, represented as a packed bytefield.
-    /// Taking the least-significant byte as byte 0:
-    /// - byte 2 contains the major version
-    /// - byte 1 contains the minor version
-    /// - byte 0 contains the patch version
-    pub plugin_version: c_int,
-    /// The plugin's supported API version represented as a packed bytefield.
-    /// Taking the least-significant byte as byte 0:
-    /// - byte 2 contains the major version
-    /// - byte 1 contains the minor version
-    /// - byte 0 contains the patch version
-    pub api_version: c_int,
-    /// The plugin's name.
-    pub plugin_name: &'static CStr,
-    /// A bitflag listing capabilities. For the core, available capabilities
-    /// are enumerated by [`CoreCaps`][`::m64prs_sys::CoreCaps`].
-    pub capabilities: c_int,
-}

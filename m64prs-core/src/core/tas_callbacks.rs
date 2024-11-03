@@ -14,6 +14,7 @@ impl Core {
     pub fn set_input_handler<I: InputHandler>(&mut self, handler: I) -> Result<(), M64PError> {
         let mut input_handler = InputHandlerFFI::new(handler);
 
+        // safety: the FFI handler will live as long as it isn't replaced.
         core_fn(unsafe { self.api.tas.set_input_handler(&mut input_handler.create_ffi_handler()) })?;
         let _ = self.input_handler.replace(Box::new(input_handler));
 
@@ -60,7 +61,7 @@ pub mod ffi {
             Self(heap_alloc)
         }
 
-        pub(super) fn create_ffi_handler(&mut self) -> m64prs_sys::TasInputHandler {
+        pub(super) unsafe fn create_ffi_handler(&mut self) -> m64prs_sys::TasInputHandler {
             m64prs_sys::TasInputHandler {
                 context: self.0 as *mut c_void,
                 filter_inputs: Some(Self::ffi_filter_inputs),

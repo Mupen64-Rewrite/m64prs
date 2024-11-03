@@ -4,6 +4,8 @@ use m64prs_sys::ConfigType;
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
+use crate::plugin::PluginType;
+
 /// Safer representation of a Mupen64Plus error which always represents an error state.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Error, IntoPrimitive, TryFromPrimitive)]
@@ -99,16 +101,36 @@ pub enum SavestateError {
 #[derive(Debug, Error)]
 pub enum PluginLoadError {
     /// An error occurred involving a dynamic library.
-    #[error("Error occurred involving a dynamic library.")]
+    #[error("dynamic library raised error")]
     Library(#[source] ::dlopen2::Error),
     /// An error occurred within Mupen64Plus or one of its plugins
-    #[error("Error occurred within Mupen64Plus or one of its plugins.")]
+    #[error("plugin function raised error")]
     M64P(#[source] M64PError),
     /// The plugin specified for a particular type isn't a valid plugin of that type.
-    #[error("The plugin is not valid for its type.")]
-    PluginInvalid(m64prs_sys::PluginType),
+    #[error("{0:?} is an invalid plugin type for this type")]
+    InvalidType(m64prs_sys::PluginType),
 }
 
+#[derive(Debug)]
+pub struct WrongPluginType {
+    expected: PluginType,
+    actual: PluginType
+}
+
+impl WrongPluginType {
+    pub fn new(expected: PluginType, actual: PluginType) -> Self {
+        Self { expected, actual }
+    }
+}
+
+impl Display for WrongPluginType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("Plugin type is {} (expected {})", self.actual, self.expected))
+    }
+}
+
+impl Error for WrongPluginType {
+}
 
 #[derive(Debug)]
 pub struct WrongConfigType {

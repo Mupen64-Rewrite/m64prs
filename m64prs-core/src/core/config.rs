@@ -8,7 +8,7 @@ use std::{
 
 use m64prs_sys::ConfigType;
 
-use crate::error::{M64PError, WrongConfigType};
+use crate::error::{M64PError, WrongConfigType, WrongPluginType};
 
 use super::{core_fn, Core};
 
@@ -198,11 +198,12 @@ impl<'a> ConfigSection<'a> {
 
 /// Represents the value of a config parameter.
 #[derive(Debug, Clone)]
+#[repr(u32)]
 pub enum ConfigValue {
-    Int(c_int),
-    Float(c_float),
-    Bool(bool),
-    String(CString),
+    Int(c_int) = ConfigType::Int as u32,
+    Float(c_float) = ConfigType::Float as u32,
+    Bool(bool) = ConfigType::Bool as u32,
+    String(CString) = ConfigType::String as u32,
 }
 
 impl ConfigValue {
