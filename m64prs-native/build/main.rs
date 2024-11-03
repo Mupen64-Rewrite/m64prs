@@ -49,7 +49,7 @@ fn compile_m64p_deps(out_dir: &Path) {
 
     let core_dir = PathBuf::from(dirs::M64P_CORE_DIR);
     // makefile no work??
-    make::make(&core_dir.join("projects/unix"));
+    make::make(&core_dir.join("projects/unix"), ["all", "TAS=1"]);
     fs::copy(core_dir.join("projects/unix/libmupen64plus.so.2.0.0"), out_dir.join("libmupen64plus.so")).unwrap();
 }
 
@@ -58,5 +58,7 @@ fn main() {
     let out_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("target");
     fs::create_dir_all(&out_dir).unwrap();
 
+    
+    setup_cargo_reruns();
     compile_m64p_deps(&out_dir);
 }

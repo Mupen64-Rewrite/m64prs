@@ -1,6 +1,9 @@
-use std::{path::Path, process::Command, sync::LazyLock};
+use std::{ffi::OsStr, path::Path, process::Command, sync::LazyLock};
 
-pub fn make(dir: &Path) {
+pub fn make<I, S>(dir: &Path, make_args: I)
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr> {
     static COMPILEDB_AVAILABLE: LazyLock<bool> =
         LazyLock::new(|| which::which("compiledb").is_ok());
 
@@ -13,7 +16,7 @@ pub fn make(dir: &Path) {
     };
 
     let cmd = cmd
-        .args(["all"])
+        .args(make_args)
         .current_dir(dir)
         .stdout(os_pipe::dup_stderr().unwrap())
         .status()

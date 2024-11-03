@@ -5,9 +5,11 @@ use std::{path::PathBuf, sync::Arc};
 use std::sync::RwLock;
 use m64prs_core::{Core, Plugin};
 use m64prs_sys::{Buttons, EmuState};
+use movie::MovieInputFilter;
 use vidext::VideoState;
 
 mod vidext;
+mod movie;
 
 fn main() {
     ::env_logger::init();
@@ -36,33 +38,9 @@ fn main() {
         cfg_sect.set(c"ScreenWidth", 960).unwrap();
         cfg_sect.set(c"ScreenHeight", 720).unwrap();
 
-        #[cfg(any())]
-        {
-            let (_, inputs) = m64prs_movie::load_m64(&args[3]);
-            let mut counter: usize = 0;
-            let mut first_frame = true;
-
-            core.set_input_filter(Box::new(move |port, input| {
-                if port != 0 {
-                    return input;
-                }
-                if first_frame {
-                    first_frame = false;
-                    return input;
-                }
-
-                if counter < inputs.len() {
-                    let result = inputs[counter];
-                    counter += 1;
-                    result
-                }
-                else {
-                    Buttons::BLANK
-                }
-            }));
-        }
+        let input_handler = MovieInputFilter::from_file(PathBuf::from(&args[3]));
+        core.set_input_handler(input_handler).unwrap();
     }
-
 
     {
         let core = core.read().unwrap();

@@ -3,7 +3,7 @@ use std::{
     fmt::Debug,
     path::Path,
     pin::Pin,
-    ptr::{null, null_mut},
+    ptr::{null, null_mut, NonNull},
     sync::{mpsc, Mutex},
 };
 
@@ -81,14 +81,20 @@ static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 pub struct Core {
     pin_state: Pin<Box<PinnedCoreState>>,
 
-    api: Container<FullCoreApi>,
     plugins: Option<[Plugin; 4]>,
     
     save_sender: mpsc::Sender<SavestateWaiter>,
     save_mutex: AsyncMutex<()>,
 
     emu_sender: mpsc::Sender<EmulatorWaiter>,
-    emu_mutex: AsyncMutex<()>
+    emu_mutex: AsyncMutex<()>,
+
+    // These handlers represent some arbitrary object that 
+    // we are holding onto until we don't need it.
+    #[allow(dyn_drop)]
+    input_handler: Option<Box<dyn Drop + Send>>,
+
+    api: Container<FullCoreApi>,
 }
 
 impl Debug for Core {
@@ -133,11 +139,14 @@ impl Core {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
                 emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
             }),
+            // async waiters for savestates
             save_sender: save_tx,
             save_mutex: AsyncMutex::new(()),
-            
+            // async waiters for emulators
             emu_sender: emu_tx,
-            emu_mutex: AsyncMutex::new(())
+            emu_mutex: AsyncMutex::new(()),
+            // frontend hooks
+            input_handler: None
         };
 
         unsafe {

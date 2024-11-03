@@ -261,10 +261,10 @@ impl M64File {
             let mut buffer = [0u8; mem::size_of::<M64Header>()];
             reader.read_exact(&mut buffer)?;
             // Check signature
-            if buffer[0..3] != M64_MAGIC {
+            if buffer[0..4] != M64_MAGIC {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    ".m64: signature not present",
+                    format!(".m64: signature doesn't match ({:x?})", &buffer[0..4]),
                 ));
             }
             // Parse the header
