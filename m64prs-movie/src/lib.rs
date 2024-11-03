@@ -1,4 +1,4 @@
-use helpers::fix_buttons_order;
+use helpers::{fix_buttons_order, AsciiField};
 use m64prs_sys::Buttons;
 use std::{
     fmt::Debug,
@@ -40,20 +40,20 @@ pub struct M64Header {
     pub controller_flags: ControllerFlags,
     _reserved3: [u8; 160],
     /// Internal name of the ROM used to record this movie.
-    pub rom_name: StringField<32>,
+    pub rom_name: AsciiField<32>,
     /// ROM's CRC32, ripped from its header.
     pub rom_crc: u32,
     /// ROM's country code, ripped from its header.
     pub rom_cc: u16,
     _reserved4: [u8; 56],
     /// Internal name of the video plugin used to record this movie.
-    pub graphics_plugin: StringField<64>,
+    pub graphics_plugin: AsciiField<64>,
     /// Internal name of the audio plugin used to record this movie.
-    pub audio_plugin: StringField<64>,
+    pub audio_plugin: AsciiField<64>,
     /// Internal name of the input plugin used to record this movie.
-    pub input_plugin: StringField<64>,
+    pub input_plugin: AsciiField<64>,
     /// Internal name of the RSP plugin used to record this movie.
-    pub rsp_plugin: StringField<64>,
+    pub rsp_plugin: AsciiField<64>,
     /// Info on the movie's authors.
     pub author: StringField<222>,
     /// Description of the movie.
