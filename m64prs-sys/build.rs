@@ -165,5 +165,6 @@ fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() {
+    println!("cargo::rerun-if-changed=build.rs");
     core_bindgen(m64prs_native::M64P_CORE_DIR).unwrap();
 }

@@ -1,10 +1,10 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, vec};
 
 use m64prs_core::tas_callbacks::InputHandler;
 use m64prs_sys::Buttons;
 
 pub struct MovieInputFilter {
-    iter: std::vec::IntoIter<Buttons>,
+    iter: vec::IntoIter<Buttons>,
     first_poll: bool,
     done: bool
 }

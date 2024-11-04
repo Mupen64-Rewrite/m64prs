@@ -1,14 +1,12 @@
-use std::fs;
+use std::{fs, thread};
 use std::{path::PathBuf, sync::Arc};
 
 use m64prs_core::plugin::PluginSet;
 use m64prs_core::{Core, Plugin};
 use movie::MovieInputFilter;
 use std::sync::RwLock;
-use vidext::VideoState;
 
 mod movie;
-mod vidext;
 
 fn main() {
     ::env_logger::init();
@@ -18,11 +16,10 @@ fn main() {
     let core = Arc::new(RwLock::new(Core::init(PathBuf::from(&args[1])).unwrap()));
 
     {
-        let core_arc = &core;
         let mut core = core.write().unwrap();
 
-        let vidext_instance = VideoState::new(Arc::clone(core_arc));
-        core.override_vidext(vidext_instance).unwrap();
+        // let vidext_instance = VideoState::new(Arc::clone(core_arc));
+        // core.override_vidext(vidext_instance).unwrap();
 
         core.open_rom(&fs::read(PathBuf::from(&args[2])).unwrap())
             .unwrap();
@@ -43,8 +40,12 @@ fn main() {
         core.set_input_handler(input_handler).unwrap();
     }
 
-    {
-        let core = core.read().unwrap();
-        core.execute().unwrap();
-    }
+    let core_thread = {
+        let core = Arc::clone(&core);
+        thread::spawn(move || {
+            core.read().unwrap().execute().unwrap();
+        })
+    };
+
+    core_thread.join().unwrap();
 }

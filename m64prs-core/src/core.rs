@@ -12,6 +12,7 @@ use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
 use plugin::PluginSet;
+use tas_callbacks::ffi::FFIHandler;
 
 use crate::error::{M64PError, StartupError};
 
@@ -92,8 +93,8 @@ pub struct Core {
 
     // These handlers represent some arbitrary object that 
     // we are holding onto until we don't need it.
-    #[allow(dyn_drop)]
-    input_handler: Option<Box<dyn Drop + Send>>,
+    input_handler: Option<Box<dyn FFIHandler>>,
+    audio_handler: Option<Box<dyn FFIHandler>>,
 
     api: Container<FullCoreApi>,
 }
@@ -148,6 +149,7 @@ impl Core {
             emu_mutex: AsyncMutex::new(()),
             // frontend hooks
             input_handler: None,
+            audio_handler: None,
             api,
         };
 
@@ -207,11 +209,6 @@ impl Drop for Core {
     fn drop(&mut self) {
         // SAFETY: the core can be shut down at any time.
         unsafe { self.api.base.shutdown() };
-        // drop the guard so that another core can be constructed
-        {
-            let mut guard = CORE_GUARD.lock().unwrap();
-            *guard = false;
-        }
     }
 }
 

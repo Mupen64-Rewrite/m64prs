@@ -35,9 +35,10 @@ impl Core {
         Ok(())
     }
     /// Opens the config section with the given name.
-    pub fn cfg_open(&self, name: &CStr) -> Result<ConfigSection, M64PError> {
-
+    pub fn cfg_open(&mut self, name: &CStr) -> Result<ConfigSection, M64PError> {
         let mut handle: m64prs_sys::Handle = null_mut();
+        // SAFETY: the returned handle is guaranteed to be valid if the function
+        // returns successfully.
         core_fn(unsafe {
             self.api
                 .config
@@ -57,7 +58,7 @@ impl Core {
 ///
 /// Each configuration section contains a list of parameters with values of variable type.
 pub struct ConfigSection<'a> {
-    core: &'a Core,
+    core: &'a mut Core,
     name: CString,
     handle: m64prs_sys::Handle,
 }
