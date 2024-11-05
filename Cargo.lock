@@ -1115,6 +1115,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "m64prs-cli-test"
+version = "0.1.0"
+dependencies = [
+ "ash",
+ "async-std",
+ "cstr",
+ "enum-map",
+ "env_logger",
+ "futures",
+ "gl_generator",
+ "glutin",
+ "glutin-winit",
+ "log",
+ "m64prs-core",
+ "m64prs-movie",
+ "m64prs-sys",
+ "num_enum",
+ "raw-window-handle",
+ "send_wrapper",
+ "winit",
+]
+
+[[package]]
 name = "m64prs-core"
 version = "0.1.0"
 dependencies = [
@@ -1133,6 +1156,10 @@ dependencies = [
  "send_wrapper",
  "thiserror",
 ]
+
+[[package]]
+name = "m64prs-gtk-test"
+version = "0.1.0"
 
 [[package]]
 name = "m64prs-movie"
@@ -1164,29 +1191,6 @@ dependencies = [
  "num_enum",
  "os_pipe",
  "regex",
-]
-
-[[package]]
-name = "m64prs-testbed"
-version = "0.1.0"
-dependencies = [
- "ash",
- "async-std",
- "cstr",
- "enum-map",
- "env_logger",
- "futures",
- "gl_generator",
- "glutin",
- "glutin-winit",
- "log",
- "m64prs-core",
- "m64prs-movie",
- "m64prs-sys",
- "num_enum",
- "raw-window-handle",
- "send_wrapper",
- "winit",
 ]
 
 [[package]]

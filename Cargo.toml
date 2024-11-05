@@ -2,8 +2,9 @@
 resolver = "2"
 
 members = [
-    "m64prs-testbed",
+    "m64prs-cli-test",
     "m64prs-core",
+    "m64prs-gtk-test",
     "m64prs-sys",
     "m64prs-movie", 
     "m64prs-native", 
