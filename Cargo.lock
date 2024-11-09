@@ -1049,6 +1049,7 @@ dependencies = [
  "glib-sys",
  "gobject-sys",
  "libc",
+ "log",
  "memchr",
  "smallvec",
 ]
@@ -1507,9 +1508,17 @@ dependencies = [
 name = "m64prs-gtk-test"
 version = "0.1.0"
 dependencies = [
+ "dpi",
+ "env_logger",
  "gdk4-wayland",
  "gdk4-x11",
+ "glib",
  "gtk4",
+ "m64prs-core",
+ "m64prs-movie",
+ "m64prs-native",
+ "m64prs-sys",
+ "relm4-macros",
  "send_wrapper",
 ]
 
@@ -2083,6 +2092,17 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "relm4-macros"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a895a7455441a857d100ca679bd24a92f91d28b5e3df63296792ac1af2eddde"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "rustc-hash"

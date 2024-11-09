@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::LazyLock};
 
-use crate::ui::GLOBAL_STATE;
+use crate::ui::UI_GLOBALS;
 use gtk::{
     gio::{self, ActionMap, ListStore},
     glib,
@@ -48,7 +48,7 @@ pub fn register_actions(map: &impl IsA<ActionMap>) {
     use ids::*;
 
     action::simple!(map[file::OPEN_ROM] => async |_| {
-        let state = GLOBAL_STATE.get().unwrap();
+        let state = UI_GLOBALS.get().unwrap();
 
         let dialog_params = FileDialog::builder()
             .title("Open ROM...")
@@ -56,7 +56,7 @@ pub fn register_actions(map: &impl IsA<ActionMap>) {
             .filters(&**OPEN_ROM_FILTERS)
             .build();
 
-        let path = match dialog_params.open_future(Some(&*state.main_window)).await {
+        let path = match dialog_params.open_future(Some(&state.main_window)).await {
             Ok(file) => file.path().unwrap(),
             Err(_) => return
         };
