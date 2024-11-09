@@ -7,7 +7,7 @@ mod sealed {
     trait Sealed {}
 }
 
-pub(in crate::ui) mod menu {
+pub(in crate::views) mod menu {
     /// Constructs a root menu.
     /// ```ignore
     /// menu::root!([name] { contents });
@@ -85,13 +85,13 @@ pub(in crate::ui) mod menu {
         };
     }
 
-    pub(in crate::ui) use item;
-    pub(in crate::ui) use section;
-    pub(in crate::ui) use submenu;
-    pub(in crate::ui) use root;
+    pub(in crate::views) use item;
+    pub(in crate::views) use section;
+    pub(in crate::views) use submenu;
+    pub(in crate::views) use root;
 }
 
-pub(in crate::ui) mod action {
+pub(in crate::views) mod action {
     macro_rules! simple {
         ($parent:ident[$name:expr] => |$action:pat_param| $contents:expr) => {
             $parent.add_action(&{
@@ -129,5 +129,5 @@ pub(in crate::ui) mod action {
         }
     }
 
-    pub(in crate::ui) use simple;
+    pub(in crate::views) use simple;
 }
