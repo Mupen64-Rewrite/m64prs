@@ -14,8 +14,9 @@ fn main() {
     for entry in fs::read_dir(native_target_dir).unwrap() {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {
-            let filename = entry.path();
-            fs::copy(&filename, target_dir.join(filename.file_name().unwrap())).unwrap();
+            let path = entry.path();
+            let file_name = path.file_name().unwrap();
+            fs::copy(&path, target_dir.join(file_name)).unwrap();
         }
     }
 }

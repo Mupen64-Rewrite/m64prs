@@ -13,6 +13,9 @@ use crate::error::M64PError;
 
 use super::Core;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StateHandlerKey(slotmap::DefaultKey);
+
 // Asynchronous core commands
 impl Core {
     /// Stops the currently-running ROM.
@@ -43,6 +46,18 @@ impl Core {
     /// Waits until the emulator state changes to a desired value.
     pub async fn await_emu_state(&self, state: EmuState) {
         self.emu_state_command(Command::Nop, state).await.unwrap()
+    }
+
+    /// Adds a state handler callback.
+    pub fn add_state_handler<F>(&mut self, callback: F) -> StateHandlerKey 
+    where 
+        F: FnMut(CoreParam, i32) + Send + 'static {
+        StateHandlerKey(self.pin_state.handlers.insert(Box::new(callback)))
+    }
+
+    /// Removes a state handler.
+    pub fn remove_state_handler(&mut self, key: StateHandlerKey) {
+        self.pin_state.handlers.remove(key.0);
     }
 
     fn emu_state_command(

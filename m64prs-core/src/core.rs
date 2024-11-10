@@ -1,9 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
-    fmt::Debug,
-    path::Path,
-    ptr::{null, null_mut},
-    sync::{mpsc, Mutex},
+    collections::HashSet, ffi::{c_char, c_int, c_void, CStr}, fmt::Debug, path::Path, ptr::{null, null_mut}, sync::{mpsc, Mutex}
 };
 
 use async_std::sync::Mutex as AsyncMutex;
@@ -12,6 +8,7 @@ use emu_state::{EmulatorWaitManager, EmulatorWaiter};
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
 use plugin::PluginSet;
+use slotmap::DenseSlotMap;
 use tas_callbacks::ffi::FFIHandler;
 
 use crate::error::{M64PError, StartupError};
@@ -76,6 +73,7 @@ extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_in
 struct PinnedCoreState {
     st_wait_mgr: SavestateWaitManager,
     emu_wait_mgr: EmulatorWaitManager,
+    handlers: DenseSlotMap<slotmap::DefaultKey, Box<dyn FnMut(CoreParam, i32) + Send>>,
 }
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
@@ -140,6 +138,7 @@ impl Core {
             pin_state: Box::new(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
                 emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
+                handlers: DenseSlotMap::new()
             }),
             // async waiters for savestates
             save_sender: save_tx,
