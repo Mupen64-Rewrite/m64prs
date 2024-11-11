@@ -73,7 +73,7 @@ impl Core {
         let (mut future, waiter) = emu_pair(value as i32);
         self.emu_sender
             .send(waiter)
-            .expect("emu waiter queue disconnected");
+            .expect("emu waiter queue should still be connected");
 
         if let Err(error) = self.do_command(command) {
             future.fail_early(error);

@@ -55,7 +55,7 @@ fn log_writer(level: GLogLevel, fields: &[LogField<'_>]) -> LogWriterOutput {
             }
             key => {
                 kv_source.insert(
-                    format!("gtk_{}", key.to_lowercase()),
+                    format!("glib_{}", key.to_lowercase()),
                     field.value_str().unwrap_or("").to_owned(),
                 );
             }
@@ -66,7 +66,7 @@ fn log_writer(level: GLogLevel, fields: &[LogField<'_>]) -> LogWriterOutput {
     let target = target.unwrap_or(NULL_MSG.to_owned());
     let level = level.unwrap_or(DEFAULT_LEVEL);
 
-    do_logging(format_args!("{}", message), &target, level, &kv_source);
+    log_structured_dynamic(format_args!("{}", message), &target, level, &kv_source);
 
     LogWriterOutput::Handled
 }
@@ -80,7 +80,7 @@ fn to_rust_level(g_level: GLogLevel) -> log::Level {
     }
 }
 
-fn do_logging(args: Arguments, target: &str, level: log::Level, kv_source: &dyn kv::Source) {
+fn log_structured_dynamic(args: Arguments, target: &str, level: log::Level, kv_source: &dyn kv::Source) {
     let mut builder = log::Record::builder();
     let record = builder
         .args(args)

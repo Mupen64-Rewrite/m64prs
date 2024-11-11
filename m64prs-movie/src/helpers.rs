@@ -75,7 +75,7 @@ impl<const N: usize> StringField<N> {
     /// # Panics
     /// Panics if the string field doesn't contain valid UTF-8.
     pub fn read(&self) -> &str {
-        self.try_read().expect("StringField::try_read_utf8 failed")
+        self.try_read().expect("field should be valid")
     }
 
     /// Writes to the string field.
@@ -84,7 +84,7 @@ impl<const N: usize> StringField<N> {
     /// Panics if the provided string is too long to fit.
     pub fn write<T: Borrow<str>>(&mut self, data: T) {
         self.try_write(data)
-            .expect("StringField::try_write_utf8 failed")
+            .expect("data should be short enough to fit")
     }
 
     /// Writes to the string field, truncating the string if it's too long.
@@ -202,9 +202,9 @@ impl<const N: usize> AsciiField<N> {
     /// Reads from the string field.
     ///
     /// # Panics
-    /// Panics if the string field doesn't contain valid UTF-8.
+    /// Panics if the string field doesn't contain valid ASCII.
     pub fn read(&self) -> &str {
-        self.try_read().expect("StringField::try_read_utf8 failed")
+        self.try_read().expect("field should be valid")
     }
 
     /// Writes to the string field.
@@ -213,7 +213,7 @@ impl<const N: usize> AsciiField<N> {
     /// Panics if the provided string is too long to fit.
     pub fn write<T: Borrow<str>>(&mut self, data: T) {
         self.try_write(data)
-            .expect("StringField::try_write_utf8 failed")
+            .expect("data should be short enough, and also valid ASCII")
     }
 
     /// Writes to the string field, truncating the string if it's too long.

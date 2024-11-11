@@ -4,6 +4,8 @@ use std::{
 };
 
 fn main() {
+    println!("cargo::rerun-if-changed=build.rs");
+    
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     let target_dir = out_dir.ancestors().nth(3).unwrap();
 
