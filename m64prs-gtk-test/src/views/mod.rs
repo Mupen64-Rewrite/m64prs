@@ -7,8 +7,8 @@ use gtk::{glib, Application, ApplicationWindow};
 use send_wrapper::SendWrapper;
 
 mod macros;
-mod menu;
 mod main;
+mod menu;
 
 const APP_ID: &str = "io.github.jgcodes.m64prs";
 

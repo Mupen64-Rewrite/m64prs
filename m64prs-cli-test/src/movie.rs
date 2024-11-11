@@ -6,7 +6,7 @@ use m64prs_sys::Buttons;
 pub struct MovieInputFilter {
     iter: vec::IntoIter<Buttons>,
     first_poll: bool,
-    done: bool
+    done: bool,
 }
 
 impl MovieInputFilter {
@@ -34,13 +34,11 @@ impl InputHandler for MovieInputFilter {
             return input;
         }
         match self.iter.next() {
-            Some(next) => {
-                next
-            },
+            Some(next) => next,
             None => {
                 self.done = true;
                 input
-            },
+            }
         }
     }
 

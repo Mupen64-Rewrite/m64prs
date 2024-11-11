@@ -1,7 +1,10 @@
 use ffi::{AudioHandlerFFI, InputHandlerFFI};
 use m64prs_sys::{Buttons, Command};
 use std::{
-    ffi::{c_int, c_uint, c_void}, mem, ptr::null_mut, sync::Mutex
+    ffi::{c_int, c_uint, c_void},
+    mem,
+    ptr::null_mut,
+    sync::Mutex,
 };
 
 use crate::error::M64PError;
@@ -11,10 +14,10 @@ use super::{core_fn, Core};
 impl Core {
     /// Sets an *input handler* for the core, which can filter or replace controller inputs.
     /// It may only be set once.
-    /// 
+    ///
     /// # Errors
     /// This function errors if the core fails to set the input handler.
-    /// 
+    ///
     /// # Panics
     /// This function panics if the input handler is already set.
     pub fn set_input_handler<I: InputHandler>(&mut self, handler: I) -> Result<(), M64PError> {
@@ -37,10 +40,10 @@ impl Core {
 
     /// Sets a *frame handler* for the core, which can filter or replace controller inputs.
     /// It may only be set once.
-    /// 
+    ///
     /// # Errors
     /// This function errors if the core fails to set the frame handler.
-    /// 
+    ///
     /// # Panics
     /// The function errors if the frame handler is already set.
     pub fn set_frame_handler<F: FrameHandler>(&mut self, handler: F) -> Result<(), M64PError> {
@@ -52,29 +55,24 @@ impl Core {
             if FRAME_HANDLER_BOX.is_some() {
                 panic!("frame handler already registered");
             }
-    
+
             FRAME_HANDLER_BOX = Some(Box::new(handler));
         }
 
         unsafe extern "C" fn frame_handler(count: c_uint) {
-            FRAME_HANDLER_BOX
-                .as_mut()
-                .unwrap()
-                .new_frame(count);
+            FRAME_HANDLER_BOX.as_mut().unwrap().new_frame(count);
         }
-        
+
         // SAFETY: the frame handler is valid as long as the core is.
-        unsafe {
-            self.do_command_p(Command::SetFrameCallback, frame_handler as *mut _)
-        }
+        unsafe { self.do_command_p(Command::SetFrameCallback, frame_handler as *mut _) }
     }
 
     /// Sets a *frame handler* for the core, which can filter or replace controller inputs.
     /// It may only be set once.
-    /// 
+    ///
     /// # Errors
     /// This function errors if the core fails to set the frame handler.
-    /// 
+    ///
     /// # Panics
     /// The function errors if the frame handler is already set.
     pub fn set_audio_handler<A: AudioHandler>(&mut self, handler: A) -> Result<(), M64PError> {
@@ -119,7 +117,6 @@ pub trait SaveHandler: Send + 'static {
 pub trait FrameHandler: Send + 'static {
     fn new_frame(&mut self, count: c_uint);
 }
-
 
 pub mod ffi {
     use super::*;
@@ -183,7 +180,6 @@ pub mod ffi {
                 context: self.0 as *mut c_void,
                 set_audio_rate: Some(Self::ffi_set_audio_rate),
                 push_audio_samples: Some(Self::ffi_push_audio_samples),
-                
             }
         }
 
@@ -192,7 +188,11 @@ pub mod ffi {
             (&mut *context).set_audio_rate(new_rate);
         }
 
-        unsafe extern "C" fn ffi_push_audio_samples(context: *mut c_void, data: *const c_void, length: usize) {
+        unsafe extern "C" fn ffi_push_audio_samples(
+            context: *mut c_void,
+            data: *const c_void,
+            length: usize,
+        ) {
             let context = context as *mut A;
             let data_ptr = data as *const u16;
             (&mut *context).push_audio_samples(std::slice::from_raw_parts(data_ptr, length / 2));

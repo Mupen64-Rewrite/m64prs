@@ -24,7 +24,7 @@ impl Core {
     /// - Starting up any of the plugins fails
     /// - Attaching any of the plugins fails
     /// - A ROM is not open (yes, this may seem stupid, but it is what it is)
-    /// 
+    ///
     /// # Panics
     /// This function will panic if there are plugins are already attached.
     pub fn attach_plugins(&mut self, mut plugins: PluginSet) -> Result<(), PluginLoadError> {
@@ -123,7 +123,7 @@ impl Core {
     }
 
     /// Detaches the currently-attached plugins.
-    /// 
+    ///
     /// # Panics
     /// This function will panic if there are no plugins attached.
     pub fn detach_plugins(&mut self) {
@@ -235,7 +235,7 @@ impl<T: PluginTypeTrait> Plugin<T> {
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
-            // SAFETY: this function should only use the borrowed value; it 
+            // SAFETY: this function should only use the borrowed value; it
             // shouldn't store any references.
             core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
                 .map_err(|err| PluginLoadError::M64P(err))?;
@@ -260,7 +260,7 @@ impl<T: PluginTypeTrait> Plugin<T> {
             let mut plugin_name: *const c_char = null();
             let mut capabilites: c_int = 0;
 
-            // SAFETY: this function should only use the borrowed value; it 
+            // SAFETY: this function should only use the borrowed value; it
             // shouldn't store any references.
             core_fn(self.api.get_version(
                 &mut plugin_type,
@@ -288,7 +288,7 @@ impl<T: PluginTypeTrait> Plugin<T> {
             PluginType::Input => c"m64p(input)",
         };
 
-        // SAFETY: We assume the plugin is valid. In addition, the debug ID is a 
+        // SAFETY: We assume the plugin is valid. In addition, the debug ID is a
         // &'static CStr, meaning it will never be freed unexpectedly.
         core_fn(unsafe {
             self.api

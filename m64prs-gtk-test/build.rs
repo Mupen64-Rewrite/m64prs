@@ -1,13 +1,11 @@
 use std::{
-    env, fs, path::{Path, PathBuf}
+    env, fs,
+    path::{Path, PathBuf},
 };
 
 fn main() {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let target_dir = out_dir
-        .ancestors()
-        .nth(3)
-        .unwrap();
+    let target_dir = out_dir.ancestors().nth(3).unwrap();
 
     let native_target_dir = PathBuf::from(m64prs_native::NATIVE_TARGET_DIR);
 

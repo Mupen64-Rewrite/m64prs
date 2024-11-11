@@ -1,5 +1,8 @@
 use std::{
-    ffi::c_int, pin::Pin, sync::mpsc, task::{Context, Poll}
+    ffi::c_int,
+    pin::Pin,
+    sync::mpsc,
+    task::{Context, Poll},
 };
 
 use futures::{channel::oneshot, Future};
@@ -32,8 +35,7 @@ impl Core {
             .send(waiter)
             .expect("save waiter queue disconnected");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
-        if let Err(error) = self.do_command(Command::StateSave)
-        {
+        if let Err(error) = self.do_command(Command::StateSave) {
             future.fail_early(error);
         }
 
@@ -46,8 +48,7 @@ impl Core {
             .send(waiter)
             .expect("save waiter queue disconnected");
 
-        if let Err(error) = self.do_command(Command::StateSave)
-        {
+        if let Err(error) = self.do_command(Command::StateSave) {
             future.fail_early(error);
         }
 

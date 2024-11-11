@@ -21,22 +21,26 @@ impl Core {
     /// Stops the currently-running ROM.
     pub async fn stop(&self) -> Result<(), M64PError> {
         let _lock = self.emu_mutex.lock().await;
-        self.emu_state_command(Command::Stop, EmuState::Stopped).await
+        self.emu_state_command(Command::Stop, EmuState::Stopped)
+            .await
     }
     /// Pauses the currently-running ROM.
     pub async fn pause(&self) -> Result<(), M64PError> {
         let _lock = self.emu_mutex.lock().await;
-        self.emu_state_command(Command::Pause, EmuState::Paused).await
+        self.emu_state_command(Command::Pause, EmuState::Paused)
+            .await
     }
     /// Resumes the currently-running ROM.
     pub async fn resume(&self) -> Result<(), M64PError> {
         let _lock = self.emu_mutex.lock().await;
-        self.emu_state_command(Command::Resume, EmuState::Running).await
+        self.emu_state_command(Command::Resume, EmuState::Running)
+            .await
     }
     /// Advances the currently-running ROM by one frame.
     pub async fn advance_frame(&self) -> Result<(), M64PError> {
         let _lock = self.emu_mutex.lock().await;
-        self.emu_state_command(Command::AdvanceFrame, EmuState::Paused).await
+        self.emu_state_command(Command::AdvanceFrame, EmuState::Paused)
+            .await
     }
 
     pub fn reset(&self) -> Result<(), M64PError> {
@@ -49,9 +53,10 @@ impl Core {
     }
 
     /// Adds a state handler callback.
-    pub fn add_state_handler<F>(&mut self, callback: F) -> StateHandlerKey 
-    where 
-        F: FnMut(CoreParam, i32) + Send + 'static {
+    pub fn add_state_handler<F>(&mut self, callback: F) -> StateHandlerKey
+    where
+        F: FnMut(CoreParam, i32) + Send + 'static,
+    {
         StateHandlerKey(self.pin_state.handlers.insert(Box::new(callback)))
     }
 
@@ -81,7 +86,7 @@ impl Core {
     pub fn notify_resize(&self, width: u16, height: u16) -> Result<(), M64PError> {
         let size_packed = (((width as u32) << 16) | (height as u32)) as c_int;
         unsafe {
-            // SAFETY: The pointer to the 32-bit size passed here is only 
+            // SAFETY: The pointer to the 32-bit size passed here is only
             // used during the call to CoreStateSet.
             self.do_command_ip(
                 Command::CoreStateSet,

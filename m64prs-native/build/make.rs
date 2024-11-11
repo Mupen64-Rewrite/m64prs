@@ -3,7 +3,8 @@ use std::{ffi::OsStr, path::Path, process::Command, sync::LazyLock};
 pub fn make<I, S>(dir: &Path, make_args: I)
 where
     I: IntoIterator<Item = S>,
-    S: AsRef<OsStr> {
+    S: AsRef<OsStr>,
+{
     static COMPILEDB_AVAILABLE: LazyLock<bool> =
         LazyLock::new(|| which::which("compiledb").is_ok());
 

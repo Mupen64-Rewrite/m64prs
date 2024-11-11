@@ -1,7 +1,9 @@
 use bindgen::callbacks::{DeriveInfo, ParseCallbacks, TypeKind};
 use heck::{ToPascalCase, ToShoutySnakeCase};
 use std::{
-    env, error::Error, path::{Path, PathBuf}
+    env,
+    error::Error,
+    path::{Path, PathBuf},
 };
 
 const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_tas.h", "m64p_plugin.h"];
@@ -23,7 +25,9 @@ impl ParseCallbacks for M64PParseCallbacks {
             "m64p_type" => Some("ConfigType".to_owned()),
             // other items
             item if item.starts_with("m64p_") => Some(original_item_name[5..].to_pascal_case()),
-            item if item.starts_with("m64ptas_") => Some(format!("Tas{}", original_item_name[8..].to_pascal_case())),
+            item if item.starts_with("m64ptas_") => {
+                Some(format!("Tas{}", original_item_name[8..].to_pascal_case()))
+            }
             _ => None,
         }
     }
@@ -158,7 +162,9 @@ fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
             continue;
         }
         let path_str = path.to_string_lossy();
-        builder = builder.header(&*path_str).allowlist_file(regex::escape(&path_str));
+        builder = builder
+            .header(&*path_str)
+            .allowlist_file(regex::escape(&path_str));
     }
     builder.generate()?.write_to_file(out_file)?;
     Ok(())

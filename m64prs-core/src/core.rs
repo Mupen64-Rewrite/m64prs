@@ -1,5 +1,10 @@
 use std::{
-    collections::HashSet, ffi::{c_char, c_int, c_void, CStr}, fmt::Debug, path::Path, ptr::{null, null_mut}, sync::{mpsc, Mutex}
+    collections::HashSet,
+    ffi::{c_char, c_int, c_void, CStr},
+    fmt::Debug,
+    path::Path,
+    ptr::{null, null_mut},
+    sync::{mpsc, Mutex},
 };
 
 use async_std::sync::Mutex as AsyncMutex;
@@ -13,9 +18,7 @@ use tas_callbacks::ffi::FFIHandler;
 
 use crate::error::{M64PError, StartupError};
 
-use m64prs_sys::{
-    api::FullCoreApi, Command, CoreParam, MsgLevel
-};
+use m64prs_sys::{api::FullCoreApi, Command, CoreParam, MsgLevel};
 
 use self::save::{SavestateWaitManager, SavestateWaiter};
 
@@ -26,8 +29,8 @@ pub mod save;
 pub mod tas_callbacks;
 pub mod vidext;
 
-pub use plugin::Plugin;
 pub use config::ConfigSection;
+pub use plugin::Plugin;
 
 /// Internal helper function to convert C results to Rust errors.
 #[inline(always)]
@@ -41,14 +44,15 @@ fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
 
 #[allow(unused)]
 unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
-    let log_level = match MsgLevel::try_from(level as <MsgLevel as TryFromPrimitive>::Primitive).unwrap() {
-        MsgLevel::Error => Level::Error,
-        MsgLevel::Warning => Level::Warn,
-        MsgLevel::Info => Level::Info,
-        MsgLevel::Status => Level::Debug,
-        MsgLevel::Verbose => Level::Trace,
-        _ => panic!("Received invalid message level {}", level),
-    };
+    let log_level =
+        match MsgLevel::try_from(level as <MsgLevel as TryFromPrimitive>::Primitive).unwrap() {
+            MsgLevel::Error => Level::Error,
+            MsgLevel::Warning => Level::Warn,
+            MsgLevel::Info => Level::Info,
+            MsgLevel::Status => Level::Debug,
+            MsgLevel::Verbose => Level::Trace,
+            _ => panic!("Received invalid message level {}", level),
+        };
 
     let target = CStr::from_ptr(context as *const c_char).to_str().unwrap();
 
@@ -82,14 +86,14 @@ pub struct Core {
     pin_state: Box<PinnedCoreState>,
 
     plugins: Option<PluginSet>,
-    
+
     save_sender: mpsc::Sender<SavestateWaiter>,
     save_mutex: AsyncMutex<()>,
 
     emu_sender: mpsc::Sender<EmulatorWaiter>,
     emu_mutex: AsyncMutex<()>,
 
-    // These handlers represent some arbitrary object that 
+    // These handlers represent some arbitrary object that
     // we are holding onto until we don't need it.
     input_handler: Option<Box<dyn FFIHandler>>,
     audio_handler: Option<Box<dyn FFIHandler>>,
@@ -138,7 +142,7 @@ impl Core {
             pin_state: Box::new(PinnedCoreState {
                 st_wait_mgr: SavestateWaitManager::new(save_rx),
                 emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
-                handlers: DenseSlotMap::new()
+                handlers: DenseSlotMap::new(),
             }),
             // async waiters for savestates
             save_sender: save_tx,
@@ -211,7 +215,6 @@ impl Drop for Core {
     }
 }
 
-
 // Synchronous core commands
 impl Core {
     /// Opens a ROM that is pre-loaded into memory.
@@ -238,4 +241,3 @@ impl Core {
         self.do_command(Command::Execute)
     }
 }
-

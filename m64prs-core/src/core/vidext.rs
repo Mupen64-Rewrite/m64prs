@@ -16,10 +16,7 @@ use crate::error::M64PError;
 use super::{core_fn, Core};
 
 impl Core {
-    pub fn override_vidext<V: VideoExtension>(
-        &mut self,
-        vidext: V,
-    ) -> Result<(), M64PError> {
+    pub fn override_vidext<V: VideoExtension>(&mut self, vidext: V) -> Result<(), M64PError> {
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
         *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper(vidext)));
         drop(vidext_box);

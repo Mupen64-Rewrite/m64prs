@@ -1,4 +1,4 @@
-pub mod menu;
 pub mod main;
+pub mod menu;
 
 pub use main::MainViewModel;

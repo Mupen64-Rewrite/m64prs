@@ -1,4 +1,7 @@
-use std::{error::Error, fmt::{Debug, Display}};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+};
 
 use m64prs_sys::ConfigType;
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
@@ -72,7 +75,6 @@ impl From<M64PError> for m64prs_sys::Error {
     }
 }
 
-
 /// Error that may occur during initialization.
 #[derive(Debug, Error)]
 pub enum StartupError {
@@ -93,9 +95,8 @@ pub enum SavestateError {
 
     /// An error occurred while saving or loading the savestate.
     #[error("savestate save/load failed")]
-    SaveLoad
+    SaveLoad,
 }
-
 
 /// Error that may occur during plugin loading.
 #[derive(Debug, Error)]
@@ -114,7 +115,7 @@ pub enum PluginLoadError {
 #[derive(Debug)]
 pub struct WrongPluginType {
     expected: PluginType,
-    actual: PluginType
+    actual: PluginType,
 }
 
 impl WrongPluginType {
@@ -125,17 +126,19 @@ impl WrongPluginType {
 
 impl Display for WrongPluginType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Plugin type is {} (expected {})", self.actual, self.expected))
+        f.write_fmt(format_args!(
+            "Plugin type is {} (expected {})",
+            self.actual, self.expected
+        ))
     }
 }
 
-impl Error for WrongPluginType {
-}
+impl Error for WrongPluginType {}
 
 #[derive(Debug)]
 pub struct WrongConfigType {
     expected: ConfigType,
-    actual: ConfigType
+    actual: ConfigType,
 }
 
 impl WrongConfigType {
@@ -146,9 +149,11 @@ impl WrongConfigType {
 
 impl Display for WrongConfigType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("parameter type is {} (expected {})", self.actual, self.expected))
+        f.write_fmt(format_args!(
+            "parameter type is {} (expected {})",
+            self.actual, self.expected
+        ))
     }
 }
 
-impl Error for WrongConfigType {
-}
+impl Error for WrongConfigType {}

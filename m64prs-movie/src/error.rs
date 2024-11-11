@@ -9,7 +9,5 @@ pub enum StringFieldError {
     #[error("ASCII validation of field failed")]
     AsciiInvalid,
     #[error("Value is too long, max length is {max_len} bytes")]
-    FieldTooLong {
-        max_len: usize
-    }
+    FieldTooLong { max_len: usize },
 }

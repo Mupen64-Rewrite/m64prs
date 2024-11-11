@@ -69,7 +69,11 @@ const _: () = {
 };
 
 impl Buttons {
-    pub const BLANK: Buttons = Buttons { button_bits: ButtonFlags::NONE, x_axis: 0, y_axis: 0 };
+    pub const BLANK: Buttons = Buttons {
+        button_bits: ButtonFlags::NONE,
+        x_axis: 0,
+        y_axis: 0,
+    };
 }
 
 impl From<u32> for Buttons {
@@ -111,7 +115,6 @@ bitflags! {
 
 #[cfg(test)]
 mod tests {
-    
 
     use num_enum::TryFromPrimitive;
 

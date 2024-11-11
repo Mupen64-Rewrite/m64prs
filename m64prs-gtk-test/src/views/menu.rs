@@ -1,6 +1,11 @@
 use std::ffi::CString;
 
-use gtk::{gio::{ActionMap, MenuModel, SimpleAction}, glib::GString, prelude::*, Application};
+use gtk::{
+    gio::{ActionMap, MenuModel, SimpleAction},
+    glib::GString,
+    prelude::*,
+    Application,
+};
 
 pub mod actions {
     pub mod file {
@@ -16,7 +21,6 @@ pub mod actions {
         pub const SAVE_TO_FILE: &str = "emu.save_file";
         pub const LOAD_FROM_FILE: &str = "emu.load_file";
     }
-
 }
 
 fn app_id(s: &str) -> String {
@@ -46,8 +50,8 @@ fn setup_menu_actions(map: &impl IsA<ActionMap>) {
 }
 
 fn create_menu() -> MenuModel {
-    use crate::views::macros::menu::*;
     use self::actions::*;
+    use crate::views::macros::menu::*;
 
     root!([menu_bar] {
         submenu!([menu_bar, menu] "File" {

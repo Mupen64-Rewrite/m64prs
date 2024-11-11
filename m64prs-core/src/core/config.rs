@@ -15,7 +15,10 @@ use super::{core_fn, Core};
 /// Functions for the configuration system.
 impl Core {
     /// Runs the provided callback once per available config section.
-    pub fn cfg_for_each_section<F: FnMut(&CStr)>(&mut self, mut callback: F) -> Result<(), M64PError> {
+    pub fn cfg_for_each_section<F: FnMut(&CStr)>(
+        &mut self,
+        mut callback: F,
+    ) -> Result<(), M64PError> {
         unsafe extern "C" fn run_callback<F: FnMut(&CStr)>(
             context: *mut c_void,
             name: *const c_char,
@@ -24,7 +27,7 @@ impl Core {
             function(CStr::from_ptr(name));
         }
 
-        // SAFETY: the reference to the callback should only be used 
+        // SAFETY: the reference to the callback should only be used
         // during the function, it is not stored.
         core_fn(unsafe {
             self.api
@@ -112,7 +115,7 @@ impl<'a> ConfigSection<'a> {
     /// Gets the type of a parameter.
     pub fn get_type(&self, param: &CStr) -> Result<ConfigType, M64PError> {
         let mut param_type = ConfigType::Int;
-        // SAFETY: the reference to the callback should only be used 
+        // SAFETY: the reference to the callback should only be used
         // during the function, it is not stored.
         core_fn(unsafe {
             self.core

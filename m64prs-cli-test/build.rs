@@ -1,4 +1,4 @@
-use gl_generator::{Registry, Api, Profile, Fallbacks};
+use gl_generator::{Api, Fallbacks, Profile, Registry};
 use std::env;
 use std::fs::File;
 use std::path::Path;

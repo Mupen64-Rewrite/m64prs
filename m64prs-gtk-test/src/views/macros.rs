@@ -1,5 +1,5 @@
 //! Utility macros for building UIs.
-//! 
+//!
 //! These create more declarative syntax for declaring UIs.
 
 #[doc(hidden)]
@@ -78,17 +78,19 @@ pub(in crate::views) mod menu {
         ([$parent:ident] $label:literal => [$param:expr] $action:expr) => {
             $parent.append_item(&{
                 let menu_item = ::gtk::gio::MenuItem::new(Some($label), None);
-                menu_item
-                    .set_action_and_target_value(Some($action), Some(&::glib::Variant::from($param)));
+                menu_item.set_action_and_target_value(
+                    Some($action),
+                    Some(&::glib::Variant::from($param)),
+                );
                 menu_item
             });
         };
     }
 
     pub(in crate::views) use item;
+    pub(in crate::views) use root;
     pub(in crate::views) use section;
     pub(in crate::views) use submenu;
-    pub(in crate::views) use root;
 }
 
 pub(in crate::views) mod action {
@@ -103,7 +105,9 @@ pub(in crate::views) mod action {
         ($parent:ident[$name:expr]<$ptype:ty> => |$action:pat_param, $param:pat_param| $contents:expr) => {
             $parent.add_action(&{
                 let action = ::gtk::gio::SimpleAction::new(
-                    $name, <$ptype as ::gtk::glib::Variant::StaticVariantType>::static_variant_type());
+                    $name,
+                    <$ptype as ::gtk::glib::Variant::StaticVariantType>::static_variant_type(),
+                );
                 action.connect_activate(|$action, $param| $contents);
                 action
             });
@@ -120,47 +124,45 @@ pub(in crate::views) mod action {
         ($parent:ident[$name:expr]<$ptype:ty> => async |$action:pat_param, $param:pat_param| $contents:expr) => {
             $parent.add_action(&{
                 let action = ::gtk::gio::SimpleAction::new(
-                    $name, <$ptype as ::gtk::glib::Variant::StaticVariantType>::static_variant_type());
+                    $name,
+                    <$ptype as ::gtk::glib::Variant::StaticVariantType>::static_variant_type(),
+                );
                 action.connect_activate(|$action, $param| {
                     ::gtk::glib::spawn_future_local(async { $contents });
                 });
                 action
             });
-        }
+        };
     }
 
     pub(in crate::views) use simple;
 }
 
-/// 
+///
 macro_rules! take_owner {
-    ($child:ident -> $parent:ident) => {
+    ($child:ident -> $parent:ident) => {{
         {
-            {
-                #[inline(always)]
-                fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
-                check_valid(&$child);
-                check_valid(&$parent);
-            }
-            $parent.add_weak_ref_notify_local(move || {
-                drop($child);
-            });
-        };
-    };
-    (clone $child:ident -> $parent:ident) => {
+            #[inline(always)]
+            fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
+            check_valid(&$child);
+            check_valid(&$parent);
+        }
+        $parent.add_weak_ref_notify_local(move || {
+            drop($child);
+        });
+    };};
+    (clone $child:ident -> $parent:ident) => {{
         {
-            {
-                #[inline(always)]
-                fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
-                check_valid(&$child);
-                check_valid(&$parent);
-            }
-            let $child = $child.clone();
-            $parent.add_weak_ref_notify_local(move || {
-                drop($child);
-            });
-        };
-    }
+            #[inline(always)]
+            fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
+            check_valid(&$child);
+            check_valid(&$parent);
+        }
+        let $child = $child.clone();
+        $parent.add_weak_ref_notify_local(move || {
+            drop($child);
+        });
+    };};
 }
 
 pub(in crate::views) use take_owner;

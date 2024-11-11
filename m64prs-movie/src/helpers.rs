@@ -223,11 +223,7 @@ impl<const N: usize> AsciiField<N> {
             return Err(StringFieldError::AsciiInvalid);
         }
 
-        let split_pos = if data.len() < N {
-            data.len()
-        } else {
-            N
-        };
+        let split_pos = if data.len() < N { data.len() } else { N };
 
         let slice = &data[0..split_pos];
         if slice.len() == N {
@@ -239,7 +235,6 @@ impl<const N: usize> AsciiField<N> {
         Ok(slice)
     }
 }
-
 
 impl<const N: usize> Debug for AsciiField<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
