@@ -3,7 +3,11 @@ use gtk::{prelude::*, subclass::prelude::*};
 
 mod inner {
 
-    use std::{cell::{Cell, RefCell}, env};
+    use std::{
+        cell::{Cell, RefCell},
+        env,
+        sync::{Arc, RwLock},
+    };
 
     use super::*;
 
@@ -13,17 +17,17 @@ mod inner {
         #[property(type = String, get, set)]
         title: RefCell<String>,
         #[property(type = bool, get, set)]
-        resizable: bool,
+        resizable: Cell<bool>,
 
-        core: RefCell<Option<m64prs_core::Core>>,
+        core: RefCell<Option<Arc<RwLock<m64prs_core::Core>>>>,
     }
 
     impl Default for MainViewModel {
         fn default() -> Self {
             Self {
-                title: RefCell::new("m64prs".into()),
-                resizable: false,
-                core: RefCell::new(None),
+                title: String::from("m64prs").into(),
+                resizable: false.into(),
+                core: None.into(),
             }
         }
     }
@@ -43,8 +47,11 @@ mod inner {
                 })
                 .unwrap();
 
-            let mut core = self.core.borrow_mut();
-            *core = Some(m64prs_core::Core::init(mupen_path).expect("Mupen init failed!"));
+            let core = m64prs_core::Core::init(mupen_path).expect("Mupen init failed!");
+
+            // this is incredibly cursed
+            let mut core_ref = self.core.borrow_mut();
+            *core_ref = Some(Arc::new(RwLock::new(core)));
         }
     }
 
@@ -54,6 +61,7 @@ mod inner {
         type Type = super::MainViewModel;
     }
 
+    #[glib::derived_properties]
     impl ObjectImpl for MainViewModel {}
 }
 

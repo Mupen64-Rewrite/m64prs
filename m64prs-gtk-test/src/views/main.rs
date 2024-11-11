@@ -1,20 +1,43 @@
 use glib::object::ObjectExt;
-use gtk::{prelude::*};
+use gtk::prelude::*;
 
 use crate::view_models;
 
-pub fn build_view(app: &gtk::Application) -> (gtk::ApplicationWindow, view_models::MainViewModel) {
+use super::macros;
+
+pub fn build_view(app: &gtk::Application) -> gtk::ApplicationWindow {
     let view_model = view_models::MainViewModel::new();
 
-    relm4_macros::view! {
-        view_root = gtk::Stack {},
-        window = gtk::ApplicationWindow::new(app) {
-            set_child: Some(&view_root)
-        }
-    }
+    // relm4_macros::view! {
+    //     view_root = gtk::Stack {
+    //         gtk::Widget {
+
+    //         }
+    //     },
+    //     window = gtk::ApplicationWindow::new(app) {
+    //         set_child: Some(&view_root)
+    //     }
+    // }
+
+    let window = gtk::ApplicationWindow::builder()
+        .application(app)
+        .child(&{
+            let stack = gtk::Stack::new();
+
+            stack.set_size_request(640, 480);
+            stack
+        })
+        .default_width(-1)
+        .default_height(-1)
+        .build();
 
     window.bind_property("title", &view_model, "title").build();
-    window.bind_property("resizable", &view_model, "resizable").build();
+    window
+        .bind_property("resizable", &view_model, "resizable")
+        .build();
 
-    (window, view_model)
+    // tie lifetime of view model to window
+    macros::take_owner!(view_model -> window);
+
+    window
 }

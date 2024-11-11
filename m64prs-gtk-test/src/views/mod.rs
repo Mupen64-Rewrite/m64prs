@@ -16,12 +16,7 @@ pub fn run_ui() -> glib::ExitCode {
     let application = Application::new(Some(APP_ID), ApplicationFlags::FLAGS_NONE);
 
     application.connect_activate(|app| {
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title("m64prs")
-            .show_menubar(true)
-            .build();
-
+        let window = main::build_view(app);
         window.present();
     });
 

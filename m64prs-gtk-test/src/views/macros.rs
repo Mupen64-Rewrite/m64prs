@@ -131,3 +131,36 @@ pub(in crate::views) mod action {
 
     pub(in crate::views) use simple;
 }
+
+/// 
+macro_rules! take_owner {
+    ($child:ident -> $parent:ident) => {
+        {
+            {
+                #[inline(always)]
+                fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
+                check_valid(&$child);
+                check_valid(&$parent);
+            }
+            $parent.add_weak_ref_notify_local(move || {
+                drop($child);
+            });
+        };
+    };
+    (clone $child:ident -> $parent:ident) => {
+        {
+            {
+                #[inline(always)]
+                fn check_valid<T: ::gtk::glib::prelude::ObjectType>(_: &T) {}
+                check_valid(&$child);
+                check_valid(&$parent);
+            }
+            let $child = $child.clone();
+            $parent.add_weak_ref_notify_local(move || {
+                drop($child);
+            });
+        };
+    }
+}
+
+pub(in crate::views) use take_owner;
