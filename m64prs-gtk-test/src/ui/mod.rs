@@ -1,6 +1,7 @@
 use relm4::RelmApp;
 
 mod actions;
+mod alert_dialog;
 mod core;
 mod file_dialog;
 mod main;

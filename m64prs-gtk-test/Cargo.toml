@@ -13,13 +13,13 @@ send_wrapper = "0.6.0"
 dpi = "0.1.1"
 
 glib = { version = "*", features = ["log"] }
+gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
 gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14"] }
 
 env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
 relm4 = "0.9.1"
 pollster = "0.4.0"
-relm4-components = "0.9.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Wayland

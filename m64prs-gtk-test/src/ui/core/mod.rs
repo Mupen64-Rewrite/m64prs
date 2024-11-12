@@ -19,7 +19,7 @@ pub enum Request {
 }
 
 #[derive(Debug)]
-pub enum Update {
+pub enum Response {
     CoreReady,
     Error(Box<dyn Error + Send + 'static>),
     EmuStateChange(EmuState),
@@ -57,14 +57,14 @@ impl Model {
                     .map(|path| path.join(MUPEN_FILENAME))
                     .expect("should be able to access other file in the same folder");
 
-                let core =
+                let mut core =
                     m64prs_core::Core::init(mupen_dll_path).expect("core startup should succeed");
 
                 ModelInner::Ready(core)
             }
             _ => panic!("core is already initialized"),
         };
-        sender.output(Update::CoreReady).unwrap();
+        sender.output(Response::CoreReady).unwrap();
     }
 
     fn start_rom(&mut self, path: &Path, sender: &ComponentSender<Self>) {
@@ -74,7 +74,7 @@ impl Model {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(Update::Error(Box::new(error)));
+                        let _ = sender.output(Response::Error(Box::new(error)));
                         break 'core_ready ModelInner::Ready(core);
                     }
                 };
@@ -87,7 +87,7 @@ impl Model {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(Update::Error(Box::new(error)));
+                        let _ = sender.output(Response::Error(Box::new(error)));
                         break 'core_running ModelInner::Running {
                             join_handle,
                             core_ref,
@@ -131,7 +131,7 @@ impl Model {
                 match ($res) {
                     Ok(value) => value,
                     Err(err) => {
-                        let _ = sender.output(Update::Error(Box::new(err)));
+                        let _ = sender.output(Response::Error(Box::new(err)));
                         return ModelInner::Ready(core);
                     }
                 }
@@ -155,7 +155,7 @@ impl Model {
         check!(core.open_rom(&rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
-            let _ = sender.output(Update::Error(Box::new(err)));
+            let _ = sender.output(Response::Error(Box::new(err)));
             core.close_rom()
                 .expect("there should be an open ROM");
             return ModelInner::Ready(core);
@@ -171,7 +171,7 @@ impl Model {
         };
 
         pollster::block_on(core_ref.await_emu_state(EmuState::Running));
-        let _ = sender.output(Update::EmuStateChange(EmuState::Running));
+        let _ = sender.output(Response::EmuStateChange(EmuState::Running));
 
         ModelInner::Running {
             join_handle,
@@ -196,7 +196,7 @@ impl Worker for Model {
     type Init = ();
 
     type Input = Request;
-    type Output = Update;
+    type Output = Response;
 
     fn init(_: Self::Init, sender: ComponentSender<Self>) -> Self {
         let result = Self(ModelInner::Uninit);

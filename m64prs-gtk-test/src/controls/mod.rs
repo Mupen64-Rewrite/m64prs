@@ -1,31 +1,41 @@
-use std::ffi::{c_int, c_void, CStr};
+mod native;
 
-use glib::object::{Cast, ObjectExt};
-use gtk::gdk;
+mod inner {
+    use glib::subclass::{object::ObjectImpl, types::ObjectSubclass};
+    use gtk::subclass::widget::WidgetImpl;
 
-pub(crate) trait PlatformSubsurface {
-    fn swap_buffers(&mut self);
-    fn set_position(&mut self, pos: dpi::PhysicalPosition<i32>);
-    fn get_attribute(&mut self, attr: m64prs_sys::GLAttribute) -> c_int;
-    fn resize_window(&mut self, size: dpi::PhysicalSize<u32>);
-    fn set_visible(&mut self, visible: bool);
-    fn get_proc_address(&mut self, symbol: &CStr) -> *mut c_void;
-}
+    use super::native::PlatformSubsurface;
 
-impl dyn PlatformSubsurface {
-    pub fn new(window: &gdk::Surface, size: dpi::PhysicalSize<u32>) -> Box<Self> {
-        #[cfg(target_os = "linux")]
-        {
-            #[cfg(feature = "wayland")]
-            if window.is::<gdk_wayland::WaylandSurface>() {
 
-            }
-            #[cfg(feature = "x11")]
-            if window.is::<gdk_x11::X11Surface>() {
+    pub struct ChildWindowContainer {
+        subsurfaces: Vec<Box<dyn PlatformSubsurface>>,
+    }
 
+    impl Default for ChildWindowContainer {
+        fn default() -> Self {
+            Self {
+                subsurfaces: vec![]
             }
         }
-
-        panic!("not implemented: platform subsurface for {}", window.type_().name());
     }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for ChildWindowContainer {
+        const NAME: &'static str = "M64PRSChildWindowContainer";
+        type Type = super::ChildWindowContainer;
+        type ParentType = gtk::Widget;
+
+        
+    }
+
+    impl ObjectImpl for ChildWindowContainer {}
+
+    impl WidgetImpl for ChildWindowContainer {}
+
+}
+
+glib::wrapper! {
+    pub struct ChildWindowContainer(ObjectSubclass<inner::ChildWindowContainer>)
+        @extends gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
