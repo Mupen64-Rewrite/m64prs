@@ -8,13 +8,11 @@ use std::{
 
 use futures::channel::oneshot;
 use m64prs_sys::{Command, CoreParam, EmuState};
+use num_enum::TryFromPrimitive;
 
 use crate::error::M64PError;
 
 use super::Core;
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StateHandlerKey(slotmap::DefaultKey);
 
 // Asynchronous core commands
 impl Core {
@@ -43,43 +41,15 @@ impl Core {
             .await
     }
 
+    /// Resets the current ROM.
     pub fn reset(&self) -> Result<(), M64PError> {
         self.do_command_i(Command::Reset, 1)
     }
 
     /// Waits until the emulator state changes to a desired value.
     pub async fn await_emu_state(&self, state: EmuState) {
-        self.emu_state_command(Command::Nop, state).await.unwrap()
-    }
-
-    /// Adds a state handler callback.
-    pub fn add_state_handler<F>(&mut self, callback: F) -> StateHandlerKey
-    where
-        F: FnMut(CoreParam, i32) + Send + 'static,
-    {
-        StateHandlerKey(self.pin_state.handlers.insert(Box::new(callback)))
-    }
-
-    /// Removes a state handler.
-    pub fn remove_state_handler(&mut self, key: StateHandlerKey) {
-        self.pin_state.handlers.remove(key.0);
-    }
-
-    fn emu_state_command(
-        &self,
-        command: Command,
-        value: EmuState,
-    ) -> impl Future<Output = Result<(), M64PError>> {
-        let (mut future, waiter) = emu_pair(value as i32);
-        self.emu_sender
-            .send(waiter)
-            .expect("emu waiter queue should still be connected");
-
-        if let Err(error) = self.do_command(command) {
-            future.fail_early(error);
-        }
-
-        future
+        let _lock = self.emu_mutex.lock().await;
+        self.await_emu_state_inner(state).await.unwrap();
     }
 
     /// Notifies the graphics plugin of a change in the window's size.
@@ -95,6 +65,64 @@ impl Core {
             )
         }
     }
+
+    fn emu_state_command(
+        &self,
+        command: Command,
+        state: EmuState,
+    ) -> impl Future<Output = Result<(), M64PError>> {
+        let (mut future, waiter) = emu_pair(state as c_int);
+        self.emu_sender
+            .send(waiter)
+            .expect("emu waiter queue should still be connected");
+
+        if let Err(error) = self.do_command(command) {
+            future.fail_early(error);
+        }
+
+        unsafe {
+            let mut cur_state: i32 = 0;
+            if let Err(error) = self.do_command_ip(
+                Command::CoreStateQuery,
+                CoreParam::EmuState as i32,
+                &mut cur_state as *mut _ as *mut _,
+            ) {
+                future.fail_early(error);
+                return future;
+            }
+            if cur_state == state as c_int {
+                future.succeed_early();
+                return future;
+            }
+        }
+
+        future
+    }
+
+    fn await_emu_state_inner(&self, state: EmuState) -> impl Future<Output = Result<(), M64PError>> {
+        let (mut future, waiter) = emu_pair(state as c_int);
+        self.emu_sender
+            .send(waiter)
+            .expect("emu waiter queue should still be connected");
+
+        unsafe {
+            let mut cur_state: i32 = 0;
+            if let Err(error) = self.do_command_ip(
+                Command::CoreStateQuery,
+                CoreParam::EmuState as i32,
+                &mut cur_state as *mut _ as *mut _,
+            ) {
+                future.fail_early(error);
+                return future;
+            }
+            if cur_state == state as c_int {
+                future.succeed_early();
+                return future;
+            }
+        }
+
+        future
+    }
 }
 
 pub(crate) struct EmulatorWaiter {
@@ -103,7 +131,7 @@ pub(crate) struct EmulatorWaiter {
 }
 
 pub(crate) struct EmulatorFuture {
-    early_fail: Option<M64PError>,
+    early_result: Option<Result<(), M64PError>>,
     rx: oneshot::Receiver<()>,
 }
 
@@ -111,8 +139,8 @@ impl Future for EmulatorFuture {
     type Output = Result<(), M64PError>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if let Some(err) = self.early_fail.take() {
-            return Poll::Ready(Err(err));
+        if let Some(result) = self.early_result.take() {
+            return Poll::Ready(result);
         }
 
         match Future::poll(Pin::new(&mut self.rx), cx) {
@@ -124,7 +152,11 @@ impl Future for EmulatorFuture {
 
 impl EmulatorFuture {
     pub(crate) fn fail_early(&mut self, error: M64PError) {
-        self.early_fail = Some(error);
+        self.early_result = Some(Err(error));
+    }
+
+    pub(crate) fn succeed_early(&mut self) {
+        self.early_result = Some(Ok(()))
     }
 }
 
@@ -132,7 +164,7 @@ fn emu_pair(value: c_int) -> (EmulatorFuture, EmulatorWaiter) {
     let (tx, rx) = oneshot::channel();
     (
         EmulatorFuture {
-            early_fail: None,
+            early_result: None,
             rx,
         },
         EmulatorWaiter { value, tx },

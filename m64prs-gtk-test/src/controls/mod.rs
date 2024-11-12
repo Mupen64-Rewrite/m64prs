@@ -1,6 +1,6 @@
 use std::ffi::{c_int, c_void, CStr};
 
-use gtk::{gdk, prelude::*};
+use gtk::gdk;
 
 pub(crate) trait PlatformSubsurface {
     fn swap_buffers(&mut self);

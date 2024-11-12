@@ -5,7 +5,6 @@
 pub mod core;
 // pub mod ctypes;
 pub mod error;
-pub mod reexports;
 
 pub use crate::core::*;
 
