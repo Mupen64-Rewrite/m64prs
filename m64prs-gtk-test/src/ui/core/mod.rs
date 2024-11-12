@@ -151,6 +151,7 @@ impl Model {
             rsp: check!(Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")),
         };
 
+
         check!(core.open_rom(&rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
@@ -204,6 +205,7 @@ impl Worker for Model {
     }
 
     fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>) {
+        eprintln!("worker thread: {:?}", std::thread::current().id());
         match request {
             Request::Init => self.init(&sender),
             Request::StartRom(path) => self.start_rom(&path, &sender),

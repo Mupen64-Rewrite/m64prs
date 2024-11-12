@@ -1,5 +1,6 @@
 use std::ffi::{c_int, c_void, CStr};
 
+use glib::object::{Cast, ObjectExt};
 use gtk::gdk;
 
 pub(crate) trait PlatformSubsurface {
@@ -12,7 +13,19 @@ pub(crate) trait PlatformSubsurface {
 }
 
 impl dyn PlatformSubsurface {
-    pub fn new(window: gdk::Surface, size: dpi::PhysicalSize<u32>) -> Box<Self> {
-        todo!()
+    pub fn new(window: &gdk::Surface, size: dpi::PhysicalSize<u32>) -> Box<Self> {
+        #[cfg(target_os = "linux")]
+        {
+            #[cfg(feature = "wayland")]
+            if window.is::<gdk_wayland::WaylandSurface>() {
+
+            }
+            #[cfg(feature = "x11")]
+            if window.is::<gdk_x11::X11Surface>() {
+
+            }
+        }
+
+        panic!("not implemented: platform subsurface for {}", window.type_().name());
     }
 }

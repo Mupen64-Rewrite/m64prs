@@ -1,8 +1,9 @@
 use relm4::RelmApp;
 
 mod actions;
+mod core;
+mod file_dialog;
 mod main;
-mod core_worker;
 
 pub(crate) fn run_ui() {
     let app = RelmApp::new("io.github.jgcodes.m64prs");
