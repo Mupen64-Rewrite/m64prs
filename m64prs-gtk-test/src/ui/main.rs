@@ -79,8 +79,9 @@ impl SimpleComponent for Model {
             set_default_height: -1,
             set_show_menubar: true,
 
-            gtk::Stack {
-                set_size_request: (640, 480)
+            crate::controls::ChildWindowContainer::new() {
+                set_hexpand: true,
+                set_vexpand: true,
             }
         }
     }

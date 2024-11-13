@@ -20,6 +20,8 @@ env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
 relm4 = "0.9.1"
 pollster = "0.4.0"
+glutin = "0.32.1"
+raw-window-handle = "0.6.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Wayland
@@ -35,7 +37,7 @@ x11rb = { version = "0.13.1", optional = true }
 
 [features]
 default = ["x11", "wayland"]
-wayland = ["dep:gdk_wayland", "dep:wayland-client"]
+wayland = ["dep:gdk_wayland", "dep:wayland-client", "dep:wayland-backend"]
 x11 = ["dep:gdk_x11", "dep:x11rb"]
 
 [build-dependencies]
