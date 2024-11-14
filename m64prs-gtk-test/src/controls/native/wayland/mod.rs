@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use dpi::{LogicalPosition, LogicalSize};
 use gdk::prelude::*;
 use raw_window_handle::{
     DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, RawWindowHandle,
@@ -15,7 +16,7 @@ use wayland_client::{
     Proxy,
 };
 
-use super::PlatformSubsurface;
+use super::{PlatformSubsurface, SubsurfaceAttributes};
 
 mod macros;
 mod state;
@@ -24,13 +25,13 @@ pub(super) struct WaylandSubsurface {
     display_state: Arc<DisplayState>,
     surface: WlSurface,
     subsurface: WlSubsurface,
+    transparent: bool,
 }
 
 impl WaylandSubsurface {
     pub(super) fn new(
         gdk_surface: &gdk_wayland::WaylandSurface,
-        size: dpi::PhysicalSize<u32>,
-        transparent: bool,
+        attrs: SubsurfaceAttributes
     ) -> Self {
         let gdk_display = gdk_surface
             .display()
@@ -41,6 +42,9 @@ impl WaylandSubsurface {
         let mut queue = st.queue.write().unwrap();
         let qh = queue.handle();
 
+        let size: dpi::PhysicalSize<u32> = attrs.surface_size;
+        let position: dpi::PhysicalPosition<i32> = attrs.position;
+
         let surface = st.compositor.create_surface(&qh, ());
         let parent_surface = gdk_surface.wl_surface();
 
@@ -48,6 +52,9 @@ impl WaylandSubsurface {
             .subcompositor
             .get_subsurface(&surface, &parent_surface, &qh, ());
         subsurface.set_desync();
+        subsurface.set_position(position.x, position.y);
+
+        let transparent = attrs.transparent;
 
         {
             let input_region = st.compositor.create_region(&qh, ());
@@ -65,8 +72,9 @@ impl WaylandSubsurface {
 
         Self {
             display_state: st,
-            surface: surface,
-            subsurface: subsurface,
+            surface,
+            subsurface,
+            transparent,
         }
     }
 }
@@ -76,9 +84,17 @@ impl PlatformSubsurface for WaylandSubsurface {
         self.subsurface.set_position(position.x, position.y);
     }
 
-    /// This is a no-op on Wayland, since size is governed by the size of the
-    /// buffer passed to the `wl_surface`.
-    fn set_size(&self, _size: dpi::PhysicalSize<u32>) {}
+    fn set_size(&self, size: dpi::PhysicalSize<u32>) {
+        if !self.transparent {
+            let st = &self.display_state;
+            let queue = st.queue.read().unwrap();
+            let qh = queue.handle();
+
+            let opaque_region = st.compositor.create_region(&qh, ());
+            opaque_region.add(0, 0, size.width as i32, size.height as i32);
+            self.surface.set_opaque_region(Some(&opaque_region));
+        }
+    }
 
     fn display_handle_src(&self) -> &dyn raw_window_handle::HasDisplayHandle {
         self

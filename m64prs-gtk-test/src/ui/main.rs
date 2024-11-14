@@ -79,7 +79,7 @@ impl SimpleComponent for Model {
             set_default_height: -1,
             set_show_menubar: true,
 
-            crate::controls::ChildWindowContainer::new() {
+            crate::controls::SubsurfaceContainer::new() {
                 set_hexpand: true,
                 set_vexpand: true,
             }

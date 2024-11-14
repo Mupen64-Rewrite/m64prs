@@ -1592,6 +1592,7 @@ dependencies = [
  "gdk4-x11",
  "glib",
  "glutin",
+ "graphene-rs",
  "gtk4",
  "log",
  "m64prs-core",

@@ -1,6 +1,6 @@
 use std::ffi::{c_int, c_void, CStr};
 
-use dpi::{PhysicalPosition, PhysicalSize};
+use dpi::{PhysicalPosition, PhysicalSize, Position};
 use glib::object::{Cast, ObjectExt};
 use glutin::{
     config::{Config as GlutinConfig, ConfigTemplate},
@@ -12,13 +12,15 @@ use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 #[cfg(all(target_os = "linux", feature = "wayland"))]
 mod wayland;
-#[cfg(all(target_os = "linux", feature = "x11"))]
-mod x11;
 #[cfg(all(target_os = "windows"))]
 mod windows;
+#[cfg(all(target_os = "linux", feature = "x11"))]
+mod x11;
+
+pub mod conv;
 
 /// Trait implementing a subsurface attached to a [`gdk::Surface`].
-pub(crate) trait PlatformSubsurface: Send {
+pub trait PlatformSubsurface: Send + Sync {
     /// Sets the position of the subsurface relative to the parent.
     fn set_position(&self, position: PhysicalPosition<i32>);
     /// Sets the size of the subsurface.
@@ -29,11 +31,44 @@ pub(crate) trait PlatformSubsurface: Send {
     fn window_handle_src(&self) -> &dyn raw_window_handle::HasWindowHandle;
 }
 
+pub struct SubsurfaceAttributes {
+    pub surface_size: dpi::PhysicalSize<u32>,
+    pub position: dpi::PhysicalPosition<i32>,
+    pub transparent: bool,
+}
+
+impl Default for SubsurfaceAttributes {
+    fn default() -> Self {
+        Self {
+            surface_size: dpi::PhysicalSize::new(100, 100),
+            position: dpi::PhysicalPosition::new(0, 0),
+            transparent: false,
+        }
+    }
+}
+
+impl SubsurfaceAttributes {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn with_surface_size<S: Into<dpi::PhysicalSize<u32>>>(mut self, size: S) -> Self {
+        self.surface_size = size.into();
+        self
+    }
+    pub fn with_position<P: Into<dpi::PhysicalPosition<i32>>>(mut self, position: P) -> Self {
+        self.position = position.into();
+        self
+    }
+    pub fn with_transparent(mut self, transparent: bool) -> Self {
+        self.transparent = transparent;
+        self
+    }
+}
+
 impl dyn PlatformSubsurface {
     pub fn new(
         window: &gdk::Surface,
-        size: dpi::PhysicalSize<u32>,
-        transparent: bool,
+        attributes: SubsurfaceAttributes
     ) -> Box<Self> {
         #[cfg(target_os = "windows")]
         {}
@@ -43,8 +78,7 @@ impl dyn PlatformSubsurface {
             if window.is::<gdk_wayland::WaylandSurface>() {
                 return Box::new(wayland::WaylandSubsurface::new(
                     window.downcast_ref().unwrap(),
-                    size,
-                    transparent,
+                    attributes
                 ));
             }
             // #[cfg(feature = "x11")]
