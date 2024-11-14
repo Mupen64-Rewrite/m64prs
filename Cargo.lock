@@ -159,6 +159,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ash"
+version = "0.38.0+1.3.281"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bb44936d800fea8f016d7f2311c6a4f97aebd5dc86f09906139ec848cf3a46f"
+dependencies = [
+ "libloading 0.8.5",
+]
+
+[[package]]
 name = "async-channel"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1546,7 +1555,7 @@ dependencies = [
 name = "m64prs-cli-test"
 version = "0.1.0"
 dependencies = [
- "ash",
+ "ash 0.37.3+1.3.251",
  "async-std",
  "cstr",
  "enum-map",
@@ -1569,7 +1578,7 @@ dependencies = [
 name = "m64prs-core"
 version = "0.1.0"
 dependencies = [
- "ash",
+ "ash 0.38.0+1.3.281",
  "async-std",
  "bindgen 0.69.5",
  "dlopen2",
@@ -1585,6 +1594,7 @@ dependencies = [
 name = "m64prs-gtk-test"
 version = "0.1.0"
 dependencies = [
+ "ash 0.38.0+1.3.281",
  "dpi",
  "env_logger",
  "gdk4",

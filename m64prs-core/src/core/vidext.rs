@@ -44,12 +44,12 @@ pub trait VideoExtension: Send + 'static {
     unsafe fn quit(&mut self) -> VidextResult<()>;
 
     /// Lists the available resolutions when rendering in full screen.
-    unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl Iterator<Item = Size2D>>;
+    unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl IntoIterator<Item = Size2D>>;
     /// Lists the available refresh rates for a specific fullscreen resolution.
     unsafe fn list_fullscreen_rates(
         &mut self,
         size: Size2D,
-    ) -> VidextResult<impl Iterator<Item = c_int>>;
+    ) -> VidextResult<impl IntoIterator<Item = c_int>>;
 
     /// Sets up a render context with the specified dimensions and current OpenGL attributes.
     unsafe fn set_video_mode(
@@ -90,7 +90,7 @@ pub trait VideoExtension: Send + 'static {
     unsafe fn gl_get_default_framebuffer(&mut self) -> u32;
 
     /// Acquires a Vulkan surface from the window.
-    unsafe fn vk_get_surface(&mut self, inst: vk::Instance) -> VidextResult<vk::SurfaceKHR>;
+    unsafe fn vk_get_surface(&mut self, inst: &vk::Instance) -> VidextResult<vk::SurfaceKHR>;
     /// Lists the extensions needed to use [`VideoExtension::vk_get_surface`]
     unsafe fn vk_get_instance_extensions(&mut self) -> VidextResult<&'static [*const c_char]>;
 }
@@ -374,7 +374,7 @@ mod ffi {
             surface: *mut *mut c_void,
             instance: *mut c_void,
         ) -> SysError {
-            match self.0.vk_get_surface(vk::Instance::from_raw(
+            match self.0.vk_get_surface(&vk::Instance::from_raw(
                 (instance as usize).try_into().unwrap(),
             )) {
                 Ok(surface_obj) => {

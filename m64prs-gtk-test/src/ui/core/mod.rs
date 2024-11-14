@@ -3,13 +3,16 @@ use std::{
     error::Error,
     fs, mem,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{mpsc, Arc},
     thread::{self, JoinHandle},
 };
 
-use m64prs_core::{plugin::PluginSet, Plugin};
+use m64prs_core::{plugin::PluginSet, vidext::VideoExtension, Plugin};
 use m64prs_sys::EmuState;
 use relm4::{ComponentSender, Worker};
+use vidext::{VideoExtensionState, VidextResponse};
+
+pub mod vidext;
 
 #[derive(Debug)]
 pub enum Request {
@@ -20,9 +23,12 @@ pub enum Request {
 
 #[derive(Debug)]
 pub enum Response {
-    CoreReady,
+    CoreReady {
+        vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
+    },
     Error(Box<dyn Error + Send + 'static>),
     EmuStateChange(EmuState),
+    VidextRequest(usize, vidext::VidextRequest),
 }
 
 /// Inner enum representing the model's current state.
@@ -31,7 +37,7 @@ enum ModelInner {
     /// The core is not initialized yet.
     Uninit,
     /// The core is ready to use. It does not have a ROM open.
-    Ready(m64prs_core::Core),
+    Ready { core: m64prs_core::Core },
     /// The core is running a ROM in a background thread.
     Running {
         join_handle: JoinHandle<()>,
@@ -49,6 +55,8 @@ impl Model {
         #[cfg(target_os = "linux")]
         const MUPEN_FILENAME: &str = "libmupen64plus.so";
 
+        let vidext_inbound: mpsc::Sender<(usize, VidextResponse)>;
+
         self.0 = match self.0 {
             ModelInner::Uninit => {
                 let self_path = env::current_exe().expect("should be able to find current_exe");
@@ -60,22 +68,28 @@ impl Model {
                 let mut core =
                     m64prs_core::Core::init(mupen_dll_path).expect("core startup should succeed");
 
-                ModelInner::Ready(core)
+                let vidext: VideoExtensionState;
+                (vidext, vidext_inbound) = VideoExtensionState::new(sender.clone());
+                core.override_vidext(vidext);
+
+                ModelInner::Ready { core }
             }
             _ => panic!("core is already initialized"),
         };
-        sender.output(Response::CoreReady).unwrap();
+        sender
+            .output(Response::CoreReady { vidext_inbound })
+            .unwrap();
     }
 
     fn start_rom(&mut self, path: &Path, sender: &ComponentSender<Self>) {
         self.0 = match mem::replace(&mut self.0, ModelInner::Uninit) {
             ModelInner::Uninit => panic!("core should be initialized"),
-            ModelInner::Ready(core) => 'core_ready: {
+            ModelInner::Ready { core } => 'core_ready: {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
                         let _ = sender.output(Response::Error(Box::new(error)));
-                        break 'core_ready ModelInner::Ready(core);
+                        break 'core_ready ModelInner::Ready { core };
                     }
                 };
                 Self::start_rom_inner(&rom_data, core, sender)
@@ -98,7 +112,6 @@ impl Model {
                 Self::start_rom_inner(&rom_data, core, sender)
             }
         };
-
     }
 
     fn stop_rom(&mut self, sender: &ComponentSender<Self>) {
@@ -112,7 +125,7 @@ impl Model {
                 core.detach_plugins();
                 core.close_rom().expect("there should be an open ROM");
 
-                ModelInner::Ready(core)
+                ModelInner::Ready { core }
             }
             _ => panic!("core should be running"),
         };
@@ -132,7 +145,7 @@ impl Model {
                     Ok(value) => value,
                     Err(err) => {
                         let _ = sender.output(Response::Error(Box::new(err)));
-                        return ModelInner::Ready(core);
+                        return ModelInner::Ready { core };
                     }
                 }
             };
@@ -151,14 +164,12 @@ impl Model {
             rsp: check!(Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")),
         };
 
-
         check!(core.open_rom(&rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
             let _ = sender.output(Response::Error(Box::new(err)));
-            core.close_rom()
-                .expect("there should be an open ROM");
-            return ModelInner::Ready(core);
+            core.close_rom().expect("there should be an open ROM");
+            return ModelInner::Ready { core };
         }
 
         let core_ref = Arc::new(core);
@@ -182,7 +193,7 @@ impl Model {
     fn stop_rom_inner(
         join_handle: JoinHandle<()>,
         core_ref: Arc<m64prs_core::Core>,
-        sender: &ComponentSender<Self>,
+        _sender: &ComponentSender<Self>,
     ) -> m64prs_core::Core {
         pollster::block_on(core_ref.stop()).expect("the core should be running");
         join_handle.join().expect("the core thread shouldn't panic");
@@ -205,7 +216,6 @@ impl Worker for Model {
     }
 
     fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>) {
-        eprintln!("worker thread: {:?}", std::thread::current().id());
         match request {
             Request::Init => self.init(&sender),
             Request::StartRom(path) => self.start_rom(&path, &sender),

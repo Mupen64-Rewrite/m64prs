@@ -1,6 +1,5 @@
 use std::{
-    future::Future,
-    sync::{Arc, Weak},
+    fmt::Debug, future::Future, sync::{Arc, Weak}
 };
 
 use gdk::prelude::SurfaceExt;
@@ -20,6 +19,14 @@ use super::native::{conv, PlatformSubsurface, SubsurfaceAttributes};
 pub struct SubsurfaceHandle {
     subsurface: Arc<dyn PlatformSubsurface>,
     parent: SendWrapper<SubsurfaceContainer>,
+}
+
+impl Debug for SubsurfaceHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let ptr = Arc::as_ptr(&self.subsurface);
+
+        f.write_fmt(format_args!("SubsurfaceHandle {{ subsurface @{:?} }}", ptr))
+    }
 }
 
 impl SubsurfaceHandle {
@@ -59,6 +66,8 @@ mod inner {
         subclass::widget::{WidgetImpl, WidgetImplExt},
     };
 
+    use crate::controls::native::conv;
+
     use super::super::native::PlatformSubsurface;
 
     pub(super) struct SubsurfaceMetadata {
@@ -79,18 +88,6 @@ mod inner {
         }
     }
 
-    impl Drop for SubsurfaceContainer {
-        fn drop(&mut self) {
-            let subsurfaces = self.subsurfaces.get_mut();
-            assert!(
-                subsurfaces
-                    .iter()
-                    .all(|s| Arc::strong_count(&s.handle) == 1),
-                "subsurfaces should not outlive SubsurfaceContainer"
-            );
-        }
-    }
-
     #[glib::object_subclass]
     impl ObjectSubclass for SubsurfaceContainer {
         const NAME: &'static str = "M64PRSChildWindowContainer";
@@ -101,13 +98,52 @@ mod inner {
     impl ObjectImpl for SubsurfaceContainer {}
 
     impl WidgetImpl for SubsurfaceContainer {
-        fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
-            self.parent_measure(orientation, for_size)
+        fn unrealize(&self) {
+            self.parent_unrealize();
+            let subsurfaces = self.subsurfaces.borrow();
+            assert!(
+                subsurfaces.is_empty(),
+                "subsurfaces should not outlive SubsurfaceContainer"
+            );
+        }
+
+        fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
+            let subsurfaces = self.subsurfaces.borrow();
+            // Find the right-most or bottom-most edge of a subsurface
+            let max_edge = subsurfaces
+                .iter()
+                .map(match orientation {
+                    gtk::Orientation::Horizontal => |s: &SubsurfaceMetadata| s.position.x() + s.size.width(),
+                    gtk::Orientation::Vertical => |s: &SubsurfaceMetadata| s.position.y() + s.size.height(),
+                    _ => unreachable!(),
+                })
+                .max_by(f32::total_cmp)
+                .unwrap_or(100.)
+                .ceil() as i32;
+
+            (max_edge, max_edge, -1, -1)
+        }
+
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
+
+            let native = self
+                .obj()
+                .native()
+                .expect("SubsurfaceContainer should be attached to a window")
+                .upcast::<gtk::Widget>();
+            let scale_factor = self.obj().scale_factor() as f64;
+
+            let mut subsurfaces = self.subsurfaces.borrow_mut();
+            for subsurface in subsurfaces.iter_mut() {
+                let g_position = self.obj().compute_point(&native, &subsurface.position).unwrap();
+                subsurface.handle.set_position(conv::into_dpi_position(g_position).to_physical(scale_factor));
+            }
         }
 
         fn snapshot(&self, snapshot: &gtk::Snapshot) {
             self.parent_snapshot(snapshot);
-            let color = gdk::RGBA::new(1.0, 0.5, 0.0, 1.0);
+            let color = gdk::RGBA::new(0.0, 0.0, 0.0, 1.0);
             let rect = Rect::new(
                 0.0,
                 0.0,
@@ -127,6 +163,12 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
+impl Default for SubsurfaceContainer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SubsurfaceContainer {
     pub fn new() -> Self {
         glib::Object::new::<Self>()
@@ -142,13 +184,13 @@ impl SubsurfaceContainer {
             self.is_mapped(),
             "SubsurfaceContainer should be mapped to create subsurfaces"
         );
-        let window = self
-            .toplevel_window()
+        let native = self
+            .native()
             .expect("SubsurfaceContainer should be attached to a window");
-        let gdk_surface = window.surface().expect("gtk::Window should have a surface");
+        let gdk_surface = native.surface().expect("gtk::Window should have a surface");
         let scale_factor = self.scale_factor() as f64;
 
-        let g_position = self.compute_point(&window, &position).unwrap();
+        let g_position = self.compute_point(&native, &position).unwrap();
 
         let attributes = SubsurfaceAttributes::new()
             .with_position(conv::into_dpi_position(g_position).to_physical(scale_factor))
@@ -164,6 +206,8 @@ impl SubsurfaceContainer {
             size,
         };
         self.imp().subsurfaces.borrow_mut().push(metadata);
+
+        self.queue_resize();
 
         SubsurfaceHandle {
             subsurface: handle,
@@ -207,6 +251,8 @@ impl SubsurfaceContainer {
                 .set_size(conv::into_dpi_size(size).to_physical(scale_factor));
             entry.size = size;
         }
+
+        self.queue_resize();
     }
 
     pub fn close_subsurface(&self, handle: SubsurfaceHandle) {
@@ -221,5 +267,7 @@ impl SubsurfaceContainer {
             .position(|entry| Arc::ptr_eq(&handle.subsurface, &entry.handle))
             .expect("handle should be valid");
         subsurfaces.swap_remove(entry_idx);
+
+        self.queue_resize();
     }
 }
