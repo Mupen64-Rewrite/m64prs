@@ -1,4 +1,9 @@
-use std::{cell::{self, Cell, OnceCell, RefCell}, error::Error, path::PathBuf, sync::mpsc};
+use std::{
+    cell::{self, Cell, OnceCell, RefCell},
+    error::Error,
+    path::PathBuf,
+    sync::mpsc,
+};
 
 use gtk::{prelude::*, FileFilter};
 use m64prs_sys::EmuState;
@@ -8,9 +13,16 @@ use relm4::{
     WorkerController,
 };
 
-use crate::{controls, ui::{actions::*, core}};
+use crate::{
+    controls::{self, native::conv},
+    ui::{actions::*, core},
+};
 
-use super::{alert_dialog, core::vidext::{VidextRequest, VidextResponse}, file_dialog};
+use super::{
+    alert_dialog,
+    core::vidext::{VidextRequest, VidextResponse},
+    file_dialog,
+};
 
 #[derive(Debug)]
 pub enum Message {
@@ -24,7 +36,7 @@ pub enum Message {
     // CORE CALLBACKS
     // ==================
     CoreReady {
-        vidext_inbound: mpsc::Sender<(usize, VidextResponse)>
+        vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
     CoreError(Box<dyn Error + Send + 'static>),
     CoreStateChange(EmuState),
@@ -43,7 +55,7 @@ pub struct Model {
     core_ready: bool,
     core_state: Option<EmuState>,
     vidext_inbound: OnceCell<mpsc::Sender<(usize, VidextResponse)>>,
-    
+
     main_view: MainViewState,
     vidext_request: RefCell<Option<(usize, VidextRequest)>>,
 
@@ -98,7 +110,7 @@ impl SimpleComponent for Model {
                     set_hexpand: true,
                     set_vexpand: true,
                 },
-                MainViewState::GameView => 
+                MainViewState::GameView =>
                 #[name(subsurface_container)]
                 controls::SubsurfaceContainer {
                     set_hexpand: true,
@@ -117,10 +129,14 @@ impl SimpleComponent for Model {
         let core = core::Model::builder()
             .detach_worker(())
             .forward(sender.input_sender(), |msg| match msg {
-                core::Response::CoreReady { vidext_inbound } => Message::CoreReady { vidext_inbound },
+                core::Response::CoreReady { vidext_inbound } => {
+                    Message::CoreReady { vidext_inbound }
+                }
                 core::Response::Error(error) => Message::CoreError(error),
                 core::Response::EmuStateChange(emu_state) => Message::CoreStateChange(emu_state),
-                core::Response::VidextRequest(id, request) => Message::CoreVidextRequest(id, request),
+                core::Response::VidextRequest(id, request) => {
+                    Message::CoreVidextRequest(id, request)
+                }
             });
 
         let rom_file_dialog = file_dialog::Model::builder()
@@ -192,7 +208,7 @@ impl SimpleComponent for Model {
             Message::CoreReady { vidext_inbound } => {
                 self.core_ready = true;
                 self.vidext_inbound.get_or_init(move || vidext_inbound);
-            },
+            }
             Message::CoreError(error) => {
                 const MESSAGE: &str = "Error occurred!";
 
@@ -202,47 +218,59 @@ impl SimpleComponent for Model {
                 })
             }
             Message::CoreStateChange(emu_state) => self.core_state = Some(emu_state),
-            Message::CoreVidextRequest(id, request) =>  {
+            Message::CoreVidextRequest(id, request) => {
                 match request {
                     VidextRequest::EnterGameView => {
-                        let vidext_inbound = self.vidext_inbound.get()
+                        let vidext_inbound = self
+                            .vidext_inbound
+                            .get()
                             .expect("vidext request should be active");
 
                         self.main_view = MainViewState::GameView;
                         let _ = vidext_inbound.send((id, VidextResponse::Done));
-                    },
+                    }
                     VidextRequest::ExitGameView => {
-                        let vidext_inbound = self.vidext_inbound.get()
-                        .expect("vidext request should be active");
+                        let vidext_inbound = self
+                            .vidext_inbound
+                            .get()
+                            .expect("vidext request should be active");
 
                         self.main_view = MainViewState::RomBrowser;
                         let _ = vidext_inbound.send((id, VidextResponse::Done));
-                    },
+                    }
                     _ => {
                         // Some requests can only be handled during the view update
                         self.vidext_request.replace(Some((id, request)));
                     }
                 }
-            },
+            }
         }
     }
 
     fn post_view() {
-        let vidext_inbound = self.vidext_inbound.get()
+        let vidext_inbound = self
+            .vidext_inbound
+            .get()
             .expect("vidext request should be active");
 
         // Handle view-update requests (subsurfaces)
         let mut vidext_request = self.vidext_request.borrow_mut();
         if let Some((id, request)) = vidext_request.take() {
             match request {
-                VidextRequest::CreateSubsurface { position, size, transparent } => {
-                    let subsurface = subsurface_container.new_subsurface(position, size, transparent);
+                VidextRequest::CreateSubsurface {
+                    position,
+                    size,
+                    transparent,
+                } => {
+                    let scale_factor = subsurface_container.scale_factor();
+                    let size = conv::into_graphene_size::<f32>(
+                        size.to_logical(scale_factor as f64),
+                    );
+
+                    let subsurface =
+                        subsurface_container.new_subsurface(position, size, transparent);
                     let _ = vidext_inbound.send((id, VidextResponse::NewSubsurface(subsurface)));
-                },
-                VidextRequest::FreeSubsurface(subsurface_handle) => {
-                    subsurface_container.close_subsurface(subsurface_handle);
-                    let _ = vidext_inbound.send((id, VidextResponse::Done));
-                },
+                }
                 _ => (),
             }
         }

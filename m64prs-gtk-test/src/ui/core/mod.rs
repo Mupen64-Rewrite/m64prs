@@ -1,16 +1,11 @@
 use std::{
-    env,
-    error::Error,
-    fs, mem,
-    path::{Path, PathBuf},
-    sync::{mpsc, Arc},
-    thread::{self, JoinHandle},
+    any::{Any, TypeId}, env, error::Error, fs, mem, path::{Path, PathBuf}, sync::{mpsc, Arc}, thread::{self, JoinHandle}
 };
 
 use m64prs_core::{plugin::PluginSet, vidext::VideoExtension, Plugin};
 use m64prs_sys::EmuState;
 use relm4::{ComponentSender, Worker};
-use vidext::{VideoExtensionState, VidextResponse};
+use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
 pub mod vidext;
 
@@ -68,9 +63,13 @@ impl Model {
                 let mut core =
                     m64prs_core::Core::init(mupen_dll_path).expect("core startup should succeed");
 
-                let vidext: VideoExtensionState;
-                (vidext, vidext_inbound) = VideoExtensionState::new(sender.clone());
-                core.override_vidext(vidext);
+                let vidext: VideoExtensionParameters;
+                (vidext, vidext_inbound) = VideoExtensionParameters::new(sender.clone());
+
+                let param_box: Box<dyn Any> = Box::new(Some(vidext));
+
+                core.override_vidext::<VideoExtensionState>(param_box)
+                    .expect("vidext override should succeed");
 
                 ModelInner::Ready { core }
             }

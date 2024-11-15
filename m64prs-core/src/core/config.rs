@@ -186,6 +186,7 @@ impl<'a> ConfigSection<'a> {
                 )
                 .to_owned()
             })),
+            _ => unreachable!()
         }
     }
 

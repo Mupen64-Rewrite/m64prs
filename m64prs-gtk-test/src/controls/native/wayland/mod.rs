@@ -58,6 +58,7 @@ impl WaylandSubsurface {
 
         {
             let input_region = st.compositor.create_region(&qh, ());
+            input_region.subtract(0, 0, size.width as i32, size.height as i32);
             surface.set_input_region(Some(&input_region));
 
             if !transparent {
@@ -76,6 +77,14 @@ impl WaylandSubsurface {
             subsurface,
             transparent,
         }
+    }
+}
+
+impl Drop for WaylandSubsurface {
+    fn drop(&mut self) {
+        log::info!("destroying wl_surface/wl_subsurface");
+        self.subsurface.destroy();
+        self.surface.destroy();
     }
 }
 

@@ -1,6 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
-    mem,
+    any::Any, ffi::{c_char, c_int, c_void, CStr}, mem
 };
 
 use ash::vk::{self, Handle};
@@ -16,9 +15,9 @@ use crate::error::M64PError;
 use super::{core_fn, Core};
 
 impl Core {
-    pub fn override_vidext<V: VideoExtension>(&mut self, vidext: V) -> Result<(), M64PError> {
+    pub fn override_vidext<V: VideoExtension>(&mut self, context: Box<dyn Any>) -> Result<(), M64PError> {
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
-        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper(vidext)));
+        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(None, context)));
         drop(vidext_box);
 
         // SAFETY: VIDEXT_TABLE is 'static, so it should outlive the core.
@@ -37,11 +36,14 @@ pub type VidextResult<T> = Result<T, M64PError>;
 
 /// Trait for implementing the video extension. The function APIs have been Rustified for convenience.
 /// The functions in this trait are unsafe, as there are some thread-safety guarantees that need to be upheld from Mupen's side.
-pub trait VideoExtension: Send + 'static {
+pub trait VideoExtension: Sized + 'static {
     /// Initializes the video extension with the specified graphics API.
-    unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> VidextResult<()>;
-    /// Shuts down the video extension.
-    unsafe fn quit(&mut self) -> VidextResult<()>;
+    unsafe fn init_with_render_mode(mode: RenderMode, context: &mut dyn Any) -> VidextResult<Self>;
+
+    /// Performs any cleanup necessary with the context before shutting down.
+    unsafe fn quit(self, context: &mut dyn Any) -> VidextResult<()> {
+        Ok(())
+    }
 
     /// Lists the available resolutions when rendering in full screen.
     unsafe fn list_fullscreen_modes(&mut self) -> VidextResult<impl IntoIterator<Item = Size2D>>;
@@ -96,6 +98,8 @@ pub trait VideoExtension: Send + 'static {
 }
 
 mod ffi {
+    use std::any::Any;
+
     use super::*;
     /// FFI-safe trait-object wrapping the video extension.
     pub(super) trait VideoExtensionDyn: Send {
@@ -179,7 +183,7 @@ mod ffi {
     }
 
     /// Object that translates generics to FFI interface.
-    pub(super) struct VideoExtensionWrapper<V: VideoExtension>(pub(super) V);
+    pub(super) struct VideoExtensionWrapper<V: VideoExtension>(pub(super) Option<V>, pub(super) Box<dyn Any>);
 
     // SAFETY: we are assuming that Mupen is responsible enough to call the graphics function from one thread only.
     unsafe impl<V: VideoExtension> Send for VideoExtensionWrapper<V> {}
@@ -187,17 +191,26 @@ mod ffi {
     impl<V: VideoExtension> VideoExtensionDyn for VideoExtensionWrapper<V> {
         #[inline(always)]
         unsafe fn init_with_render_mode(&mut self, mode: RenderMode) -> SysError {
-            match self.0.init_with_render_mode(mode) {
-                Ok(()) => SysError::Success,
+            if self.0.is_some() {
+                return SysError::AlreadyInit;
+            }
+            match <V as VideoExtension>::init_with_render_mode(mode, &mut *self.1) {
+                Ok(instance) => {
+                    self.0 = Some(instance);
+                    SysError::Success
+                },
                 Err(error) => error.into(),
             }
         }
 
         #[inline(always)]
         unsafe fn quit(&mut self) -> SysError {
-            match self.0.quit() {
-                Ok(()) => SysError::Success,
-                Err(error) => error.into(),
+            match self.0.take() {
+                Some(object) => match object.quit(&mut *self.1) {
+                    Ok(()) => SysError::Success,
+                    Err(error) => error.into(),
+                },
+                None => SysError::NotInit,
             }
         }
 
@@ -207,7 +220,12 @@ mod ffi {
             modes: *mut Size2D,
             count: *mut c_int,
         ) -> SysError {
-            match self.0.list_fullscreen_modes() {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.list_fullscreen_modes() {
                 Ok(mode_iter) => unsafe {
                     let slice = std::slice::from_raw_parts_mut(modes, *count as usize);
                     let mut copy_count: usize = 0;
@@ -231,7 +249,12 @@ mod ffi {
             rates: *mut c_int,
             count: *mut c_int,
         ) -> SysError {
-            match self.0.list_fullscreen_rates(size) {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.list_fullscreen_rates(size) {
                 Ok(rate_iter) => {
                     let slice = std::slice::from_raw_parts_mut(rates, *count as usize);
                     let mut copy_count: usize = 0;
@@ -256,6 +279,10 @@ mod ffi {
             screen_mode: c_int,
             flags: c_int,
         ) -> SysError {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
             let screen_mode = match VideoMode::try_from(
                 screen_mode as <VideoMode as TryFromPrimitive>::Primitive,
             ) {
@@ -264,8 +291,8 @@ mod ffi {
             };
             let flags = VideoFlags::from_bits_retain(flags as u32);
 
-            match self
-                .0
+
+            match inst
                 .set_video_mode(width, height, bits_per_pixel, screen_mode, flags)
             {
                 Ok(()) => SysError::Success,
@@ -283,6 +310,11 @@ mod ffi {
             screen_mode: c_int,
             flags: c_int,
         ) -> SysError {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
             let screen_mode = match VideoMode::try_from(
                 screen_mode as <VideoMode as TryFromPrimitive>::Primitive,
             ) {
@@ -291,7 +323,7 @@ mod ffi {
             };
             let flags = VideoFlags::from_bits_retain(flags as u32);
 
-            match self.0.set_video_mode_with_rate(
+            match inst.set_video_mode_with_rate(
                 width,
                 height,
                 refresh_rate,
@@ -306,7 +338,12 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn set_caption(&mut self, title: *const c_char) -> SysError {
-            match self.0.set_caption(CStr::from_ptr(title)) {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.set_caption(CStr::from_ptr(title)) {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -314,7 +351,12 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn toggle_full_screen(&mut self) -> SysError {
-            match self.0.toggle_full_screen() {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.toggle_full_screen() {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -322,7 +364,12 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn resize_window(&mut self, width: c_int, height: c_int) -> SysError {
-            match self.0.resize_window(width, height) {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.resize_window(width, height) {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -333,12 +380,21 @@ mod ffi {
             &mut self,
             symbol: *const c_char,
         ) -> Option<unsafe extern "C" fn()> {
-            mem::transmute(self.0.gl_get_proc_address(CStr::from_ptr(symbol)))
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return None,
+            };
+            mem::transmute(inst.gl_get_proc_address(CStr::from_ptr(symbol)))
         }
 
         #[inline(always)]
         unsafe fn gl_set_attribute(&mut self, attr: GLAttribute, value: c_int) -> SysError {
-            match self.0.gl_set_attribute(attr, value) {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.gl_set_attribute(attr, value) {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -346,7 +402,12 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn gl_get_attribute(&mut self, attr: GLAttribute, value: *mut c_int) -> SysError {
-            match self.0.gl_get_attribute(attr) {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.gl_get_attribute(attr) {
                 Ok(result) => unsafe {
                     *value = result;
                     SysError::Success
@@ -357,7 +418,12 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn gl_swap_buffers(&mut self) -> SysError {
-            match self.0.gl_swap_buffers() {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.gl_swap_buffers() {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -365,7 +431,7 @@ mod ffi {
 
         #[inline(always)]
         unsafe fn gl_get_default_framebuffer(&mut self) -> u32 {
-            self.0.gl_get_default_framebuffer()
+            self.0.as_mut().unwrap().gl_get_default_framebuffer()
         }
 
         #[inline(always)]
@@ -374,7 +440,12 @@ mod ffi {
             surface: *mut *mut c_void,
             instance: *mut c_void,
         ) -> SysError {
-            match self.0.vk_get_surface(&vk::Instance::from_raw(
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.vk_get_surface(&vk::Instance::from_raw(
                 (instance as usize).try_into().unwrap(),
             )) {
                 Ok(surface_obj) => {
@@ -391,7 +462,12 @@ mod ffi {
             extensions: *mut *mut *const c_char,
             count: *mut u32,
         ) -> SysError {
-            match self.0.vk_get_instance_extensions() {
+            let inst = match self.0.as_mut() {
+                Some(value) => value,
+                None => return SysError::NotInit,
+            };
+
+            match inst.vk_get_instance_extensions() {
                 Ok(extension_span) => {
                     *count = extension_span.len().try_into().unwrap();
                     *extensions = extension_span.as_ptr() as *mut *const c_char;

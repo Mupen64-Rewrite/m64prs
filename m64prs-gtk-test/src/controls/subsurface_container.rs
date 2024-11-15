@@ -1,9 +1,8 @@
 use std::{
-    fmt::Debug, future::Future, sync::{Arc, Weak}
+    fmt::Debug, sync::Arc
 };
 
-use gdk::prelude::SurfaceExt;
-use glib::subclass::types::ObjectSubclassIsExt;
+use glib::{subclass::types::ObjectSubclassIsExt, MainContext};
 use graphene::{Point, Size};
 use gtk::prelude::{NativeExt, WidgetExt};
 use inner::SubsurfaceMetadata;
@@ -18,7 +17,7 @@ use super::native::{conv, PlatformSubsurface, SubsurfaceAttributes};
 
 pub struct SubsurfaceHandle {
     subsurface: Arc<dyn PlatformSubsurface>,
-    parent: SendWrapper<SubsurfaceContainer>,
+    parent: Option<SendWrapper<SubsurfaceContainer>>,
 }
 
 impl Debug for SubsurfaceHandle {
@@ -29,10 +28,24 @@ impl Debug for SubsurfaceHandle {
     }
 }
 
+impl Drop for SubsurfaceHandle {
+    fn drop(&mut self) {
+        let main_context = MainContext::ref_thread_default();
+        {
+            log::info!("freeing subsurface");
+            let subsurface = self.subsurface.clone();
+            let parent = self.parent.take().unwrap();
+            main_context.invoke(move || {
+                parent.close_subsurface_inner(subsurface);
+            });
+        }
+    }
+}
+
 impl SubsurfaceHandle {
     pub fn request_bounds(self, position: Option<Point>, size: Option<Size>) -> Self {
         glib::spawn_future(async move {
-            self.parent.adjust_subsurface(&self, position, size);
+            self.parent.as_ref().unwrap().adjust_subsurface(&self, position, size);
             self
         })
         .block_on()
@@ -55,10 +68,10 @@ impl HasWindowHandle for SubsurfaceHandle {
 mod inner {
     use std::{cell::RefCell, sync::Arc};
 
-    use glib::subclass::{
+    use glib::{subclass::{
         object::ObjectImpl,
         types::{ObjectSubclass, ObjectSubclassExt},
-    };
+    }, translate::Stash};
     use graphene::{Point, Rect, Size};
     use gtk::{
         graphene,
@@ -98,15 +111,6 @@ mod inner {
     impl ObjectImpl for SubsurfaceContainer {}
 
     impl WidgetImpl for SubsurfaceContainer {
-        fn unrealize(&self) {
-            self.parent_unrealize();
-            let subsurfaces = self.subsurfaces.borrow();
-            assert!(
-                subsurfaces.is_empty(),
-                "subsurfaces should not outlive SubsurfaceContainer"
-            );
-        }
-
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
             let subsurfaces = self.subsurfaces.borrow();
             // Find the right-most or bottom-most edge of a subsurface
@@ -191,6 +195,7 @@ impl SubsurfaceContainer {
         let scale_factor = self.scale_factor() as f64;
 
         let g_position = self.compute_point(&native, &position).unwrap();
+        log::info!("translated position: {:?}", g_position);
 
         let attributes = SubsurfaceAttributes::new()
             .with_position(conv::into_dpi_position(g_position).to_physical(scale_factor))
@@ -211,18 +216,18 @@ impl SubsurfaceContainer {
 
         SubsurfaceHandle {
             subsurface: handle,
-            parent: SendWrapper::new(self.clone()),
+            parent: Some(SendWrapper::new(self.clone())),
         }
     }
 
-    fn adjust_subsurface(
+    pub fn adjust_subsurface(
         &self,
         handle: &SubsurfaceHandle,
         position: Option<Point>,
         size: Option<Size>,
     ) {
         assert!(
-            &*handle.parent == self,
+            &**handle.parent.as_ref().unwrap() == self,
             "Cannot reposition subsurface from another controller!"
         );
 
@@ -255,16 +260,11 @@ impl SubsurfaceContainer {
         self.queue_resize();
     }
 
-    pub fn close_subsurface(&self, handle: SubsurfaceHandle) {
-        assert!(
-            &*handle.parent == self,
-            "Cannot reposition subsurface from another controller!"
-        );
-
+    fn close_subsurface_inner(&self, handle: Arc<dyn PlatformSubsurface>) {
         let mut subsurfaces = self.imp().subsurfaces.borrow_mut();
         let entry_idx = subsurfaces
             .iter()
-            .position(|entry| Arc::ptr_eq(&handle.subsurface, &entry.handle))
+            .position(|entry| Arc::ptr_eq(&handle, &entry.handle))
             .expect("handle should be valid");
         subsurfaces.swap_remove(entry_idx);
 
