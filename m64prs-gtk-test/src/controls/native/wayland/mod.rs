@@ -23,6 +23,7 @@ mod state;
 
 pub(super) struct WaylandSubsurface {
     display_state: Arc<DisplayState>,
+    parent_surface: WlSurface,
     surface: WlSurface,
     subsurface: WlSubsurface,
     transparent: bool,
@@ -68,11 +69,16 @@ impl WaylandSubsurface {
             }
         }
 
+        subsurface.set_position(position.x, position.y);
+        surface.commit();
+        parent_surface.commit();
+
         queue.roundtrip();
         drop(queue);
 
         Self {
             display_state: st,
+            parent_surface,
             surface,
             subsurface,
             transparent,
@@ -91,6 +97,7 @@ impl Drop for WaylandSubsurface {
 impl PlatformSubsurface for WaylandSubsurface {
     fn set_position(&self, position: dpi::PhysicalPosition<i32>) {
         self.subsurface.set_position(position.x, position.y);
+        self.parent_surface.commit();
     }
 
     fn set_size(&self, size: dpi::PhysicalSize<u32>) {
