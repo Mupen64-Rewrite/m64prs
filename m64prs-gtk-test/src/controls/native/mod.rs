@@ -1,12 +1,6 @@
-use std::ffi::{c_int, c_void, CStr};
 
-use dpi::{PhysicalPosition, PhysicalSize, Position};
+use dpi::{PhysicalPosition, PhysicalSize};
 use glib::object::{Cast, ObjectExt};
-use glutin::{
-    config::{Config as GlutinConfig, ConfigTemplate},
-    context::{ContextAttributes, PossiblyCurrentContext},
-    surface::{GlSurface, Surface as GlutinSurface, SurfaceAttributes, WindowSurface},
-};
 use gtk::gdk;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 

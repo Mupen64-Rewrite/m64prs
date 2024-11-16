@@ -3,7 +3,7 @@ use std::{
 };
 
 use ash::vk;
-use graphene::{Point, Size};
+use graphene::Point;
 use m64prs_core::{
     error::M64PError,
     vidext::{VideoExtension, VidextResult},

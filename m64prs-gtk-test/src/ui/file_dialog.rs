@@ -1,4 +1,4 @@
-use std::{cell::Cell, collections::VecDeque, path::PathBuf};
+use std::{cell::Cell, path::PathBuf};
 
 use glib::object::IsA;
 use gtk::{gio::{self, ListStore}, prelude::*, Widget};

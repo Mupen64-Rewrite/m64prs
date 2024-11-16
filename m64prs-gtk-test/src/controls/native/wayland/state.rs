@@ -12,7 +12,7 @@ use wayland_backend::client::{Backend, ObjectId};
 use wayland_client::{
     globals::{registry_queue_init, GlobalListContents},
     protocol::{
-        wl_compositor::WlCompositor, wl_display::WlDisplay, wl_region::WlRegion, wl_registry::{self, WlRegistry}, wl_subcompositor::WlSubcompositor, wl_subsurface::WlSubsurface, wl_surface::{self, WlSurface}
+        wl_compositor::WlCompositor, wl_display::WlDisplay, wl_region::WlRegion, wl_registry::{WlRegistry}, wl_subcompositor::WlSubcompositor, wl_subsurface::WlSubsurface, wl_surface::{self, WlSurface}
     },
     Connection, Dispatch, EventQueue, Proxy, QueueHandle,
 };

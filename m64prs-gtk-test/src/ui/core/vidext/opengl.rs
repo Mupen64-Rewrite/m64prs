@@ -1,22 +1,20 @@
 use std::{
     ffi::{c_int, c_void, CStr, CString},
-    num::{NonZero, NonZeroU32},
+    num::NonZero,
 };
 
 use glutin::{
-    config::{Api, ColorBufferType, Config, ConfigTemplateBuilder, GetGlConfig, GlConfig},
+    config::{Api, ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, DisplayApiPreference},
-    platform::x11::X11GlConfigExt,
-    prelude::{GlContext, GlDisplay, NotCurrentGlContext},
-    surface::{GlSurface, Surface, SurfaceAttributes, SurfaceAttributesBuilder, WindowSurface},
+    prelude::{GlDisplay, NotCurrentGlContext},
+    surface::{GlSurface, Surface, SurfaceAttributesBuilder, WindowSurface},
 };
-use graphene::{Point, Size};
 use m64prs_core::{error::M64PError, vidext::VidextResult};
 use m64prs_sys::{GLAttribute, GLContextType};
 use num_enum::TryFromPrimitive;
 use raw_window_handle::{
-    HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle, WindowHandle,
+    HasDisplayHandle, HasWindowHandle, RawDisplayHandle,
 };
 
 use crate::{

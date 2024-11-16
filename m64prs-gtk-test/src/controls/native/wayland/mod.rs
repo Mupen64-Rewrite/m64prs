@@ -4,10 +4,9 @@ use std::{
     sync::Arc,
 };
 
-use dpi::{LogicalPosition, LogicalSize};
 use gdk::prelude::*;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, RawWindowHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle,
     WaylandDisplayHandle, WaylandWindowHandle, WindowHandle,
 };
 use state::{DisplayState, WaylandDisplayExt, WaylandSurfaceExt};

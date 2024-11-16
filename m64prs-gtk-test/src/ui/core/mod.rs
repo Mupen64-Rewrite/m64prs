@@ -1,8 +1,8 @@
 use std::{
-    any::{Any, TypeId}, env, error::Error, fs, mem, path::{Path, PathBuf}, sync::{mpsc, Arc}, thread::{self, JoinHandle}
+    any::Any, env, error::Error, fs, mem, path::{Path, PathBuf}, sync::{mpsc, Arc}, thread::{self, JoinHandle}
 };
 
-use m64prs_core::{plugin::PluginSet, vidext::VideoExtension, Plugin};
+use m64prs_core::{plugin::PluginSet, Plugin};
 use m64prs_sys::EmuState;
 use relm4::{ComponentSender, Worker};
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};

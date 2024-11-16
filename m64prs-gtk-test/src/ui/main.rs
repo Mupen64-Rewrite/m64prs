@@ -1,5 +1,5 @@
 use std::{
-    cell::{self, Cell, OnceCell, RefCell},
+    cell::{OnceCell, RefCell},
     error::Error,
     path::PathBuf,
     sync::mpsc,

@@ -11,8 +11,7 @@ use x11rb::{
     protocol::{
         xfixes::ConnectionExt as XFixesConnectionExt,
         xproto::{
-            self, ColormapAlloc, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask,
-            VisualClass, Visualtype, WindowClass,
+            self, ColormapAlloc, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask, WindowClass,
         },
     },
     reexports::x11rb_protocol::protocol::shape,

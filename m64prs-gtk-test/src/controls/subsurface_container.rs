@@ -76,10 +76,10 @@ impl HasWindowHandle for SubsurfaceHandle {
 mod inner {
     use std::{cell::RefCell, sync::Arc};
 
-    use glib::{subclass::{
+    use glib::subclass::{
         object::ObjectImpl,
         types::{ObjectSubclass, ObjectSubclassExt},
-    }, translate::Stash};
+    };
     use graphene::{Point, Rect, Size};
     use gtk::{
         graphene,
