@@ -601,6 +601,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor-lite"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f791803201ab277ace03903de1594460708d2d54df6053f2d9e82f592b19e3b"
+
+[[package]]
 name = "cursor-icon"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1594,6 +1600,7 @@ dependencies = [
 name = "m64prs-gtk-test"
 version = "0.1.0"
 dependencies = [
+ "as-raw-xcb-connection",
  "ash 0.38.0+1.3.281",
  "dpi",
  "env_logger",
@@ -1615,6 +1622,7 @@ dependencies = [
  "raw-window-handle",
  "relm4",
  "send_wrapper",
+ "tiny-xlib",
  "wayland-backend",
  "wayland-client",
  "x11rb",
@@ -2611,6 +2619,18 @@ dependencies = [
  "arrayref",
  "bytemuck",
  "strict-num",
+]
+
+[[package]]
+name = "tiny-xlib"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d52f22673960ad13af14ff4025997312def1223bfa7c8e4949d099e6b3d5d1c"
+dependencies = [
+ "as-raw-xcb-connection",
+ "ctor-lite",
+ "pkg-config",
+ "tracing",
 ]
 
 [[package]]

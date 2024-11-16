@@ -4,9 +4,10 @@ use std::{
 };
 
 use glutin::{
-    config::{Api, ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
+    config::{Api, ColorBufferType, Config, ConfigTemplateBuilder, GetGlConfig, GlConfig},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, DisplayApiPreference},
+    platform::x11::X11GlConfigExt,
     prelude::{GlContext, GlDisplay, NotCurrentGlContext},
     surface::{GlSurface, Surface, SurfaceAttributes, SurfaceAttributesBuilder, WindowSurface},
 };
@@ -14,7 +15,9 @@ use graphene::{Point, Size};
 use m64prs_core::{error::M64PError, vidext::VidextResult};
 use m64prs_sys::{GLAttribute, GLContextType};
 use num_enum::TryFromPrimitive;
-use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle};
+use raw_window_handle::{
+    HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle, WindowHandle,
+};
 
 use crate::{
     controls::SubsurfaceHandle,
@@ -156,11 +159,20 @@ impl OpenGlConfigState {
                     Err(_) => return Err(($err, self)),
                 }
             };
-            ($exp:expr, $err:expr, $fmt:literal, $($args:expr),* $(,)?) => {
+            ($exp:expr, $err:expr, $fmt:literal $(, $($args:expr),* $(,)?)?) => {
                 match $exp {
                     Ok(value) => value,
                     Err(_) => {
-                        ::log::error!($fmt, $($args),*);
+                        ::log::error!($fmt, $(, $($args),*)?);
+                        return Err(($err, self));
+                    },
+                }
+            };
+            ($exp:expr, $err:expr, [$errp:ident] $fmt:literal $(, $($args:expr),* $(,)?)?) => {
+                match $exp {
+                    Ok(value) => value,
+                    Err($errp) => {
+                        ::log::error!($fmt $(, $($args),*)?);
                         return Err(($err, self));
                     },
                 }
@@ -173,14 +185,18 @@ impl OpenGlConfigState {
         let gl_display = {
             let api_preference = match display_handle.as_raw() {
                 RawDisplayHandle::Wayland(_) => DisplayApiPreference::Egl,
+                RawDisplayHandle::Xcb(_) => DisplayApiPreference::Egl,
                 _ => unimplemented!(),
             };
 
             check!(
                 unsafe { Display::new(display_handle.as_raw(), api_preference) },
-                M64PError::SystemFail
+                M64PError::SystemFail,
+                "glutin Display::new should succeed"
             )
         };
+
+        log::debug!("Created GL display");
 
         let gl_config = {
             let mut builder = ConfigTemplateBuilder::new()
@@ -199,36 +215,39 @@ impl OpenGlConfigState {
                     b_size: self.blue_size,
                 })
                 .with_alpha_size(self.alpha_size)
-                .with_depth_size(self.depth_size)
-                .compatible_with_native_window(window_handle.as_raw());
+                .with_depth_size(self.depth_size);
             if self.multisampling > 0 {
                 builder = builder.with_multisampling(self.multisampling);
             }
-            let template = builder.build();
-            let mut config_iter = check!(
-                unsafe { gl_display.find_configs(template) },
-                M64PError::SystemFail
-            );
+            builder = builder.compatible_with_native_window(window_handle.as_raw());
 
-            check!(config_iter.next().ok_or(()), M64PError::SystemFail)
+            let result = check!(
+                unsafe { gl_display.find_configs(builder.build()) },
+                M64PError::SystemFail
+            )
+            .next();
+
+            result.expect("No valid OpenGL configs available")
         };
+
+        log::debug!("Found GL config");
 
         let gl_surface = {
             // safety: it was previously asserted that size is non-zero in either dimension.
             let nz_width = unsafe { NonZero::new_unchecked(size.width) };
             let nz_height = unsafe { NonZero::new_unchecked(size.height) };
 
-            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
-                window_handle.as_raw(),
-                nz_width,
-                nz_height,
-            );
+            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new()
+                .build(window_handle.as_raw(), nz_width, nz_height);
 
             check!(
                 unsafe { gl_display.create_window_surface(&gl_config, &attrs) },
-                M64PError::SystemFail
+                M64PError::SystemFail,
+                [err] "Failed to create window surface: {}", err
             )
         };
+
+        log::debug!("Created GL surface");
 
         let gl_context = {
             let attrs = match self.context_profile_mask {
@@ -259,7 +278,11 @@ impl OpenGlConfigState {
             check!(context.make_current(&gl_surface), M64PError::SystemFail)
         };
 
+        log::debug!("Created GL context");
+
         let gl = Gl::load_with(|sym| gl_display.get_proc_address(&CString::new(sym).unwrap()));
+
+        log::debug!("Loaded GL functions");
 
         Ok(OpenGlActiveState {
             subsurface,

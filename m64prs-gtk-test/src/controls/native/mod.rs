@@ -66,10 +66,7 @@ impl SubsurfaceAttributes {
 }
 
 impl dyn PlatformSubsurface {
-    pub fn new(
-        window: &gdk::Surface,
-        attributes: SubsurfaceAttributes
-    ) -> Box<Self> {
+    pub fn new(window: &gdk::Surface, attributes: SubsurfaceAttributes) -> Box<Self> {
         #[cfg(target_os = "windows")]
         {}
         #[cfg(target_os = "linux")]
@@ -78,11 +75,16 @@ impl dyn PlatformSubsurface {
             if window.is::<gdk_wayland::WaylandSurface>() {
                 return Box::new(wayland::WaylandSubsurface::new(
                     window.downcast_ref().unwrap(),
-                    attributes
+                    attributes,
                 ));
             }
-            // #[cfg(feature = "x11")]
-            // if window.is::<gdk_x11::X11Surface>() {}
+            #[cfg(feature = "x11")]
+            if window.is::<gdk_x11::X11Surface>() {
+                return Box::new(x11::X11Subsurface::new(
+                    window.downcast_ref().unwrap(),
+                    attributes,
+                ));
+            }
         }
 
         panic!(

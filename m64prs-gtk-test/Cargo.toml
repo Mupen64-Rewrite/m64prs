@@ -26,6 +26,7 @@ raw-window-handle = "0.6.2"
 ash = "0.38.0"
 num_enum = "0.7.3"
 
+
 [target.'cfg(target_os = "linux")'.dependencies]
 # Wayland
 gdk_wayland = { version = "0.9.3", package = "gdk4-wayland", optional = true }
@@ -34,14 +35,19 @@ wayland-backend = { version = "*", features = ["client_system"], optional = true
 
 # X11
 gdk_x11 = { version = "0.9.3", package = "gdk4-x11", optional = true }
-x11rb = { version = "0.13.1", optional = true }
+x11rb = { version = "0.13.1", optional = true, features = ["allow-unsafe-code", "xfixes"] }
+tiny-xlib = { version = "0.2.3", optional = true }
+as-raw-xcb-connection = { version = "1.0.1", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+
+[profile.dev]
+panic = "unwind"
 
 [features]
 default = ["x11", "wayland"]
 wayland = ["dep:gdk_wayland", "dep:wayland-client", "dep:wayland-backend"]
-x11 = ["dep:gdk_x11", "dep:x11rb"]
+x11 = ["dep:gdk_x11", "dep:x11rb", "dep:tiny-xlib", "dep:as-raw-xcb-connection"]
 
 [build-dependencies]
 gl_generator = "0.14.0"

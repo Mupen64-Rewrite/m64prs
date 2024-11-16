@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug, sync::Arc
+    fmt::Debug, ops::Deref, sync::Arc
 };
 
 use glib::{subclass::types::ObjectSubclassIsExt, MainContext};
@@ -50,6 +50,14 @@ impl SubsurfaceHandle {
         })
         .block_on()
         .unwrap()
+    }
+}
+
+impl Deref for SubsurfaceHandle {
+    type Target = dyn PlatformSubsurface;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.subsurface
     }
 }
 

@@ -145,6 +145,13 @@ impl VideoExtension for VideoExtensionState {
         screen_mode: m64prs_sys::VideoMode,
         flags: m64prs_sys::VideoFlags,
     ) -> VidextResult<()> {
+        if !(0 < width && width <= u16::MAX.into()) {
+            return Err(M64PError::InputAssert)
+        }
+        if !(0 < height && height <= u16::MAX.into()) {
+            return Err(M64PError::InputAssert)
+        }
+
         match &mut self.graphics {
             GraphicsState::OpenGl(opengl_state @ Some(_)) => {
                 let return_value: VidextResult<()>;
