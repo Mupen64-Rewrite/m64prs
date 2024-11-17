@@ -1,4 +1,3 @@
-use std::panic::PanicHookInfo;
 
 mod controls;
 mod ui;

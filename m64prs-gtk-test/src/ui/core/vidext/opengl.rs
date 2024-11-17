@@ -6,7 +6,7 @@ use std::{
 use glutin::{
     config::{Api, ColorBufferType, ConfigSurfaceTypes, ConfigTemplateBuilder, GetGlConfig, GlConfig},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
-    display::{Display, DisplayApiPreference},
+    display::Display,
     prelude::{GlDisplay, NotCurrentGlContext},
     surface::{GlSurface, Surface, SurfaceAttributesBuilder, WindowSurface},
 };
@@ -14,7 +14,7 @@ use m64prs_core::{error::M64PError, vidext::VidextResult};
 use m64prs_sys::{GLAttribute, GLContextType};
 use num_enum::TryFromPrimitive;
 use raw_window_handle::{
-    HasDisplayHandle, HasWindowHandle, RawDisplayHandle,
+    HasDisplayHandle, HasWindowHandle,
 };
 
 use crate::{

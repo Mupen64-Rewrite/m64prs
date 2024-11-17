@@ -1,12 +1,12 @@
 use std::{
-    ffi::{c_int, c_ulong}, num::NonZero, ptr::NonNull, sync::Arc
+    num::NonZero, ptr::NonNull, sync::Arc
 };
 
 use gdk::prelude::*;
 use glutin::display::DisplayApiPreference;
 use m64prs_core::error::M64PError;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle, XcbDisplayHandle, XcbWindowHandle, XlibDisplayHandle, XlibWindowHandle
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle, XcbDisplayHandle, XcbWindowHandle
 };
 use state::{DisplayState, ScopeGuard, X11DisplayExt};
 use x11rb::{
@@ -15,7 +15,7 @@ use x11rb::{
     protocol::{
         xfixes::ConnectionExt as XFixesConnectionExt,
         xproto::{
-            self, ColormapAlloc, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask,
+            self, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask,
             WindowClass,
         },
     },

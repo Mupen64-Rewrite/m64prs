@@ -1,4 +1,4 @@
-use std::{mem::ManuallyDrop, sync::{Arc, LazyLock}};
+use std::sync::{Arc, LazyLock};
 
 use as_raw_xcb_connection::AsRawXcbConnection;
 use gdk_x11::ffi::{gdk_x11_display_get_xdisplay, GdkX11Display};
