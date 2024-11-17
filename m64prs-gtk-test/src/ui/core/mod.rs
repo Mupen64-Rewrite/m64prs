@@ -60,6 +60,8 @@ impl Model {
                     .map(|path| path.join(MUPEN_FILENAME))
                     .expect("should be able to access other file in the same folder");
 
+                log::info!("Loading M64+ from {}", mupen_dll_path.display());
+
                 let mut core =
                     m64prs_core::Core::init(mupen_dll_path).expect("core startup should succeed");
 

@@ -36,19 +36,19 @@ impl Core {
         let core_ptr = unsafe { self.api.into_raw() };
         plugins
             .graphics
-            .startup(core_ptr)
+            .startup(core_ptr as *mut c_void)
             .map_err(|err| PluginLoadError::M64P(err))?;
         plugins
             .audio
-            .startup(core_ptr)
+            .startup(core_ptr as *mut c_void)
             .map_err(|err| PluginLoadError::M64P(err))?;
         plugins
             .input
-            .startup(core_ptr)
+            .startup(core_ptr as *mut c_void)
             .map_err(|err| PluginLoadError::M64P(err))?;
         plugins
             .rsp
-            .startup(core_ptr)
+            .startup(core_ptr as *mut c_void)
             .map_err(|err| PluginLoadError::M64P(err))?;
 
         // This keeps track of the last plugin we attached.

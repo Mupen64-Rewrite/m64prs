@@ -42,7 +42,8 @@ fn compile_m64p_deps(out_dir: &Path) {
 
     let vs_env = msvc::vs_dev_env(vs_env_arch);
 
-    let sln_file = Path::new(dirs::ROOT_DIR).join("m64prs-vs-deps.sln");
+    let root_path = Path::new(dirs::ROOT_DIR);
+    let sln_file = root_path.join("m64prs-vs-deps.sln");
 
     msvc::msbuild(
         &vs_env,
@@ -51,6 +52,35 @@ fn compile_m64p_deps(out_dir: &Path) {
         &msbuild_config,
         &msbuild_platform,
     );
+
+    // copy DLLs (w.r.t. target arch)
+    let win32_libs = match msbuild_platform {
+        "Win32" => vec![
+            root_path.join("mupen64plus-win32-deps\\freetype-2.13.0\\lib\\x86\\freetype.dll"),
+            root_path.join("mupen64plus-win32-deps\\SDL2_net-2.2.0\\lib\\x86\\SDL2_net.dll"),
+            root_path.join("mupen64plus-win32-deps\\SDL2-2.26.3\\lib\\x86\\SDL2.dll"),
+            root_path.join("mupen64plus-win32-deps\\zlib-1.2.13\\lib\\x86\\zlib.dll"),
+        ],
+        "x64" => vec![
+            root_path.join("mupen64plus-win32-deps\\freetype-2.13.0\\lib\\x64\\freetype.dll"),
+            root_path.join("mupen64plus-win32-deps\\SDL2_net-2.2.0\\lib\\x64\\SDL2_net.dll"),
+            root_path.join("mupen64plus-win32-deps\\SDL2-2.26.3\\lib\\x64\\SDL2.dll"),
+            root_path.join("mupen64plus-win32-deps\\zlib-1.2.13\\lib\\x64\\zlib.dll"),
+        ],
+        _ => unreachable!()
+    };
+    for lib_path in win32_libs {
+        let file_name = lib_path.file_name().unwrap();
+        fs::copy(&lib_path, out_dir.join(file_name)).unwrap();
+    }
+
+    for entry in fs::read_dir(root_path.join("mupen64plus-core-tas\\data")).unwrap() {
+        let entry = entry.unwrap();
+        if !entry.file_type().is_ok_and(|f| f.is_file()) {
+            continue;
+        }
+        fs::copy(entry.path(), out_dir.join(entry.file_name())).unwrap();
+    }
 }
 
 #[cfg(unix)]
