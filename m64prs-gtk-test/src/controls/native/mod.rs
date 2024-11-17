@@ -1,7 +1,7 @@
-
 use dpi::{PhysicalPosition, PhysicalSize};
 use glib::object::{Cast, ObjectExt};
 use gtk::gdk;
+use m64prs_core::error::M64PError;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 #[cfg(all(target_os = "linux", feature = "wayland"))]
@@ -9,7 +9,7 @@ mod wayland;
 #[cfg(all(target_os = "windows"))]
 mod windows;
 #[cfg(all(target_os = "linux", feature = "x11"))]
-mod x11;
+mod xcb;
 
 pub mod conv;
 
@@ -23,6 +23,8 @@ pub trait PlatformSubsurface: Send + Sync {
     fn display_handle_src(&self) -> &dyn raw_window_handle::HasDisplayHandle;
     /// Returns an object owning the window handle.
     fn window_handle_src(&self) -> &dyn raw_window_handle::HasWindowHandle;
+    /// Returns the preferred OpenGL API for this surface.
+    fn gl_api_preference(&self) -> glutin::display::DisplayApiPreference;
 }
 
 pub struct SubsurfaceAttributes {
@@ -60,31 +62,35 @@ impl SubsurfaceAttributes {
 }
 
 impl dyn PlatformSubsurface {
-    pub fn new(window: &gdk::Surface, attributes: SubsurfaceAttributes) -> Box<Self> {
+    pub fn new(
+        window: &gdk::Surface,
+        attributes: SubsurfaceAttributes,
+    ) -> Result<Box<Self>, M64PError> {
         #[cfg(target_os = "windows")]
         {}
         #[cfg(target_os = "linux")]
         {
             #[cfg(feature = "wayland")]
             if window.is::<gdk_wayland::WaylandSurface>() {
-                return Box::new(wayland::WaylandSubsurface::new(
+                return Ok(Box::new(wayland::WaylandSubsurface::new(
                     window.downcast_ref().unwrap(),
                     attributes,
-                ));
+                )));
             }
             #[cfg(feature = "x11")]
             if window.is::<gdk_x11::X11Surface>() {
-                return Box::new(x11::X11Subsurface::new(
+                return Ok(Box::new(xcb::XcbSubsurface::new(
                     window.downcast_ref().unwrap(),
                     attributes,
-                ));
+                )?));
             }
         }
 
-        panic!(
+        log::error!(
             "not implemented: platform subsurface for {}",
             window.type_().name()
         );
+        Err(M64PError::Unsupported)
     }
 }
 

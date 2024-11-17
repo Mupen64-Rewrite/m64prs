@@ -98,6 +98,7 @@ impl SimpleComponent for Model {
     }
 
     view! {
+        #[name(root)]
         gtk::ApplicationWindow::new(&relm4::main_application()) {
             set_title: Some("m64prs"),
             set_default_width: -1,

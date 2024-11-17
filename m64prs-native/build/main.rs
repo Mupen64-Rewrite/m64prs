@@ -58,13 +58,26 @@ fn compile_m64p_deps(out_dir: &Path) {
     use std::fs;
 
     let core_dir = PathBuf::from(dirs::M64P_CORE_DIR);
-    // makefile no work??
-    make::make(&core_dir.join("projects/unix"), ["all", "TAS=1"]);
-    fs::copy(
-        core_dir.join("projects/unix/libmupen64plus.so.2.0.0"),
-        out_dir.join("libmupen64plus.so"),
-    )
-    .unwrap();
+    let makefile_dir = core_dir.join("projects/unix");
+
+    make::make(&makefile_dir, ["all", "TAS=1"]);
+    for file in fs::read_dir(makefile_dir).unwrap() {
+        let file = file.unwrap();
+        let path = file.path();
+        let name = file.file_name().into_string().unwrap();
+        if let Some((name, extension)) = name.split_once('.') {
+            if !(extension.starts_with("so") || extension.starts_with("dylib")) {
+                continue;
+            }
+            let strip_ext = name
+                .split_once('.')
+                .map(|(ext1, _)| ext1)
+                .unwrap_or(name);
+
+            let out_path = out_dir.join(format!("{}.{}", name, strip_ext));
+            fs::copy(&path, &out_path).expect("copy to target dir should succeed");
+        }
+    }
 }
 
 fn main() {

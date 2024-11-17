@@ -4,7 +4,7 @@ use std::{
 };
 
 use glutin::{
-    config::{Api, ColorBufferType, ConfigTemplateBuilder, GetGlConfig, GlConfig},
+    config::{Api, ColorBufferType, ConfigSurfaceTypes, ConfigTemplateBuilder, GetGlConfig, GlConfig},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::{Display, DisplayApiPreference},
     prelude::{GlDisplay, NotCurrentGlContext},
@@ -180,19 +180,11 @@ impl OpenGlConfigState {
         let display_handle = check!(subsurface.display_handle(), M64PError::SystemFail);
         let window_handle = check!(subsurface.window_handle(), M64PError::SystemFail);
 
-        let gl_display = {
-            let api_preference = match display_handle.as_raw() {
-                RawDisplayHandle::Wayland(_) => DisplayApiPreference::Egl,
-                RawDisplayHandle::Xcb(_) => DisplayApiPreference::Egl,
-                _ => unimplemented!(),
-            };
-
-            check!(
-                unsafe { Display::new(display_handle.as_raw(), api_preference) },
-                M64PError::SystemFail,
-                "glutin Display::new should succeed"
-            )
-        };
+        let gl_display = check!(
+            unsafe { Display::new(display_handle.as_raw(), subsurface.gl_api_preference()) },
+            M64PError::SystemFail,
+            "glutin Display::new should succeed"
+        );
 
         log::debug!("Created GL display");
 
@@ -213,7 +205,8 @@ impl OpenGlConfigState {
                     b_size: self.blue_size,
                 })
                 .with_alpha_size(self.alpha_size)
-                .with_depth_size(self.depth_size);
+                .with_depth_size(self.depth_size)
+                .with_transparency(self.alpha_size > 0);
             if self.multisampling > 0 {
                 builder = builder.with_multisampling(self.multisampling);
             }
@@ -223,9 +216,9 @@ impl OpenGlConfigState {
                 unsafe { gl_display.find_configs(builder.build()) },
                 M64PError::SystemFail
             )
-            .next();
+            .find(|config| config.config_surface_types().contains(ConfigSurfaceTypes::WINDOW));
 
-            result.expect("No valid OpenGL configs available")
+            check!(result.ok_or(()), M64PError::SystemFail)
         };
 
         log::debug!("Found GL config");

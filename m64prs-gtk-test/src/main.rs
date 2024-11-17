@@ -1,3 +1,5 @@
+use std::panic::PanicHookInfo;
+
 mod controls;
 mod ui;
 mod logging;

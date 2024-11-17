@@ -6,6 +6,7 @@ use glib::{subclass::types::ObjectSubclassIsExt, MainContext};
 use graphene::{Point, Size};
 use gtk::prelude::{NativeExt, WidgetExt};
 use inner::SubsurfaceMetadata;
+use m64prs_core::error::M64PError;
 use pollster::FutureExt;
 use raw_window_handle::{
     DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle,
@@ -191,7 +192,7 @@ impl SubsurfaceContainer {
         position: Point,
         size: Size,
         transparent: bool,
-    ) -> SubsurfaceHandle {
+    ) -> Result<SubsurfaceHandle, M64PError> {
         assert!(
             self.is_mapped(),
             "SubsurfaceContainer should be mapped to create subsurfaces"
@@ -211,7 +212,7 @@ impl SubsurfaceContainer {
             .with_transparent(transparent);
 
         let handle: Arc<dyn PlatformSubsurface> =
-            <dyn PlatformSubsurface>::new(&gdk_surface, attributes).into();
+            <dyn PlatformSubsurface>::new(&gdk_surface, attributes)?.into();
 
         let metadata = SubsurfaceMetadata {
             handle: Arc::clone(&handle),
@@ -222,10 +223,10 @@ impl SubsurfaceContainer {
 
         self.queue_resize();
 
-        SubsurfaceHandle {
+        Ok(SubsurfaceHandle {
             subsurface: handle,
             parent: Some(SendWrapper::new(self.clone())),
-        }
+        })
     }
 
     pub fn adjust_subsurface(

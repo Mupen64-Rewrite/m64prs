@@ -32,7 +32,7 @@ pub enum VidextRequest {
 #[derive(Debug)]
 pub enum VidextResponse {
     Done,
-    NewSubsurface(SubsurfaceHandle),
+    NewSubsurface(Result<SubsurfaceHandle, M64PError>),
 }
 
 enum GraphicsState {
@@ -177,7 +177,7 @@ impl VideoExtension for VideoExtensionState {
                                     Some(OpenGlState::Config(config_state)),
                                 )
                             }
-                            VidextResponse::NewSubsurface(subsurface_handle) => subsurface_handle,
+                            VidextResponse::NewSubsurface(subsurface_handle) => subsurface_handle?,
                         };
 
                         // Initialize OpenGL with that subsurface

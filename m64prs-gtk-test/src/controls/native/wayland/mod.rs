@@ -5,6 +5,7 @@ use std::{
 };
 
 use gdk::prelude::*;
+use glutin::display::DisplayApiPreference;
 use raw_window_handle::{
     DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle,
     WaylandDisplayHandle, WaylandWindowHandle, WindowHandle,
@@ -117,6 +118,10 @@ impl PlatformSubsurface for WaylandSubsurface {
 
     fn window_handle_src(&self) -> &dyn raw_window_handle::HasWindowHandle {
         self
+    }
+    
+    fn gl_api_preference(&self) -> DisplayApiPreference {
+        DisplayApiPreference::Egl
     }
 }
 
