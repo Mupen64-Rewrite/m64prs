@@ -58,6 +58,11 @@ pub struct CoreBaseApi {
 
 #[derive(WrapperApi)]
 pub struct CoreConfigApi {
+    // DIRECTORIES
+    // =================
+    #[dlopen2_name = "ConfigGetSharedDataFilepath"]
+    shared_data_filepath: unsafe extern "C" fn(name: *const c_char) -> *const c_char,
+
     // DISCOVERY
     // =================
     #[dlopen2_name = "ConfigListSections"]

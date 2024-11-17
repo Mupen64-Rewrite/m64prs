@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    ffi::{c_char, c_int, c_void, CStr},
+    ffi::{c_char, c_int, c_void, CStr, CString},
     fmt::Debug,
     path::Path,
     ptr::{null, null_mut},
@@ -119,7 +119,11 @@ impl Core {
     /// This function may error if:
     /// - Library loading fails ([`CoreError::Library`])
     /// - Initialization of Mupen64Plus fails ([`CoreError::M64P`])
-    pub fn init(path: impl AsRef<Path>) -> Result<Self, StartupError> {
+    pub fn init(
+        path: impl AsRef<Path>,
+        config_path: Option<&Path>,
+        data_path: Option<&Path>,
+    ) -> Result<Self, StartupError> {
         const CORE_DEBUG_ID: &'static CStr = c"m64p(core)";
 
         let mut guard = CORE_GUARD.lock().unwrap();
@@ -128,12 +132,19 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
+        let config_c_path =
+            config_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+        let data_c_path =
+            data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+
         // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
         let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
             .map_err(StartupError::Library)?;
 
         let (save_tx, save_rx) = mpsc::channel();
         let (emu_tx, emu_rx) = mpsc::channel();
+
+        dbg!(&data_c_path);
 
         let mut core = Self {
             plugins: None,
@@ -160,8 +171,8 @@ impl Core {
             // as the core due to the initialization order of this struct.
             core_fn(core.api.base.startup(
                 0x02_01_00,
-                null(),
-                null(),
+                config_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
+                data_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
                 CORE_DEBUG_ID.as_ptr() as *mut c_void,
                 debug_callback,
                 &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,

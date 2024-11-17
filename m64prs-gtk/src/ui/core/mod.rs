@@ -47,6 +47,8 @@ impl Model {
     fn init(&mut self, sender: &ComponentSender<Self>) {
         #[cfg(target_os = "windows")]
         const MUPEN_FILENAME: &str = "mupen64plus.dll";
+        #[cfg(target_os = "macos")]
+        const MUPEN_FILENAME: &str = "libmupen64plus.dylib";
         #[cfg(target_os = "linux")]
         const MUPEN_FILENAME: &str = "libmupen64plus.so";
 
@@ -55,15 +57,17 @@ impl Model {
         self.0 = match self.0 {
             ModelInner::Uninit => {
                 let self_path = env::current_exe().expect("should be able to find current_exe");
-                let mupen_dll_path = self_path
-                    .parent()
-                    .map(|path| path.join(MUPEN_FILENAME))
-                    .expect("should be able to access other file in the same folder");
+                let self_dir = self_path.parent().expect("self path should be in a directory");
+
+                let mupen_dll_path = self_dir.join(MUPEN_FILENAME);
+                let data_dir = self_dir.join("data\\");
 
                 log::info!("Loading M64+ from {}", mupen_dll_path.display());
+                log::info!("Data path is {}", data_dir.display());
 
                 let mut core =
-                    m64prs_core::Core::init(mupen_dll_path).expect("core startup should succeed");
+                    m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
+                    .expect("core startup should succeed");
 
                 let vidext: VideoExtensionParameters;
                 (vidext, vidext_inbound) = VideoExtensionParameters::new(sender.clone());

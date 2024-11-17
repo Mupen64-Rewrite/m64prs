@@ -4,4 +4,5 @@
 .vs/
 sweep.timestamp
 
-/m64prs-native/target
+/m64prs-native/target/
+/install/

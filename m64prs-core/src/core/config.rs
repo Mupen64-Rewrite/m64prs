@@ -3,7 +3,8 @@
 
 use std::{
     ffi::{c_char, c_float, c_int, c_void, CStr, CString},
-    ptr::{null, null_mut},
+    path::PathBuf,
+    ptr::{null, null_mut, NonNull},
 };
 
 use m64prs_sys::ConfigType;
@@ -14,6 +15,20 @@ use super::{core_fn, Core};
 
 /// Functions for the configuration system.
 impl Core {
+    pub fn cfg_shared_data_filepath(&self, name: &CStr) -> Option<PathBuf> {
+        let path_ptr = unsafe { self.api.config.shared_data_filepath(name.as_ptr()) };
+        if path_ptr.is_null() {
+            None
+        } else {
+            Some(
+                unsafe { CStr::from_ptr(path_ptr) }
+                    .to_string_lossy()
+                    .to_string()
+                    .into(),
+            )
+        }
+    }
+
     /// Runs the provided callback once per available config section.
     pub fn cfg_for_each_section<F: FnMut(&CStr)>(
         &mut self,
@@ -186,7 +201,7 @@ impl<'a> ConfigSection<'a> {
                 )
                 .to_owned()
             })),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 

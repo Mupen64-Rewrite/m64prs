@@ -1284,7 +1284,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "m64prs-gtk-test"
+name = "m64prs-gtk"
 version = "0.1.0"
 dependencies = [
  "as-raw-xcb-connection",
