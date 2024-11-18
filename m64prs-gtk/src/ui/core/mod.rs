@@ -168,7 +168,12 @@ impl Model {
             .parent()
             .expect("self path should be in a directory");
 
+        #[cfg(target_os = "windows")]
         const DLL_EXT: &str = "dll";
+        #[cfg(target_os = "macos")]
+        const DLL_EXT: &str = "dylib";
+        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+        const DLL_EXT: &str = "so";
 
         let plugins = PluginSet {
             graphics: check!(Plugin::load(
