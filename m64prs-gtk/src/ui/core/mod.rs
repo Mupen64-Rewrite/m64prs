@@ -1,5 +1,11 @@
 use std::{
-    any::Any, env, error::Error, fs, mem, path::{Path, PathBuf}, sync::{mpsc, Arc}, thread::{self, JoinHandle}
+    any::Any,
+    env,
+    error::Error,
+    fs, mem,
+    path::{Path, PathBuf},
+    sync::{mpsc, Arc},
+    thread::{self, JoinHandle},
 };
 
 use m64prs_core::{plugin::PluginSet, Plugin};
@@ -57,7 +63,9 @@ impl Model {
         self.0 = match self.0 {
             ModelInner::Uninit => {
                 let self_path = env::current_exe().expect("should be able to find current_exe");
-                let self_dir = self_path.parent().expect("self path should be in a directory");
+                let self_dir = self_path
+                    .parent()
+                    .expect("self path should be in a directory");
 
                 let mupen_dll_path = self_dir.join(MUPEN_FILENAME);
                 let data_dir = self_dir.join("data\\");
@@ -65,8 +73,7 @@ impl Model {
                 log::info!("Loading M64+ from {}", mupen_dll_path.display());
                 log::info!("Data path is {}", data_dir.display());
 
-                let mut core =
-                    m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
+                let mut core = m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
                     .expect("core startup should succeed");
 
                 let vidext: VideoExtensionParameters;
@@ -156,17 +163,26 @@ impl Model {
             };
         }
 
+        let self_path = env::current_exe().expect("should be able to find current_exe");
+        let self_dir = self_path
+            .parent()
+            .expect("self path should be in a directory");
+
+        const DLL_EXT: &str = "dll";
+
         let plugins = PluginSet {
             graphics: check!(Plugin::load(
-                "/usr/lib/mupen64plus/mupen64plus-video-rice.so"
+                self_dir.join(format!("plugins/mupen64plus-video-rice.{}", DLL_EXT))
             )),
             audio: check!(Plugin::load(
-                "/usr/lib/mupen64plus/mupen64plus-audio-sdl.so"
+                self_dir.join(format!("plugins/mupen64plus-audio-sdl.{}", DLL_EXT))
             )),
             input: check!(Plugin::load(
-                "/usr/lib/mupen64plus/mupen64plus-input-sdl.so"
+                self_dir.join(format!("plugins/mupen64plus-input-sdl.{}", DLL_EXT))
             )),
-            rsp: check!(Plugin::load("/usr/lib/mupen64plus/mupen64plus-rsp-hle.so")),
+            rsp: check!(Plugin::load(
+                self_dir.join(format!("plugins/mupen64plus-rsp-hle.{}", DLL_EXT))
+            )),
         };
 
         check!(core.open_rom(&rom_data));

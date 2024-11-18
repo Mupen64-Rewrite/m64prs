@@ -6,18 +6,22 @@ import shutil
 import platform
 import os
 
+# UTILITY FUNCTIONS
+# ======================
 
 def copy_if_newer(src: Path, dst: Path) -> None:
-    assert src.exists()
+    if not src.exists():
+        raise FileNotFoundError(src)
 
     if dst.is_dir():
         dst = dst.joinpath(src.name)
 
     if dst.exists() and dst.stat().st_mtime_ns > src.stat().st_mtime_ns:
         return
+    
+    print(f"copy: {src} -> {dst}")
     shutil.copy(src, dst)
     pass
-
 
 def exe_name(name: str) -> str:
     match platform.system():
@@ -25,7 +29,6 @@ def exe_name(name: str) -> str:
             return f"{name}.exe"
         case _:
             return name
-
 
 def dll_name(name: str) -> str:
     match platform.system():
@@ -38,6 +41,16 @@ def dll_name(name: str) -> str:
         case _:
             return name
 
+def plugin_name(name: str) -> str:
+    match platform.system():
+        case "Windows":
+            return f"{name}.dll"
+        case "Darwin":
+            return f"{name}.dylib"
+        case "Linux":
+            return f"{name}.so"
+        case _:
+            return name
 
 def install_exe(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
@@ -47,7 +60,6 @@ def install_exe(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = 
 
     copy_if_newer(srcdir/srcfile, dstdir/dstfile)
 
-
 def install_dll(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
         dstfile = srcfile
@@ -56,6 +68,20 @@ def install_dll(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = 
 
     copy_if_newer(srcdir/srcfile, dstdir/dstfile)
 
+def install_plugin(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
+    if dstfile is None:
+        dstfile = srcfile
+    srcfile = plugin_name(srcfile)
+    dstfile = plugin_name(dstfile)
+
+    copy_if_newer(srcdir/srcfile, dstdir/dstfile)
+
+def install_data(srcdir: Path, dstdir: Path):
+    for item in srcdir.iterdir():
+        copy_if_newer(item, dstdir.joinpath(item.name))
+
+# COMMANDS
+# ======================
 
 def build(args: argparse.Namespace, extra: list[str]):
     root_dir = Path(__file__).parent
@@ -71,9 +97,8 @@ def build(args: argparse.Namespace, extra: list[str]):
         target_dir = root_dir.joinpath("target/debug")
     bin_dir.mkdir(parents=True, exist_ok=True)
 
-    native_target_dir = root_dir.joinpath("m64prs-native/target")
-    core_data_dir = root_dir.joinpath(
-        "m64prs-native/mupen64plus-core-tas/data")
+    native_root_dir = root_dir.joinpath("m64prs-native")
+    native_target_dir = native_root_dir.joinpath("target")
 
     data_dir = bin_dir.joinpath("data")
     plugins_dir = bin_dir.joinpath("plugins")
@@ -93,7 +118,13 @@ def build(args: argparse.Namespace, extra: list[str]):
     install_exe(target_dir, bin_dir, "m64prs-gtk")
     install_dll(native_target_dir, bin_dir, "mupen64plus")
 
-    # Copy Windows dependencies
+    # copy plugins
+    install_plugin(native_target_dir, plugins_dir, "mupen64plus-video-rice")
+    install_plugin(native_target_dir, plugins_dir, "mupen64plus-audio-sdl")
+    install_plugin(native_target_dir, plugins_dir, "mupen64plus-input-sdl")
+    install_plugin(native_target_dir, plugins_dir, "mupen64plus-rsp-hle")
+
+    # copy Windows dependencies
     if platform.system() == "Windows":
         arch_name = None
         if platform.machine() in ["x86"]:
@@ -104,17 +135,25 @@ def build(args: argparse.Namespace, extra: list[str]):
             assert False
 
         deps_dir = root_dir.joinpath("m64prs-native/mupen64plus-win32-deps")
-            
-        install_dll(deps_dir.joinpath(f"freetype-2.13.0/lib/{arch_name}"), bin_dir, "freetype")
-        install_dll(deps_dir.joinpath(f"libpng-1.6.39/lib/{arch_name}"), bin_dir, "libpng16")
-        install_dll(deps_dir.joinpath(f"SDL2_net-2.2.0/lib/{arch_name}"), bin_dir, "SDL2_net")
-        install_dll(deps_dir.joinpath(f"SDL2-2.26.3/lib/{arch_name}"), bin_dir, "SDL2")
-        install_dll(deps_dir.joinpath(f"zlib-1.2.13/lib/{arch_name}"), bin_dir, "zlib")
 
-    # copy data
-    for item in core_data_dir.iterdir():
-        copy_if_newer(item, data_dir.joinpath(item.name))
+        NATIVE_DEP_NAMES = [
+            ("freetype-2.13.0", "freetype"),
+            ("libpng-1.6.39", "libpng16"),
+            ("SDL2_net-2.2.0", "SDL2_net"),
+            ("SDL2-2.26.3", "SDL2"),
+            ("zlib-1.2.13", "zlib"),
+        ]
+        for dep_name, lib_name in NATIVE_DEP_NAMES:
+            install_dll(deps_dir / dep_name / "lib" / arch_name, bin_dir, lib_name)
 
+    # copy data files
+    NATIVE_DATA_PATHS = [
+        "mupen64plus-core/data",
+        "mupen64plus-input-sdl/data",
+        "mupen64plus-video-rice/data",
+    ]
+    for data_path in NATIVE_DATA_PATHS:
+        install_data(native_root_dir / data_path, data_dir)
 
 def run(args: argparse.Namespace, extra: list[str]):
     build(args, extra)
@@ -133,6 +172,14 @@ def run(args: argparse.Namespace, extra: list[str]):
         run_args
     ).check_returncode()
 
+def clean(args: argparse.Namespace, extra: list[str]):
+    root_dir = Path(__file__).parent
+    shutil.rmtree(root_dir.joinpath("target"))
+    shutil.rmtree(root_dir.joinpath("install"))
+    pass
+
+# CLI
+# ======================
 
 def create_cli():
     cli = argparse.ArgumentParser(
@@ -169,6 +216,12 @@ def create_cli():
         default=False
     )
     run_cli.set_defaults(func=run)
+
+    clean_cli = subclis.add_parser(
+        "clean",
+        help="Cleans all build artifacts."
+    )
+    clean_cli.set_defaults(func=clean)
 
     return cli
 

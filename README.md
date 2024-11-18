@@ -22,3 +22,5 @@ using paths relative to it self.
 
 ## To-do list
 - Video encoding via `rsmpeg`
+- VCR features (input recording, savestate linkage)
+- Scripting (potentially not via Lua)

@@ -15,6 +15,8 @@ pub fn setup_cargo_reruns() {
     }
 
     println!("cargo::rerun-if-changed=build.rs");
+    #[cfg(windows)]
+    println!("cargo::rerun-if-changed=m64prs-vs-deps.sln");
     // mupen64plus-core-tas
     {
         let core_dir = Path::new(dirs::M64P_CORE_DIR);
