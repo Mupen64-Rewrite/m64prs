@@ -50,9 +50,9 @@ fn compile_m64p_deps(out_dir: &Path) {
     msvc::msbuild(
         &vs_env,
         &sln_file,
-        &out_dir,
-        &msbuild_config,
-        &msbuild_platform,
+        out_dir,
+        msbuild_config,
+        msbuild_platform,
     );
 }
 
@@ -72,10 +72,7 @@ fn compile_m64p_deps(out_dir: &Path) {
             if !(extension.starts_with("so") || extension.starts_with("dylib")) {
                 continue;
             }
-            let strip_ext = name
-                .split_once('.')
-                .map(|(ext1, _)| ext1)
-                .unwrap_or(name);
+            let strip_ext = name.split_once('.').map(|(ext1, _)| ext1).unwrap_or(name);
 
             let out_path = out_dir.join(format!("{}.{}", name, strip_ext));
             fs::copy(&path, &out_path).expect("copy to target dir should succeed");

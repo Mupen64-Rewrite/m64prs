@@ -185,7 +185,7 @@ impl Model {
             )),
         };
 
-        check!(core.open_rom(&rom_data));
+        check!(core.open_rom(rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
             let _ = sender.output(Response::Error(Box::new(err)));

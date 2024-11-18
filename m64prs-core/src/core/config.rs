@@ -4,7 +4,7 @@
 use std::{
     ffi::{c_char, c_float, c_int, c_void, CStr, CString},
     path::PathBuf,
-    ptr::{null, null_mut, NonNull},
+    ptr::{null, null_mut},
 };
 
 use m64prs_sys::ConfigType;
@@ -68,7 +68,7 @@ impl Core {
         Ok(ConfigSection {
             core: self,
             name: name.to_owned(),
-            handle: handle,
+            handle,
         })
     }
 }
@@ -81,7 +81,7 @@ pub struct ConfigSection<'a> {
     handle: m64prs_sys::Handle,
 }
 
-impl<'a> ConfigSection<'a> {
+impl ConfigSection<'_> {
     /// Returns the section's name.
     pub fn name(&self) -> &CStr {
         &self.name
@@ -153,12 +153,12 @@ impl<'a> ConfigSection<'a> {
                 .config
                 .get_parameter_help(self.handle, param.as_ptr());
 
-            if help_ptr == null() {
-                return Err(M64PError::InputNotFound);
+            if help_ptr.is_null() {
+                Err(M64PError::InputNotFound)
             } else {
                 // SAFETY: the CString returned by Mupen should last
                 // as long as it isn't overwritten.
-                return Ok(CStr::from_ptr(help_ptr).to_owned());
+                Ok(CStr::from_ptr(help_ptr).to_owned())
             }
         }
     }
@@ -201,7 +201,6 @@ impl<'a> ConfigSection<'a> {
                 )
                 .to_owned()
             })),
-            _ => unreachable!(),
         }
     }
 

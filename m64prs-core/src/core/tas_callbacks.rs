@@ -1,11 +1,6 @@
 use ffi::{AudioHandlerFFI, InputHandlerFFI};
 use m64prs_sys::{Buttons, Command};
-use std::{
-    ffi::{c_int, c_uint, c_void},
-    mem,
-    ptr::null_mut,
-    sync::Mutex,
-};
+use std::ffi::{c_int, c_uint, c_void};
 
 use crate::error::M64PError;
 
@@ -149,12 +144,12 @@ pub mod ffi {
             input: *mut Buttons,
         ) {
             let context = context as *mut I;
-            *input = (&mut *context).filter_inputs(port, *input);
+            *input = (*context).filter_inputs(port, *input);
         }
 
         unsafe extern "C" fn ffi_poll_present(context: *mut c_void, port: c_int) -> bool {
             let context = context as *mut I;
-            (&mut *context).poll_present(port)
+            (*context).poll_present(port)
         }
     }
 
@@ -185,7 +180,7 @@ pub mod ffi {
 
         unsafe extern "C" fn ffi_set_audio_rate(context: *mut c_void, new_rate: u32) {
             let context = context as *mut A;
-            (&mut *context).set_audio_rate(new_rate);
+            (*context).set_audio_rate(new_rate);
         }
 
         unsafe extern "C" fn ffi_push_audio_samples(
@@ -195,7 +190,7 @@ pub mod ffi {
         ) {
             let context = context as *mut A;
             let data_ptr = data as *const u16;
-            (&mut *context).push_audio_samples(std::slice::from_raw_parts(data_ptr, length / 2));
+            (*context).push_audio_samples(std::slice::from_raw_parts(data_ptr, length / 2));
         }
     }
 }

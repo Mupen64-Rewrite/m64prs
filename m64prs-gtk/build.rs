@@ -1,7 +1,4 @@
-use std::{
-    env, fs,
-    path::PathBuf,
-};
+use std::{env, fs, path::PathBuf};
 
 use gl_generator::{Api, Fallbacks, Profile, Registry, StructGenerator};
 

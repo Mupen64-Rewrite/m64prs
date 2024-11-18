@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     ffi::{c_char, c_int, c_void, CStr, CString},
     fmt::Debug,
     path::Path,
@@ -33,7 +32,6 @@ pub use plugin::Plugin;
 
 /// Internal helper function to convert C results to Rust errors.
 #[inline(always)]
-#[must_use]
 fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
     match err {
         m64prs_sys::Error::Success => Ok(()),
@@ -124,7 +122,7 @@ impl Core {
         config_path: Option<&Path>,
         data_path: Option<&Path>,
     ) -> Result<Self, StartupError> {
-        const CORE_DEBUG_ID: &'static CStr = c"m64p(core)";
+        const CORE_DEBUG_ID: &CStr = c"m64p(core)";
 
         let mut guard = CORE_GUARD.lock().unwrap();
         if *guard {
@@ -132,10 +130,8 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
-        let config_c_path =
-            config_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
-        let data_c_path =
-            data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+        let config_c_path = config_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+        let data_c_path = data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
 
         // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
         let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
@@ -176,7 +172,7 @@ impl Core {
                 &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
                 state_callback,
             ))
-            .map_err(|err| StartupError::CoreInit(err))?;
+            .map_err(StartupError::CoreInit)?;
         };
 
         *guard = true;

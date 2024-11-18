@@ -8,7 +8,6 @@ use std::{
 
 use futures::channel::oneshot;
 use m64prs_sys::{Command, CoreParam, EmuState};
-use num_enum::TryFromPrimitive;
 
 use crate::error::M64PError;
 
@@ -99,7 +98,10 @@ impl Core {
         future
     }
 
-    fn await_emu_state_inner(&self, state: EmuState) -> impl Future<Output = Result<(), M64PError>> {
+    fn await_emu_state_inner(
+        &self,
+        state: EmuState,
+    ) -> impl Future<Output = Result<(), M64PError>> {
         let (mut future, waiter) = emu_pair(state as c_int);
         self.emu_sender
             .send(waiter)

@@ -1,11 +1,11 @@
 use core::str;
+use m64prs_sys::Buttons;
+use std::cmp::Ordering;
 use std::{
     borrow::Borrow,
     fmt::{Debug, Display},
     str::FromStr,
 };
-
-use m64prs_sys::Buttons;
 
 use crate::error::StringFieldError;
 
@@ -45,7 +45,7 @@ impl<const N: usize> StringField<N> {
             Some(pos) => &self.0[..pos],
             None => &self.0,
         };
-        std::str::from_utf8(to_null_term).map_err(|err| StringFieldError::Utf8Invalid(err))
+        str::from_utf8(to_null_term).map_err(StringFieldError::Utf8Invalid)
     }
 
     /// Tries to write a string to the string field.
@@ -57,16 +57,17 @@ impl<const N: usize> StringField<N> {
 
         let data = data.borrow();
         let len = data.len();
-        if len > N {
-            Err(StringFieldError::FieldTooLong { max_len: N })
-        } else if len == N {
-            self.0.copy_from_slice(data.as_bytes());
-
-            Ok(())
-        } else {
-            self.0[..len].copy_from_slice(data.as_bytes());
-            self.0[len] = b'\0';
-            Ok(())
+        match len.cmp(&N) {
+            Ordering::Less => {
+                self.0[..len].copy_from_slice(data.as_bytes());
+                self.0[len] = b'\0';
+                Ok(())
+            }
+            Ordering::Equal => {
+                self.0.copy_from_slice(data.as_bytes());
+                Ok(())
+            }
+            Ordering::Greater => Err(StringFieldError::FieldTooLong { max_len: N }),
         }
     }
 
@@ -157,9 +158,9 @@ impl<const N: usize> AsciiField<N> {
     pub fn try_read(&self) -> Result<&str, StringFieldError> {
         assert!(N > 0, "Cannot read from an empty field");
         // Find the null-terminator
-        let mut iter = self.0.iter();
+        let iter = self.0.iter();
         let mut count = 0;
-        while let Some(next) = iter.next() {
+        for next in iter {
             if !next.is_ascii() {
                 return Err(StringFieldError::AsciiInvalid);
             }
@@ -169,7 +170,7 @@ impl<const N: usize> AsciiField<N> {
             count += 1;
         }
         // SAFETY: we verified everything was ASCII in the for loop.
-        return unsafe { Ok(std::str::from_utf8_unchecked(&self.0[0..count])) };
+        unsafe { Ok(str::from_utf8_unchecked(&self.0[0..count])) }
     }
 
     /// Tries to write a string to the string field.
@@ -185,17 +186,17 @@ impl<const N: usize> AsciiField<N> {
         if !data.is_ascii() {
             return Err(StringFieldError::AsciiInvalid);
         }
-
-        if len > N {
-            Err(StringFieldError::FieldTooLong { max_len: N })
-        } else if len == N {
-            self.0.copy_from_slice(data.as_bytes());
-
-            Ok(())
-        } else {
-            self.0[..len].copy_from_slice(data.as_bytes());
-            self.0[len] = b'\0';
-            Ok(())
+        match len.cmp(&N) {
+            Ordering::Less => {
+                self.0[..len].copy_from_slice(data.as_bytes());
+                self.0[len] = b'\0';
+                Ok(())
+            }
+            Ordering::Equal => {
+                self.0.copy_from_slice(data.as_bytes());
+                Ok(())
+            }
+            Ordering::Greater => Err(StringFieldError::FieldTooLong { max_len: N }),
         }
     }
 

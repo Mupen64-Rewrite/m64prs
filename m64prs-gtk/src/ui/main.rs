@@ -80,10 +80,10 @@ impl Model {
 
 #[relm4::component(pub)]
 impl SimpleComponent for Model {
-    type Init = ();
-
     type Input = Message;
+
     type Output = ();
+    type Init = ();
 
     menu! {
         menu_root: {
@@ -256,24 +256,20 @@ impl SimpleComponent for Model {
 
         // Handle view-update requests (subsurfaces)
         let mut vidext_request = self.vidext_request.borrow_mut();
-        if let Some((id, request)) = vidext_request.take() {
-            match request {
-                VidextRequest::CreateSubsurface {
-                    position,
-                    size,
-                    transparent,
-                } => {
-                    let scale_factor = subsurface_container.scale_factor();
-                    let size = conv::into_graphene_size::<f32>(
-                        size.to_logical(scale_factor as f64),
-                    );
+        if let Some((
+            id,
+            VidextRequest::CreateSubsurface {
+                position,
+                size,
+                transparent,
+            },
+        )) = vidext_request.take()
+        {
+            let scale_factor = subsurface_container.scale_factor();
+            let size = conv::into_graphene_size::<f32>(size.to_logical(scale_factor as f64));
 
-                    let subsurface =
-                        subsurface_container.new_subsurface(position, size, transparent);
-                    let _ = vidext_inbound.send((id, VidextResponse::NewSubsurface(subsurface)));
-                }
-                _ => (),
-            }
+            let subsurface = subsurface_container.new_subsurface(position, size, transparent);
+            let _ = vidext_inbound.send((id, VidextResponse::NewSubsurface(subsurface)));
         }
     }
 }

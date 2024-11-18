@@ -4,7 +4,9 @@ use std::{
 };
 
 use glutin::{
-    config::{Api, ColorBufferType, ConfigSurfaceTypes, ConfigTemplateBuilder, GetGlConfig, GlConfig},
+    config::{
+        Api, ColorBufferType, ConfigSurfaceTypes, ConfigTemplateBuilder, GetGlConfig, GlConfig,
+    },
     context::{ContextApi, ContextAttributesBuilder, GlProfile, PossiblyCurrentContext, Version},
     display::Display,
     prelude::{GlDisplay, NotCurrentGlContext},
@@ -13,9 +15,7 @@ use glutin::{
 use m64prs_core::{error::M64PError, vidext::VidextResult};
 use m64prs_sys::{GLAttribute, GLContextType};
 use num_enum::TryFromPrimitive;
-use raw_window_handle::{
-    HasDisplayHandle, HasWindowHandle,
-};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 use crate::{
     controls::SubsurfaceHandle,
@@ -216,7 +216,11 @@ impl OpenGlConfigState {
                 unsafe { gl_display.find_configs(builder.build()) },
                 M64PError::SystemFail
             )
-            .find(|config| config.config_surface_types().contains(ConfigSurfaceTypes::WINDOW));
+            .find(|config| {
+                config
+                    .config_surface_types()
+                    .contains(ConfigSurfaceTypes::WINDOW)
+            });
 
             check!(result.ok_or(()), M64PError::SystemFail)
         };
@@ -228,8 +232,11 @@ impl OpenGlConfigState {
             let nz_width = unsafe { NonZero::new_unchecked(size.width) };
             let nz_height = unsafe { NonZero::new_unchecked(size.height) };
 
-            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new()
-                .build(window_handle.as_raw(), nz_width, nz_height);
+            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
+                window_handle.as_raw(),
+                nz_width,
+                nz_height,
+            );
 
             check!(
                 unsafe { gl_display.create_window_surface(&gl_config, &attrs) },

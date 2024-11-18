@@ -1,6 +1,4 @@
-use std::{
-    fmt::Debug, ops::Deref, sync::Arc
-};
+use std::{fmt::Debug, ops::Deref, sync::Arc};
 
 use glib::{subclass::types::ObjectSubclassIsExt, MainContext};
 use graphene::{Point, Size};
@@ -46,7 +44,10 @@ impl Drop for SubsurfaceHandle {
 impl SubsurfaceHandle {
     pub fn request_bounds(self, position: Option<Point>, size: Option<Size>) -> Self {
         glib::spawn_future(async move {
-            self.parent.as_ref().unwrap().adjust_subsurface(&self, position, size);
+            self.parent
+                .as_ref()
+                .unwrap()
+                .adjust_subsurface(&self, position, size);
             self
         })
         .block_on()
@@ -126,8 +127,12 @@ mod inner {
             let max_edge = subsurfaces
                 .iter()
                 .map(match orientation {
-                    gtk::Orientation::Horizontal => |s: &SubsurfaceMetadata| s.position.x() + s.size.width(),
-                    gtk::Orientation::Vertical => |s: &SubsurfaceMetadata| s.position.y() + s.size.height(),
+                    gtk::Orientation::Horizontal => {
+                        |s: &SubsurfaceMetadata| s.position.x() + s.size.width()
+                    }
+                    gtk::Orientation::Vertical => {
+                        |s: &SubsurfaceMetadata| s.position.y() + s.size.height()
+                    }
                     _ => unreachable!(),
                 })
                 .max_by(f32::total_cmp)
@@ -149,8 +154,13 @@ mod inner {
 
             let mut subsurfaces = self.subsurfaces.borrow_mut();
             for subsurface in subsurfaces.iter_mut() {
-                let g_position = self.obj().compute_point(&native, &subsurface.position).unwrap();
-                subsurface.handle.set_position(conv::into_dpi_position(g_position).to_physical(scale_factor));
+                let g_position = self
+                    .obj()
+                    .compute_point(&native, &subsurface.position)
+                    .unwrap();
+                subsurface
+                    .handle
+                    .set_position(conv::into_dpi_position(g_position).to_physical(scale_factor));
             }
         }
 

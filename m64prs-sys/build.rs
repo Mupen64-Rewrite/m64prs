@@ -55,8 +55,8 @@ impl ParseCallbacks for M64PParseCallbacks {
         original_variant_name: &str,
         _variant_value: bindgen::callbacks::EnumVariantValue,
     ) -> Option<String> {
-        let stripped = if original_variant_name.starts_with("M64P_GL_") {
-            &original_variant_name[8..]
+        let stripped = if let Some(stripped) = original_variant_name.strip_prefix("M64P_GL_") {
+            stripped
         } else if original_variant_name.starts_with("M64") {
             match original_variant_name.find('_') {
                 Some(pos) => &original_variant_name[(pos + 1)..],
