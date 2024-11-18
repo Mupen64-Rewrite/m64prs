@@ -67,7 +67,14 @@ impl dyn PlatformSubsurface {
         attributes: SubsurfaceAttributes,
     ) -> Result<Box<Self>, M64PError> {
         #[cfg(target_os = "windows")]
-        {}
+        {
+            if window.is::<gdk_win32::Win32Surface>() {
+                return Ok(Box::new(windows::WindowsSubsurface::new(
+                    window.downcast_ref().unwrap(),
+                    attributes,
+                )?));
+            }
+        }
         #[cfg(target_os = "linux")]
         {
             #[cfg(feature = "wayland")]

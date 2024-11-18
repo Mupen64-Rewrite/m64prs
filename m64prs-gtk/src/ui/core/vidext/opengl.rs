@@ -273,6 +273,11 @@ impl OpenGlConfigState {
 
         let gl = Gl::load_with(|sym| gl_display.get_proc_address(&CString::new(sym).unwrap()));
 
+        unsafe {
+            gl.ClearColor(0.0, 0.0, 0.0, 1.0);
+            gl.Clear(gl::COLOR_BUFFER_BIT);
+        }
+
         log::debug!("Loaded GL functions");
 
         Ok(OpenGlActiveState {

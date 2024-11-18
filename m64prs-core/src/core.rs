@@ -144,8 +144,6 @@ impl Core {
         let (save_tx, save_rx) = mpsc::channel();
         let (emu_tx, emu_rx) = mpsc::channel();
 
-        dbg!(&data_c_path);
-
         let mut core = Self {
             plugins: None,
             pin_state: Box::new(PinnedCoreState {

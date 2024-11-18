@@ -41,6 +41,16 @@ tiny-xlib = { version = "0.2.3", optional = true }
 as-raw-xcb-connection = { version = "1.0.1", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+gdk_win32 = { version = "0.9.3", package = "gdk4-win32", features = ["windows"] }
+
+[target.'cfg(target_os = "windows")'.dependencies.windows]
+version = "0.58.0"
+features = [
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse"
+]
 
 [profile.dev]
 panic = "abort"
