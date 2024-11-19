@@ -142,8 +142,8 @@ impl SimpleComponent for Model {
 
             match request {
                 Request::Show { detail, message } => {
-                    widgets.dialog.set_message(&message);
-                    widgets.dialog.set_detail(&detail);
+                    widgets.dialog.set_message(message);
+                    widgets.dialog.set_detail(detail);
 
                     widgets.dialog.choose(
                         transient,

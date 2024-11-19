@@ -78,7 +78,7 @@ impl Settings {
         }
 
         dialog.set_title(&self.title);
-        dialog.set_accept_label(self.accept_label.as_ref().map(String::as_str));
+        dialog.set_accept_label(self.accept_label.as_deref());
         dialog.set_modal(self.modal);
 
         Widgets {

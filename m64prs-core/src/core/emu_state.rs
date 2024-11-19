@@ -8,7 +8,6 @@ use std::{
 
 use futures::channel::oneshot;
 use m64prs_sys::{Command, CoreParam, EmuState};
-use num_enum::TryFromPrimitive;
 
 use crate::error::M64PError;
 

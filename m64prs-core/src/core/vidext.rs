@@ -385,10 +385,7 @@ mod ffi {
             &mut self,
             symbol: *const c_char,
         ) -> Option<unsafe extern "C" fn()> {
-            let inst = match self.0.as_mut() {
-                Some(value) => value,
-                None => return None,
-            };
+            let inst = self.0.as_mut()?;
             mem::transmute(inst.gl_get_proc_address(CStr::from_ptr(symbol)))
         }
 

@@ -80,10 +80,10 @@ impl Model {
 
 #[relm4::component(pub)]
 impl SimpleComponent for Model {
-    type Init = ();
-
     type Input = Message;
+
     type Output = ();
+    type Init = ();
 
     menu! {
         menu_root: {

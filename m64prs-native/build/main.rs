@@ -50,9 +50,9 @@ fn compile_m64p_deps(out_dir: &Path) {
     msvc::msbuild(
         &vs_env,
         &sln_file,
-        &out_dir,
-        &msbuild_config,
-        &msbuild_platform,
+        out_dir,
+        msbuild_config,
+        msbuild_platform,
     );
 }
 
