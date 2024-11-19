@@ -70,10 +70,7 @@ mod inner {
                 dpi_conv::into_dpi_position(win_pos).to_physical(gdk_surface.scale_factor() as f64);
 
             let mut compositor = self.compositor.borrow_mut();
-            *compositor = Some(
-                <dyn NativeCompositor>::new(gdk_surface, physical_pos)
-                    .expect("Compositor creation should not fail"),
-            );
+            *compositor = Some(<dyn NativeCompositor>::new(gdk_surface, physical_pos));
         }
 
         fn unrealize(&self) {

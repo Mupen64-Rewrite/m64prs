@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use glib::object::ObjectExt;
+use glib::object::{Cast, ObjectExt};
 use glutin::display::DisplayApiPreference;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
@@ -18,7 +18,7 @@ slotmap::new_key_type! {
 #[derive(Debug, Clone)]
 pub enum StackOrder {
     StackAbove(NativeViewKey),
-    StackBelow(NativeViewKey)
+    StackBelow(NativeViewKey),
 }
 
 #[derive(Debug, Clone)]
@@ -76,17 +76,13 @@ pub trait NativeCompositor {
         size: Option<dpi::PhysicalSize<u32>>,
     );
     /// Restacks a view relative to another.
-    fn restack_view(
-        &mut self,
-        key: NativeViewKey,
-        stack_order: StackOrder
-    );
+    fn restack_view(&mut self, key: NativeViewKey, stack_order: StackOrder);
 
     /// Computes the total bounds of all views in the graph.
     fn total_bounds(&self) -> dpi::PhysicalSize<u32>;
 
     /// Sets the position of the compositor with respect tothe parent surface.
-    fn set_position(&mut self, position: dpi::PhysicalPosition<u32>);
+    fn set_position(&mut self, position: dpi::PhysicalPosition<i32>);
     /// Maps or unmaps the compositor.
     fn set_mapped(&mut self, mapped: bool);
 }
@@ -105,7 +101,10 @@ pub trait NativeView: Send + Sync {
 impl dyn NativeCompositor {
     /// Creates a new compositor. The compositor is initially unmapped and must be mapped
     /// by a call to [`NativeCompositor::set_mapped`].
-    pub fn new(surface: gdk::Surface, position: dpi::PhysicalPosition<i32>) -> Result<Box<dyn NativeCompositor>, Box<dyn Error>> {
+    pub fn new(
+        surface: gdk::Surface,
+        position: dpi::PhysicalPosition<i32>,
+    ) -> Box<dyn NativeCompositor> {
         #[cfg(target_os = "windows")]
         {
             if surface.is::<gdk_win32::Win32Surface>() {
@@ -121,7 +120,10 @@ impl dyn NativeCompositor {
             }
             #[cfg(feature = "wayland")]
             if surface.is::<gdk_wayland::WaylandSurface>() {
-                todo!()
+                return Box::new(wayland::WaylandCompositor::new(
+                    surface.downcast_ref().unwrap(),
+                    position,
+                ))
             }
             unreachable!()
         }

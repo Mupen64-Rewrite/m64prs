@@ -769,6 +769,8 @@ dependencies = [
  "gio",
  "glib",
  "libc",
+ "wayland-backend",
+ "wayland-client",
 ]
 
 [[package]]
@@ -1324,6 +1326,7 @@ dependencies = [
  "gl_generator",
  "glib",
  "glutin",
+ "glutin_egl_sys",
  "graphene-rs",
  "gtk4",
  "log",
