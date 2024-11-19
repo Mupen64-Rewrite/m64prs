@@ -17,15 +17,18 @@ glib = { version = "*", features = ["log"] }
 graphene-rs = { version = "*" }
 gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
 gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14"] }
+relm4 = "0.9.1"
 
 env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
-relm4 = "0.9.1"
 pollster = "0.4.0"
+
 glutin = "0.32.1"
 raw-window-handle = "0.6.2"
 ash = "0.38.0"
+
 num_enum = "0.7.3"
+slotmap = "1.0.7"
 
 
 [target.'cfg(target_os = "linux")'.dependencies]
