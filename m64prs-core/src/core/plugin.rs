@@ -37,19 +37,19 @@ impl Core {
         plugins
             .graphics
             .startup(core_ptr as *mut c_void)
-            .map_err(|err| PluginLoadError::M64P(err))?;
+            .map_err(PluginLoadError::M64P)?;
         plugins
             .audio
             .startup(core_ptr as *mut c_void)
-            .map_err(|err| PluginLoadError::M64P(err))?;
+            .map_err(PluginLoadError::M64P)?;
         plugins
             .input
             .startup(core_ptr as *mut c_void)
-            .map_err(|err| PluginLoadError::M64P(err))?;
+            .map_err(PluginLoadError::M64P)?;
         plugins
             .rsp
             .startup(core_ptr as *mut c_void)
-            .map_err(|err| PluginLoadError::M64P(err))?;
+            .map_err(PluginLoadError::M64P)?;
 
         // This keeps track of the last plugin we attached.
         // 0 - Graphics
@@ -230,15 +230,15 @@ impl<T: PluginTypeTrait> Plugin<T> {
         // SAFETY: we assume the dynamic library loaded here is a plugin. We have
         // no way to tell whether this is malicious, but unfortunately this is by
         // the nature of Mupen64Plus's plugin system.
-        let api: Container<BasePluginApi> = unsafe { Container::load(path.as_ref()) }
-            .map_err(|err| PluginLoadError::Library(err))?;
+        let api: Container<BasePluginApi> =
+            unsafe { Container::load(path.as_ref()) }.map_err(PluginLoadError::Library)?;
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
             // SAFETY: this function should only use the borrowed value; it
             // shouldn't store any references.
             core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
-                .map_err(|err| PluginLoadError::M64P(err))?;
+                .map_err(PluginLoadError::M64P)?;
             value
         };
         if plugin_type != T::TYPE.into() {
@@ -272,8 +272,8 @@ impl<T: PluginTypeTrait> Plugin<T> {
 
             Ok(PluginInfo {
                 api_type: plugin_type.try_into().unwrap(),
-                plugin_version: plugin_version,
-                api_version: api_version,
+                plugin_version,
+                api_version,
                 plugin_name: CStr::from_ptr(plugin_name),
                 capabilities: 0,
             })
@@ -327,13 +327,13 @@ impl AnyPlugin {
     ///
     /// If you need to load a plugin of a specific type, use [`Plugin<T>::load`].
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, PluginLoadError> {
-        let api: Container<BasePluginApi> = unsafe { Container::load(path.as_ref()) }
-            .map_err(|err| PluginLoadError::Library(err))?;
+        let api: Container<BasePluginApi> =
+            unsafe { Container::load(path.as_ref()) }.map_err(PluginLoadError::Library)?;
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
             core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
-                .map_err(|err| PluginLoadError::M64P(err))?;
+                .map_err(PluginLoadError::M64P)?;
             value
         };
 

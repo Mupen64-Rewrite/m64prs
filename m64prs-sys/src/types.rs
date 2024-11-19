@@ -90,7 +90,7 @@ impl From<Buttons> for u32 {
 }
 impl Hash for Buttons {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u32(u32::from(self.clone()))
+        state.write_u32(u32::from(*self))
     }
 }
 

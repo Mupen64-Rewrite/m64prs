@@ -1,12 +1,11 @@
-use std::{
-    num::NonZero, ptr::NonNull, sync::Arc
-};
+use std::{num::NonZero, ptr::NonNull, sync::Arc};
 
 use gdk::prelude::*;
 use glutin::display::DisplayApiPreference;
 use m64prs_core::error::M64PError;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle, XcbDisplayHandle, XcbWindowHandle
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WindowHandle, XcbDisplayHandle,
+    XcbWindowHandle,
 };
 use state::{DisplayState, ScopeGuard, X11DisplayExt};
 use x11rb::{
@@ -15,8 +14,7 @@ use x11rb::{
     protocol::{
         xfixes::ConnectionExt as XFixesConnectionExt,
         xproto::{
-            self, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask,
-            WindowClass,
+            self, ConfigureWindowAux, ConnectionExt, CreateWindowAux, EventMask, WindowClass,
         },
     },
     reexports::x11rb_protocol::protocol::shape,
@@ -95,15 +93,18 @@ impl XcbSubsurface {
             );
             // Find a "true-color" visual: this type simply yeets pixel data onto the screen.
             check!(
-                visuals.iter().find(|visual| visual.class == xproto::VisualClass::TRUE_COLOR).ok_or(()),
+                visuals
+                    .iter()
+                    .find(|visual| visual.class == xproto::VisualClass::TRUE_COLOR)
+                    .ok_or(()),
                 M64PError::SystemFail,
                 "No visuals available"
             )
             .visual_id
         };
 
-        // Because ancient graphics systems used lookup tables for colour, X11 provides a 
-        // colormap which maps raw pixel data to actual on-screen colours. However, it 
+        // Because ancient graphics systems used lookup tables for colour, X11 provides a
+        // colormap which maps raw pixel data to actual on-screen colours. However, it
         // doesn't really need to do anything nowadays and really exists for show.
         let colormap = {
             let colormap_id = check!(st.conn.generate_id(), M64PError::SystemFail);
@@ -112,7 +113,7 @@ impl XcbSubsurface {
             // as the window we're creating.
             // - ColormapAlloc::NONE: We can't and won't need to change color mappings.
             // - colormap_id: the colormap we're creating.
-            // - screen_info.root: the root window will be on the same screen as the window 
+            // - screen_info.root: the root window will be on the same screen as the window
             //   we're creating. Just use it.
             // - visual_id: the visual we're using for the colormap.
             check!(
@@ -300,7 +301,8 @@ impl HasDisplayHandle for XcbSubsurface {
     fn display_handle<'a>(&'a self) -> Result<DisplayHandle<'a>, HandleError> {
         let st = &self.display_state;
 
-        let raw_handle = XcbDisplayHandle::new(NonNull::new(st.conn.get_raw_xcb_connection()), st.screen);
+        let raw_handle =
+            XcbDisplayHandle::new(NonNull::new(st.conn.get_raw_xcb_connection()), st.screen);
 
         unsafe { Ok(DisplayHandle::borrow_raw(raw_handle.into())) }
     }

@@ -1,7 +1,11 @@
 use std::{cell::Cell, path::PathBuf};
 
 use glib::object::IsA;
-use gtk::{gio::{self, ListStore}, prelude::*, Widget};
+use gtk::{
+    gio::{self, ListStore},
+    prelude::*,
+    Widget,
+};
 use relm4::{ComponentParts, RelmWidgetExt, SimpleComponent};
 
 #[derive(Debug, Clone, Copy)]
@@ -74,10 +78,13 @@ impl Settings {
         }
 
         dialog.set_title(&self.title);
-        dialog.set_accept_label(self.accept_label.as_ref().map(String::as_str));
+        dialog.set_accept_label(self.accept_label.as_deref());
         dialog.set_modal(self.modal);
 
-        Widgets { dialog, transient_window: self.transient_to }
+        Widgets {
+            dialog,
+            transient_window: self.transient_to,
+        }
     }
 }
 
@@ -89,7 +96,7 @@ pub struct Widgets {
 
 #[derive(Debug)]
 pub struct Model {
-    next_request: Cell<Option<Request>>
+    next_request: Cell<Option<Request>>,
 }
 
 impl SimpleComponent for Model {
@@ -130,24 +137,24 @@ impl SimpleComponent for Model {
 
             match request {
                 Request::Open => widgets.dialog.open(
-                    transient, 
+                    transient,
                     Option::<&gio::Cancellable>::None,
                     move |result| {
                         let _ = match result {
                             Ok(file) => sender.output(Response::Accept(file.path().unwrap())),
                             Err(_) => sender.output(Response::Cancel),
                         };
-                    }
+                    },
                 ),
                 Request::Save => widgets.dialog.save(
-                    transient, 
+                    transient,
                     Option::<&gio::Cancellable>::None,
                     move |result| {
                         let _ = match result {
                             Ok(file) => sender.output(Response::Accept(file.path().unwrap())),
                             Err(_) => sender.output(Response::Cancel),
                         };
-                    }
+                    },
                 ),
             }
         }

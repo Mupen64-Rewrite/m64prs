@@ -16,7 +16,10 @@ use state::{DisplayState, Win32DisplayExt};
 use windows::Win32::{
     Foundation::HWND,
     UI::WindowsAndMessaging::{
-        CreateWindowExW, DestroyWindow, GetWindowLongPtrW, MoveWindow, SetParent, SetWindowLongPtrW, ShowWindowAsync, GWL_STYLE, HMENU, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WINDOW_STYLE, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU
+        CreateWindowExW, DestroyWindow, GetWindowLongPtrW, MoveWindow, SetParent,
+        SetWindowLongPtrW, ShowWindowAsync, GWL_STYLE, HMENU, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE,
+        WINDOW_STYLE, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_OVERLAPPED,
+        WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU,
     },
 };
 
@@ -138,13 +141,13 @@ impl PlatformSubsurface for WindowsSubsurface {
 }
 
 impl HasDisplayHandle for WindowsSubsurface {
-    fn display_handle<'a>(&'a self) -> Result<DisplayHandle<'a>, HandleError> {
+    fn display_handle(&self) -> Result<DisplayHandle, HandleError> {
         let raw_handle = WindowsDisplayHandle::new();
         Ok(unsafe { DisplayHandle::borrow_raw(raw_handle.into()) })
     }
 }
 impl HasWindowHandle for WindowsSubsurface {
-    fn window_handle<'a>(&'a self) -> Result<raw_window_handle::WindowHandle<'a>, HandleError> {
+    fn window_handle(&self) -> Result<WindowHandle, HandleError> {
         let st = &self.display_state;
 
         let mut raw_handle =

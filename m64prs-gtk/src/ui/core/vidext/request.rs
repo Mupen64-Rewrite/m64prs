@@ -1,4 +1,7 @@
-use std::sync::{atomic::{self, AtomicUsize}, mpsc};
+use std::sync::{
+    atomic::{self, AtomicUsize},
+    mpsc,
+};
 
 use relm4::ComponentSender;
 
@@ -17,7 +20,11 @@ impl RequestManager {
         outbound: ComponentSender<core::Model>,
         inbound: mpsc::Receiver<(usize, VidextResponse)>,
     ) -> Self {
-        Self { uid_counter: AtomicUsize::new(0), outbound, inbound }
+        Self {
+            uid_counter: AtomicUsize::new(0),
+            outbound,
+            inbound,
+        }
     }
 
     pub(super) fn request(&self, req: VidextRequest) -> Result<VidextResponse, mpsc::RecvError> {

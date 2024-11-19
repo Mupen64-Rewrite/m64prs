@@ -1,5 +1,7 @@
 use std::{
-    any::Any, ffi::{c_char, c_int, c_void, CStr}, mem
+    any::Any,
+    ffi::{c_char, c_int, c_void, CStr},
+    mem,
 };
 
 use ash::vk::{self, Handle};
@@ -15,7 +17,10 @@ use crate::error::M64PError;
 use super::{core_fn, Core};
 
 impl Core {
-    pub fn override_vidext<V: VideoExtension>(&mut self, context: Box<dyn Any>) -> Result<(), M64PError> {
+    pub fn override_vidext<V: VideoExtension>(
+        &mut self,
+        context: Box<dyn Any>,
+    ) -> Result<(), M64PError> {
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
         *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(None, context)));
         drop(vidext_box);
@@ -183,7 +188,10 @@ mod ffi {
     }
 
     /// Object that translates generics to FFI interface.
-    pub(super) struct VideoExtensionWrapper<V: VideoExtension>(pub(super) Option<V>, pub(super) Box<dyn Any>);
+    pub(super) struct VideoExtensionWrapper<V: VideoExtension>(
+        pub(super) Option<V>,
+        pub(super) Box<dyn Any>,
+    );
 
     // SAFETY: we are assuming that Mupen is responsible enough to call the graphics function from one thread only.
     unsafe impl<V: VideoExtension> Send for VideoExtensionWrapper<V> {}
@@ -198,7 +206,7 @@ mod ffi {
                 Ok(instance) => {
                     self.0 = Some(instance);
                     SysError::Success
-                },
+                }
                 Err(error) => error.into(),
             }
         }
@@ -291,10 +299,7 @@ mod ffi {
             };
             let flags = VideoFlags::from_bits_retain(flags as u32);
 
-
-            match inst
-                .set_video_mode(width, height, bits_per_pixel, screen_mode, flags)
-            {
+            match inst.set_video_mode(width, height, bits_per_pixel, screen_mode, flags) {
                 Ok(()) => SysError::Success,
                 Err(error) => error.into(),
             }
@@ -380,10 +385,7 @@ mod ffi {
             &mut self,
             symbol: *const c_char,
         ) -> Option<unsafe extern "C" fn()> {
-            let inst = match self.0.as_mut() {
-                Some(value) => value,
-                None => return None,
-            };
+            let inst = self.0.as_mut()?;
             mem::transmute(inst.gl_get_proc_address(CStr::from_ptr(symbol)))
         }
 

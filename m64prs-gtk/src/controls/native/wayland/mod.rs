@@ -1,14 +1,10 @@
-use std::{
-    ffi::c_void,
-    ptr::NonNull,
-    sync::Arc,
-};
+use std::{ffi::c_void, ptr::NonNull, sync::Arc};
 
 use gdk::prelude::*;
 use glutin::display::DisplayApiPreference;
 use raw_window_handle::{
-    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle,
-    WaylandDisplayHandle, WaylandWindowHandle, WindowHandle,
+    DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, WaylandDisplayHandle,
+    WaylandWindowHandle, WindowHandle,
 };
 use state::{DisplayState, WaylandDisplayExt, WaylandSurfaceExt};
 use wayland_client::{
@@ -32,7 +28,7 @@ pub(super) struct WaylandSubsurface {
 impl WaylandSubsurface {
     pub(super) fn new(
         gdk_surface: &gdk_wayland::WaylandSurface,
-        attrs: SubsurfaceAttributes
+        attrs: SubsurfaceAttributes,
     ) -> Self {
         let gdk_display = gdk_surface
             .display()
@@ -119,7 +115,7 @@ impl PlatformSubsurface for WaylandSubsurface {
     fn window_handle_src(&self) -> &dyn raw_window_handle::HasWindowHandle {
         self
     }
-    
+
     fn gl_api_preference(&self) -> DisplayApiPreference {
         DisplayApiPreference::Egl
     }

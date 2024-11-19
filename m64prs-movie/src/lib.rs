@@ -118,7 +118,7 @@ impl Default for M64Header {
 impl M64Header {
     fn from_bytes(slice: [u8; 1024]) -> Self {
         // SAFETY: All fields, including padding, do not technically have invalid values.
-        let mut result = unsafe { mem::transmute::<_, Self>(slice) };
+        let mut result = unsafe { mem::transmute::<[u8; 1024], Self>(slice) };
 
         // Fix endianness of integer fields
         macro_rules! fix_field {
@@ -317,7 +317,7 @@ impl M64File {
         unsafe {
             // SAFETY: Buttons is a POD type and can be directly written.
             let bytes = inputs.align_to_mut::<u8>().1;
-            writer.write_all(&bytes)?;
+            writer.write_all(bytes)?;
         }
 
         Ok(())

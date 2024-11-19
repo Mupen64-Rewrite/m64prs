@@ -6,12 +6,13 @@ use std::{
 
 use glib::object::ObjectExt;
 use windows::{
-    core::{s, w, PCSTR, PCWSTR},
+    core::{w, PCWSTR},
     Win32::{
         Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
         Graphics::Gdi::{CreateSolidBrush, HBRUSH},
         UI::WindowsAndMessaging::{
-            DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, HICON, IDC_ARROW, WM_NCHITTEST, WNDCLASSA, WNDCLASSEXW
+            DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, HICON,
+            IDC_ARROW, WM_NCHITTEST, WNDCLASSEXW,
         },
     },
 };
@@ -27,7 +28,7 @@ const fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
 
 pub struct DisplayState {
     pub hinstance: HINSTANCE,
-    pub wndclass_atom: u16
+    pub wndclass_atom: u16,
 }
 
 mod sealed {
@@ -61,9 +62,7 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
             .map_err(|_| M64PError::SystemFail)?
             .into();
 
-        let bg_brush: HBRUSH = unsafe {
-            CreateSolidBrush(rgb(0, 0, 128))
-        };
+        let bg_brush: HBRUSH = unsafe { CreateSolidBrush(rgb(0, 0, 128)) };
 
         let wndclass_data = WNDCLASSEXW {
             cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
@@ -81,9 +80,7 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
             hIconSm: HICON(null_mut()),
         };
 
-        let wndclass_atom = unsafe {
-            RegisterClassExW(&wndclass_data)
-        };
+        let wndclass_atom = unsafe { RegisterClassExW(&wndclass_data) };
 
         let state = Arc::new(DisplayState {
             hinstance,

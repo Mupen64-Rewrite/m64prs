@@ -50,7 +50,8 @@ impl Settings {
     ) -> Self
     where
         I: IntoIterator<Item = T>,
-        String: From<T> {
+        String: From<T>,
+    {
         let buttons: Vec<String> = buttons.into_iter().map(|item| String::from(item)).collect();
 
         if cancel_index >= buttons.len()
@@ -141,8 +142,8 @@ impl SimpleComponent for Model {
 
             match request {
                 Request::Show { detail, message } => {
-                    widgets.dialog.set_message(&message);
-                    widgets.dialog.set_detail(&detail);
+                    widgets.dialog.set_message(message);
+                    widgets.dialog.set_detail(detail);
 
                     widgets.dialog.choose(
                         transient,
