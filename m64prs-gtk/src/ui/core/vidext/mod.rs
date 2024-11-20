@@ -1,5 +1,9 @@
 use std::{
-    any::Any, ffi::{c_char, c_int, c_void, CStr}, fmt::Debug, ptr::null_mut, sync::mpsc
+    any::Any,
+    ffi::{c_char, c_int, c_void, CStr},
+    fmt::Debug,
+    ptr::null_mut,
+    sync::mpsc,
 };
 
 use ash::vk;
@@ -13,7 +17,10 @@ use opengl::OpenGlState;
 use relm4::ComponentSender;
 use request::RequestManager;
 
-use crate::controls::SubsurfaceHandle;
+use crate::controls::{
+    compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
+    SubsurfaceHandle,
+};
 
 mod opengl;
 mod request;
@@ -22,17 +29,24 @@ mod request;
 pub enum VidextRequest {
     EnterGameView,
     ExitGameView,
-    CreateSubsurface {
-        position: Point,
-        size: dpi::Size,
-        transparent: bool,
-    },
+    CreateView(NativeViewAttributes),
+    DeleteView(NativeViewKey),
 }
 
-#[derive(Debug)]
 pub enum VidextResponse {
     Done,
-    NewSubsurface(Result<SubsurfaceHandle, M64PError>),
+    NewView(Box<dyn NativeView>),
+}
+impl Debug for VidextResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Done => write!(f, "Done"),
+            Self::NewView(native_view) => {
+                let q = &**native_view as *const dyn NativeView;
+                write!(f, "NewSubsurface({:?})", q)
+            }
+        }
+    }
 }
 
 enum GraphicsState {
@@ -85,8 +99,6 @@ impl VideoExtensionState {
 #[allow(unused)]
 impl VideoExtension for VideoExtensionState {
     unsafe fn init_with_render_mode(mode: RenderMode, context: &mut dyn Any) -> VidextResult<Self> {
-        
-
         let context = context
             .downcast_mut::<Option<VideoExtensionParameters>>()
             .expect("expected Option<VideoExtensionParameters> from downcast");
@@ -98,7 +110,8 @@ impl VideoExtension for VideoExtensionState {
                 let mut inst = Self::new(parameters);
                 // Request the GUI to switch to the game view.
                 log::info!("Requesting switch to game view");
-                inst.request_mgr.request(VidextRequest::EnterGameView)
+                inst.request_mgr
+                    .request(VidextRequest::EnterGameView)
                     .map_err(|_| M64PError::Internal)?;
 
                 log::info!("Init successful");
@@ -114,12 +127,23 @@ impl VideoExtension for VideoExtensionState {
             .downcast_mut::<Option<VideoExtensionParameters>>()
             .expect("expected Option<VideoExtensionParameters> from downcast");
 
-        let Self { graphics, request_mgr } = self;
+        let Self {
+            graphics,
+            request_mgr,
+        } = self;
+
+        match &graphics {
+            GraphicsState::OpenGl(Some(OpenGlState::Active(active_state))) => {
+                // delete the view
+                let _ =
+                    request_mgr.request(VidextRequest::DeleteView(active_state.native_view_key()));
+            }
+            _ => (),
+        }
         drop(graphics);
 
         let _ = request_mgr.request(VidextRequest::ExitGameView);
         *state = Some(request_mgr.cleanup());
-
 
         Ok(())
     }
@@ -155,26 +179,21 @@ impl VideoExtension for VideoExtensionState {
                 (return_value, *opengl_state) = match opengl_state.take().unwrap() {
                     OpenGlState::Config(config_state) => 'config_state: {
                         // Get window request parameters from the config state
-                        let (position, size, transparent) =
-                            config_state.window_request_params(width, height);
+                        let attrs = config_state.window_request_params(width, height);
 
                         // Request a subsurface
                         let subsurface_handle = match self
                             .request_mgr
-                            .request(VidextRequest::CreateSubsurface {
-                                position,
-                                size: size.into(),
-                                transparent,
-                            })
+                            .request(VidextRequest::CreateView(attrs))
                             .map_err(|_| M64PError::SystemFail)?
                         {
-                            VidextResponse::Done => {
+                            VidextResponse::NewView(native_view) => native_view,
+                            _ => {
                                 break 'config_state (
                                     Err(M64PError::SystemFail),
                                     Some(OpenGlState::Config(config_state)),
                                 )
                             }
-                            VidextResponse::NewSubsurface(subsurface_handle) => subsurface_handle?,
                         };
 
                         // Initialize OpenGL with that subsurface
@@ -228,8 +247,8 @@ impl VideoExtension for VideoExtensionState {
         match &mut self.graphics {
             GraphicsState::OpenGl(Some(OpenGlState::Active(active_state))) => {
                 active_state.get_proc_address(symbol)
-            },
-            _ => null_mut()
+            }
+            _ => null_mut(),
         }
     }
 
@@ -242,8 +261,8 @@ impl VideoExtension for VideoExtensionState {
             GraphicsState::OpenGl(Some(OpenGlState::Config(config_state))) => {
                 log::info!("Setting attribute {:?} = {:?}", attr, value);
                 config_state.gl_set_attribute(attr, value)
-            },
-            _ => Err(M64PError::Internal)
+            }
+            _ => Err(M64PError::Internal),
         }
     }
 
@@ -251,8 +270,8 @@ impl VideoExtension for VideoExtensionState {
         match &mut self.graphics {
             GraphicsState::OpenGl(Some(OpenGlState::Active(active_state))) => {
                 active_state.gl_get_attribute(attr)
-            },
-            _ => Err(M64PError::InvalidState)
+            }
+            _ => Err(M64PError::InvalidState),
         }
     }
 
@@ -260,8 +279,8 @@ impl VideoExtension for VideoExtensionState {
         match &mut self.graphics {
             GraphicsState::OpenGl(Some(OpenGlState::Active(active_state))) => {
                 active_state.swap_buffers()
-            },
-            _ => Err(M64PError::InvalidState)
+            }
+            _ => Err(M64PError::InvalidState),
         }
     }
 

@@ -127,8 +127,8 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
 
         // bind compositor/subcompositor globals
         let compositor: WlCompositor = globals
-            .bind(&qh, 6..=6, ())
-            .expect("expected support for wl_compositor@v6");
+            .bind(&qh, 5..=6, ())
+            .expect("expected support for wl_compositor@v5 or @v6");
         let subcompositor: WlSubcompositor = globals
             .bind(&qh, 1..=1, ())
             .expect("expected support for wl_subcompositor@v1");

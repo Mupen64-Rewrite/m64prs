@@ -78,13 +78,16 @@ pub trait NativeCompositor {
     /// Restacks a view relative to another.
     fn restack_view(&mut self, key: NativeViewKey, stack_order: StackOrder);
 
-    /// Computes the total bounds of all views in the graph.
+    /// Computes the total bounds of all views in the compositor.
     fn total_bounds(&self) -> dpi::PhysicalSize<u32>;
 
     /// Sets the position of the compositor with respect tothe parent surface.
     fn set_position(&mut self, position: dpi::PhysicalPosition<i32>);
     /// Maps or unmaps the compositor.
     fn set_mapped(&mut self, mapped: bool);
+
+    /// Returns the conversion factor between compositor coordinates and surface coordinates.
+    fn scale_factor(&self) -> f64;
 }
 
 pub trait NativeView: Send + Sync {
@@ -129,5 +132,16 @@ impl dyn NativeCompositor {
         }
         #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         compile_error!("Platform is currently not supported");
+    }
+}
+
+impl HasWindowHandle for dyn NativeView {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        return self.window_handle_src().window_handle()
+    }
+}
+impl HasDisplayHandle for dyn NativeView {
+    fn display_handle(&self) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        return self.display_handle_src().display_handle()
     }
 }

@@ -1343,6 +1343,7 @@ dependencies = [
  "tiny-xlib",
  "wayland-backend",
  "wayland-client",
+ "wayland-protocols",
  "windows 0.58.0",
  "x11rb",
 ]
@@ -2307,6 +2308,18 @@ dependencies = [
  "bitflags",
  "rustix",
  "wayland-backend",
+ "wayland-scanner",
+]
+
+[[package]]
+name = "wayland-protocols"
+version = "0.32.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cd0ade57c4e6e9a8952741325c30bf82f4246885dca8bf561898b86d0c1f58e"
+dependencies = [
+ "bitflags",
+ "wayland-backend",
+ "wayland-client",
  "wayland-scanner",
 ]
 

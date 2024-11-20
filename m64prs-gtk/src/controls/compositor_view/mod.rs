@@ -1,7 +1,8 @@
 use glib::subclass::types::ObjectSubclassIsExt;
+use gtk::prelude::WidgetExt;
 use native::{NativeView, NativeViewAttributes, NativeViewKey, StackOrder};
 
-mod native;
+pub mod native;
 
 mod inner {
     use std::cell::RefCell;
@@ -61,13 +62,15 @@ mod inner {
                 .expect("widget should be bound to a gtk::Native");
             let gdk_surface = native.surface().expect("gtk::Native should have a surface");
 
+            log::info!("Window scale factor: {}", gdk_surface.scale());
+
             // compute position relative to the window's coordinate system
             let win_pos = self
                 .obj()
                 .compute_point(&native, &graphene::Point::zero())
                 .unwrap();
             let physical_pos =
-                dpi_conv::into_dpi_position(win_pos).to_physical(gdk_surface.scale_factor() as f64);
+                dpi_conv::into_dpi_position(win_pos).to_physical(gdk_surface.scale() as f64);
 
             let mut compositor = self.compositor.borrow_mut();
             *compositor = Some(<dyn NativeCompositor>::new(gdk_surface, physical_pos));
@@ -91,31 +94,29 @@ mod inner {
                 .obj()
                 .native()
                 .expect("widget should be bound to a gtk::Native");
-            let gdk_surface = native.surface().expect("gtk::Native should have a surface");
 
             // compute position relative to the window's coordinate system
             let win_pos = self
                 .obj()
                 .compute_point(&native, &graphene::Point::zero())
                 .unwrap();
-            let physical_pos =
-                dpi_conv::into_dpi_position(win_pos).to_physical(gdk_surface.scale_factor() as f64);
 
-            self.with_compositor(|comp| comp.set_position(physical_pos));
+            self.with_compositor(|comp| {
+                let physical_pos =
+                    dpi_conv::into_dpi_position(win_pos).to_physical(comp.scale_factor());
+                comp.set_position(physical_pos)
+            });
         }
 
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
-            let native = self
-                .obj()
-                .native()
-                .expect("widget should be bound to a gtk::Native");
-            let gdk_surface = native.surface().expect("gtk::Native should have a surface");
-
             // compute bounds relative to GTK's coordinate system
-            let physical_bounds = self.with_compositor(|comp| comp.total_bounds()).unwrap();
-            let gtk_bounds = dpi_conv::into_graphene_size(
-                physical_bounds.to_logical::<f32>(gdk_surface.scale_factor() as f64),
-            );
+            let gtk_bounds = self
+                .with_compositor(|comp| {
+                    let bounds = comp.total_bounds();
+                    dpi_conv::into_graphene_size(bounds.to_logical::<f32>(comp.scale_factor()))
+                })
+                .unwrap_or(graphene::Size::new(100.0, 100.0));
+            log::debug!("bounds: {:?}", &gtk_bounds);
 
             let dimension: i32 = match orientation {
                 gtk::Orientation::Horizontal => gtk_bounds.width(),
@@ -135,16 +136,27 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
+impl Default for CompositorView {
+    fn default() -> Self {
+        glib::Object::new::<Self>()
+    }
+}
+
 impl CompositorView {
     pub fn new_view(&self, attrs: NativeViewAttributes) -> Box<dyn NativeView> {
-        self.imp()
+        let view = self
+            .imp()
             .with_compositor(|comp| comp.new_view(attrs))
-            .expect("compositor must be realized")
+            .expect("compositor must be realized");
+
+        self.queue_resize();
+        view
     }
     pub fn del_view(&self, key: NativeViewKey) {
         self.imp()
             .with_compositor(|comp| comp.delete_view(key))
             .expect("compositor must be realized");
+        self.queue_resize();
     }
     pub fn set_view_bounds(
         &self,
@@ -155,6 +167,7 @@ impl CompositorView {
         self.imp()
             .with_compositor(|comp| comp.set_view_bounds(key, position, size))
             .expect("compositor must be realized");
+        self.queue_resize();
     }
     pub fn restack_view(&self, key: NativeViewKey, stack_order: StackOrder) {
         self.imp()

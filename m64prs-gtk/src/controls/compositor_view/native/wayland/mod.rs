@@ -17,11 +17,11 @@ use glutin::{
     context::{ContextApi, ContextAttributesBuilder, GlProfile, Version},
     display::DisplayApiPreference,
     prelude::*,
-    surface::{PbufferSurface, SurfaceAttributesBuilder},
+    surface::{PbufferSurface, SurfaceAttributesBuilder, WindowSurface},
 };
 use raw_window_handle::{
-    DisplayHandle, HasDisplayHandle, HasWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
-    WindowHandle,
+    DisplayHandle, HasDisplayHandle, HasWindowHandle, RawWindowHandle, WaylandDisplayHandle,
+    WaylandWindowHandle, WindowHandle,
 };
 use slotmap::DenseSlotMap;
 use state::{DisplayState, WaylandDisplayExt};
@@ -47,10 +47,11 @@ pub struct WaylandCompositor {
 
     parent_surface: WlSurface,
     surface: WlSurface,
+    dummy_surface: WlSurface,
     subsurface: WlSubsurface,
 
     egl_context: EGLPossiblyCurrentContext,
-    egl_surface: EGLSurface<PbufferSurface>,
+    egl_surface: EGLSurface<WindowSurface>,
     egl_image: EGLImage,
 
     gl: gl::Gl,
@@ -90,6 +91,7 @@ impl WaylandCompositor {
         let qh = queue.handle();
 
         let surface = st.compositor.create_surface(&qh, ());
+        let dummy_surface = st.compositor.create_surface(&qh, ());
         let parent_surface = gdk_surface
             .wl_surface()
             .expect("Parent should have Wayland surface");
@@ -127,22 +129,22 @@ impl WaylandCompositor {
 
             unsafe { egl_display.find_configs(builder.build()) }
                 .expect("there shouldn't be problems generating the config iterator")
-                .find(|config| {
-                    config
-                        .config_surface_types()
-                        .contains(ConfigSurfaceTypes::PBUFFER)
-                })
-                .expect("there should be a config supporting PBuffers")
+                .next()
+                .expect("there should be an OpenGL config")
         };
 
         // Create offscreen surface since we're creating a
         // separate buffer later on
         let egl_surface = {
-            let builder = SurfaceAttributesBuilder::<PbufferSurface>::new()
-                .build(NonZero::new(1).unwrap(), NonZero::new(1).unwrap());
+            let dummy_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
+                NonNull::new(dummy_surface.id().as_ptr() as *mut c_void).unwrap(),
+            ));
 
-            unsafe { egl_display.create_pbuffer_surface(&egl_config, &builder) }
-                .expect("PBuffer creation should succeed")
+            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new()
+                .build(dummy_window_handle, NonZero::new(1).unwrap(), NonZero::new(1).unwrap());
+
+            unsafe { egl_display.create_window_surface(&egl_config, &attrs) }
+                .expect("Surface creation should succeed")
         };
 
         let egl_context = {
@@ -188,6 +190,7 @@ impl WaylandCompositor {
             // Wayland
             parent_surface,
             surface,
+            dummy_surface,
             subsurface,
             // EGL
             egl_context,
@@ -311,6 +314,8 @@ impl NativeCompositor for WaylandCompositor {
             panic!("delete_view should be called with a valid key")
         };
 
+        self.surface.commit();
+
         // recompute bounds
         self.current_bounds = self.compute_bounds();
         self.on_bounds_changed();
@@ -322,8 +327,9 @@ impl NativeCompositor for WaylandCompositor {
         position: Option<dpi::PhysicalPosition<i32>>,
         size: Option<dpi::PhysicalSize<u32>>,
     ) {
-
-        let view = self.views.get_mut(view_key)
+        let view = self
+            .views
+            .get_mut(view_key)
             .expect("set_view_bounds requires a valid key");
 
         if position.is_none() && size.is_none() {
@@ -344,21 +350,27 @@ impl NativeCompositor for WaylandCompositor {
     }
 
     fn restack_view(&mut self, view_key: NativeViewKey, stack_order: super::StackOrder) {
-        let view = self.views.get(view_key)
+        let view = self
+            .views
+            .get(view_key)
             .expect("set_view_bounds requires a valid key");
         match stack_order {
             super::StackOrder::StackAbove(ref_view_key) => {
-                let ref_view = self.views.get(view_key)
+                let ref_view = self
+                    .views
+                    .get(view_key)
                     .expect("set_view_bounds requires a valid key");
-                
+
                 view.subsurface.place_above(&ref_view.surface);
-            },
+            }
             super::StackOrder::StackBelow(ref_view_key) => {
-                let ref_view = self.views.get(view_key)
+                let ref_view = self
+                    .views
+                    .get(view_key)
                     .expect("set_view_bounds requires a valid key");
-                
+
                 view.subsurface.place_below(&ref_view.surface);
-            },
+            }
         }
     }
 
@@ -380,6 +392,17 @@ impl NativeCompositor for WaylandCompositor {
         self.surface.commit();
 
         self.mapped = mapped;
+    }
+
+    fn scale_factor(&self) -> f64 {
+        1.0
+    }
+}
+
+impl Drop for WaylandView {
+    fn drop(&mut self) {
+        self.subsurface.destroy();
+        self.surface.destroy();
     }
 }
 

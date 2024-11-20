@@ -18,7 +18,7 @@ use raw_window_handle::{
 };
 
 use crate::{
-    controls::SubsurfaceHandle,
+    controls::{compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey}, SubsurfaceHandle},
     ui::gl::{
         self,
         types::{GLenum, GLint},
@@ -50,7 +50,7 @@ pub(super) struct OpenGlConfigState {
 }
 
 pub(super) struct OpenGlActiveState {
-    subsurface: SubsurfaceHandle,
+    native_view: Box<dyn NativeView>,
 
     gl_display: Display,
     gl_context: PossiblyCurrentContext,
@@ -139,14 +139,16 @@ impl OpenGlConfigState {
         &self,
         width: c_int,
         height: c_int,
-    ) -> (graphene::Point, dpi::PhysicalSize<u32>, bool) {
-        let size = dpi::PhysicalSize::new(width, height).cast::<u32>();
-        (graphene::Point::zero(), size, self.alpha_size > 0)
+    ) -> NativeViewAttributes {
+        NativeViewAttributes::new()
+            .with_position(dpi::PhysicalPosition::new(0, 0))
+            .with_surface_size(dpi::PhysicalSize::new(width, height).cast::<u32>())
+            .with_transparent(false)
     }
 
     pub(super) fn setup_opengl_context(
         self,
-        subsurface: SubsurfaceHandle,
+        native_view: Box<dyn NativeView>,
         size: dpi::PhysicalSize<u32>,
     ) -> Result<OpenGlActiveState, (M64PError, OpenGlConfigState)> {
         // We can't just use the question mark operator, so we do this.
@@ -177,11 +179,11 @@ impl OpenGlConfigState {
             };
         }
 
-        let display_handle = check!(subsurface.display_handle(), M64PError::SystemFail);
-        let window_handle = check!(subsurface.window_handle(), M64PError::SystemFail);
+        let display_handle = check!(native_view.display_handle(), M64PError::SystemFail);
+        let window_handle = check!(native_view.window_handle(), M64PError::SystemFail);
 
         let gl_display = check!(
-            unsafe { Display::new(display_handle.as_raw(), subsurface.gl_api_preference()) },
+            unsafe { Display::new(display_handle.as_raw(), native_view.gl_api_preference()) },
             M64PError::SystemFail,
             "glutin Display::new should succeed"
         );
@@ -281,7 +283,7 @@ impl OpenGlConfigState {
         log::debug!("Loaded GL functions");
 
         Ok(OpenGlActiveState {
-            subsurface,
+            native_view,
             gl_display,
             gl_context,
             gl_surface,
@@ -356,5 +358,9 @@ impl OpenGlActiveState {
 
     pub(super) fn get_proc_address(&mut self, sym: &CStr) -> *mut c_void {
         self.gl_display.get_proc_address(sym) as *mut c_void
+    }
+
+    pub(super) fn native_view_key(&self) -> NativeViewKey {
+        self.native_view.key()
     }
 }
