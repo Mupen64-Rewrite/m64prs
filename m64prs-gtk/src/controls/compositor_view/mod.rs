@@ -11,7 +11,7 @@ mod inner {
         object::ObjectImpl,
         types::{ObjectSubclass, ObjectSubclassExt},
     };
-    use gtk::prelude::*;
+    use gtk::{prelude::*, subclass::widget::WidgetImplExt};
     use gtk::subclass::widget::WidgetImpl;
 
     use crate::utils::dpi_conv;
@@ -56,6 +56,7 @@ mod inner {
 
     impl WidgetImpl for CompositorView {
         fn realize(&self) {
+            self.parent_realize();
             let native = self
                 .obj()
                 .native()
@@ -77,15 +78,20 @@ mod inner {
         }
 
         fn unrealize(&self) {
+            self.parent_unrealize();
             let mut compositor = self.compositor.borrow_mut();
             *compositor = None;
         }
 
         fn map(&self) {
+            self.parent_map();
+            log::info!("gtk map");
             self.with_compositor(|comp| comp.set_mapped(true));
         }
 
         fn unmap(&self) {
+            self.parent_unmap();
+            log::info!("gtk unmap");
             self.with_compositor(|comp| comp.set_mapped(false));
         }
 

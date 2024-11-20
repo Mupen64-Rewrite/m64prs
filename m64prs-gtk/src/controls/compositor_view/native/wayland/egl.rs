@@ -1,6 +1,6 @@
 use glutin::{
     api::egl::{
-        self as glutin_egl, config::Config as EGLConfig,
+        config::Config as EGLConfig,
         context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
         display::Display as EGLDisplay,
     },
@@ -12,7 +12,7 @@ use glutin_egl_sys::egl::{self, types::EGLClientBuffer};
 use wayland_backend::client::ObjectId;
 use std::{ffi::c_void, ptr::null};
 
-use crate::utils::gl::{self, types::GLenum};
+use crate::utils::gl::{types::GLenum};
 
 use wayland_client::{protocol::wl_buffer::WlBuffer, Connection, Proxy};
 

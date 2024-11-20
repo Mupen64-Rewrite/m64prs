@@ -7,7 +7,6 @@ use std::{
 };
 
 use ash::vk;
-use graphene::Point;
 use m64prs_core::{
     error::M64PError,
     vidext::{VideoExtension, VidextResult},
@@ -17,10 +16,7 @@ use opengl::OpenGlState;
 use relm4::ComponentSender;
 use request::RequestManager;
 
-use crate::controls::{
-    compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
-    SubsurfaceHandle,
-};
+use crate::controls::compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey};
 
 mod opengl;
 mod request;

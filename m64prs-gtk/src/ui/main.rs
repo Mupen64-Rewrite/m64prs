@@ -14,7 +14,7 @@ use relm4::{
 };
 
 use crate::{
-    controls::{self, compositor_view::native::NativeViewAttributes, native::conv},
+    controls::{self},
     ui::{actions::*, core},
 };
 

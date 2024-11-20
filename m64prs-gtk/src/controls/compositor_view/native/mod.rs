@@ -1,4 +1,3 @@
-use std::error::Error;
 
 use glib::object::{Cast, ObjectExt};
 use glutin::display::DisplayApiPreference;

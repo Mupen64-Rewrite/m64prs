@@ -13,11 +13,11 @@ use glutin::{
         context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
         surface::Surface as EGLSurface,
     },
-    config::{ColorBufferType, ConfigSurfaceTypes, ConfigTemplateBuilder},
+    config::{ColorBufferType, ConfigTemplateBuilder},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, Version},
     display::DisplayApiPreference,
     prelude::*,
-    surface::{PbufferSurface, SurfaceAttributesBuilder, WindowSurface},
+    surface::{SurfaceAttributesBuilder, WindowSurface},
 };
 use raw_window_handle::{
     DisplayHandle, HasDisplayHandle, HasWindowHandle, RawWindowHandle, WaylandDisplayHandle,
@@ -140,8 +140,11 @@ impl WaylandCompositor {
                 NonNull::new(dummy_surface.id().as_ptr() as *mut c_void).unwrap(),
             ));
 
-            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new()
-                .build(dummy_window_handle, NonZero::new(1).unwrap(), NonZero::new(1).unwrap());
+            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
+                dummy_window_handle,
+                NonZero::new(1).unwrap(),
+                NonZero::new(1).unwrap(),
+            );
 
             unsafe { egl_display.create_window_surface(&egl_config, &attrs) }
                 .expect("Surface creation should succeed")
@@ -219,6 +222,8 @@ impl WaylandCompositor {
         self.egl_context
             .make_current_surfaceless()
             .expect("context being made current should succeed");
+
+        log::info!("updating bounds to {:?}", self.current_bounds);
 
         let st = &*self.display_state;
         let queue = st.queue.write().unwrap();
@@ -358,7 +363,7 @@ impl NativeCompositor for WaylandCompositor {
             super::StackOrder::StackAbove(ref_view_key) => {
                 let ref_view = self
                     .views
-                    .get(view_key)
+                    .get(ref_view_key)
                     .expect("set_view_bounds requires a valid key");
 
                 view.subsurface.place_above(&ref_view.surface);
@@ -366,7 +371,7 @@ impl NativeCompositor for WaylandCompositor {
             super::StackOrder::StackBelow(ref_view_key) => {
                 let ref_view = self
                     .views
-                    .get(view_key)
+                    .get(ref_view_key)
                     .expect("set_view_bounds requires a valid key");
 
                 view.subsurface.place_below(&ref_view.surface);
@@ -384,13 +389,18 @@ impl NativeCompositor for WaylandCompositor {
     }
 
     fn set_mapped(&mut self, mapped: bool) {
-        let buffer = mapped.then(|| unsafe {
-            self.egl_image
-                .get_wayland_buffer(&self.display_state.connection)
-        });
-        self.surface.attach(buffer.as_ref(), 0, 0);
-        self.surface.commit();
+        log::info!("set_mapped: {}", mapped);
+        if mapped {
+            let st = &*self.display_state;
+            let buffer = unsafe { self.egl_image.get_wayland_buffer(&st.connection) };
 
+            self.surface.attach(Some(&buffer), 0, 0);
+            self.surface.commit();
+        }
+        else {
+            self.surface.attach(None, 0, 0);
+            self.surface.commit();
+        }
         self.mapped = mapped;
     }
 

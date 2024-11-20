@@ -18,7 +18,7 @@ use raw_window_handle::{
 };
 
 use crate::{
-    controls::{compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey}, SubsurfaceHandle},
+    controls::compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
     ui::gl::{
         self,
         types::{GLenum, GLint},
