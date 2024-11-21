@@ -1,6 +1,4 @@
-use std::
-    sync::{Arc, LazyLock, RwLock}
-;
+use std::sync::{Arc, LazyLock, RwLock};
 
 use gdk::prelude::*;
 use gdk_wayland::ffi::{
@@ -12,7 +10,13 @@ use wayland_backend::client::{Backend, ObjectId};
 use wayland_client::{
     globals::{registry_queue_init, GlobalListContents},
     protocol::{
-        wl_compositor::WlCompositor, wl_display::WlDisplay, wl_region::WlRegion, wl_registry::{WlRegistry}, wl_subcompositor::WlSubcompositor, wl_subsurface::WlSubsurface, wl_surface::{self, WlSurface}
+        wl_compositor::WlCompositor,
+        wl_display::WlDisplay,
+        wl_region::WlRegion,
+        wl_registry::WlRegistry,
+        wl_subcompositor::WlSubcompositor,
+        wl_subsurface::WlSubsurface,
+        wl_surface::{self, WlSurface},
     },
     Connection, Dispatch, EventQueue, Proxy, QueueHandle,
 };
@@ -39,7 +43,8 @@ impl Queue {
         self.events.handle()
     }
     pub fn roundtrip(&mut self) {
-        self.events.roundtrip(&mut self.state)
+        self.events
+            .roundtrip(&mut self.state)
             .expect("roundtrip should not fail");
     }
 }
@@ -64,18 +69,10 @@ impl Dispatch<WlSurface, ()> for QueueState {
     ) {
         #[allow(unused)]
         match event {
-            wl_surface::Event::Enter { output } => {
-                
-            },
-            wl_surface::Event::Leave { output } => {
-                
-            },
-            wl_surface::Event::PreferredBufferScale { factor } => {
-                
-            },
-            wl_surface::Event::PreferredBufferTransform { transform } => {
-                
-            },
+            wl_surface::Event::Enter { output } => {}
+            wl_surface::Event::Leave { output } => {}
+            wl_surface::Event::PreferredBufferScale { factor } => {}
+            wl_surface::Event::PreferredBufferTransform { transform } => {}
             _ => (),
         }
     }
@@ -179,7 +176,7 @@ impl WaylandSurfaceExt for gdk_wayland::WaylandSurface {
             .downcast::<gdk_wayland::WaylandDisplay>()
             .unwrap();
         let st = gdk_display.display_state();
-        
+
         // acquire wl_surface from GDK
         let surface = unsafe {
             let ffi_surface: Stash<'_, *mut GdkWaylandSurface, _> = self.to_glib_none();
@@ -194,7 +191,10 @@ impl WaylandSurfaceExt for gdk_wayland::WaylandSurface {
         unsafe {
             // SAFETY: this key is always WlSurface.
             self.set_qdata(*M64PRS_WAYLAND_SURFACE, surface);
-            self.qdata::<WlSurface>(*M64PRS_WAYLAND_SURFACE).unwrap().as_ref().clone()
+            self.qdata::<WlSurface>(*M64PRS_WAYLAND_SURFACE)
+                .unwrap()
+                .as_ref()
+                .clone()
         }
     }
 }

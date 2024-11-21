@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Arguments,
-};
+use std::{collections::HashMap, fmt::Arguments};
 
 use glib::{LogField, LogLevel as GLogLevel, LogWriterOutput};
 use log::kv;
@@ -79,7 +76,12 @@ fn to_rust_level(g_level: GLogLevel) -> log::Level {
     }
 }
 
-fn log_structured_dynamic(args: Arguments, target: &str, level: log::Level, kv_source: &dyn kv::Source) {
+fn log_structured_dynamic(
+    args: Arguments,
+    target: &str,
+    level: log::Level,
+    kv_source: &dyn kv::Source,
+) {
     let mut builder = log::Record::builder();
     let record = builder
         .args(args)

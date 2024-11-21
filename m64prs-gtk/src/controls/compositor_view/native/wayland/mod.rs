@@ -1,6 +1,5 @@
 use std::{
     ffi::{c_void, CString},
-    num::NonZero,
     ptr::NonNull,
     sync::Arc,
 };
@@ -9,19 +8,15 @@ use egl::{EGLContextExt, EGLImage};
 use gdk::prelude::*;
 use gdk_wayland::prelude::WaylandSurfaceExtManual;
 use glutin::{
-    api::egl::{
-        context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
-        surface::Surface as EGLSurface,
-    },
+    api::egl::context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
     config::{ColorBufferType, ConfigTemplateBuilder},
     context::{ContextApi, ContextAttributesBuilder, GlProfile, Version},
     display::DisplayApiPreference,
     prelude::*,
-    surface::{SurfaceAttributesBuilder, WindowSurface},
 };
 use raw_window_handle::{
-    DisplayHandle, HasDisplayHandle, HasWindowHandle, RawWindowHandle, WaylandDisplayHandle,
-    WaylandWindowHandle, WindowHandle,
+    DisplayHandle, HasDisplayHandle, HasWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
+    WindowHandle,
 };
 use slotmap::DenseSlotMap;
 use state::{DisplayState, WaylandDisplayExt};
@@ -47,11 +42,9 @@ pub struct WaylandCompositor {
 
     parent_surface: WlSurface,
     surface: WlSurface,
-    dummy_surface: WlSurface,
     subsurface: WlSubsurface,
 
     egl_context: EGLPossiblyCurrentContext,
-    egl_surface: EGLSurface<WindowSurface>,
     egl_image: EGLImage,
 
     gl: gl::Gl,
@@ -91,7 +84,6 @@ impl WaylandCompositor {
         let qh = queue.handle();
 
         let surface = st.compositor.create_surface(&qh, ());
-        let dummy_surface = st.compositor.create_surface(&qh, ());
         let parent_surface = gdk_surface
             .wl_surface()
             .expect("Parent should have Wayland surface");
@@ -131,23 +123,6 @@ impl WaylandCompositor {
                 .expect("there shouldn't be problems generating the config iterator")
                 .next()
                 .expect("there should be an OpenGL config")
-        };
-
-        // Create offscreen surface since we're creating a
-        // separate buffer later on
-        let egl_surface = {
-            let dummy_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-                NonNull::new(dummy_surface.id().as_ptr() as *mut c_void).unwrap(),
-            ));
-
-            let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
-                dummy_window_handle,
-                NonZero::new(1).unwrap(),
-                NonZero::new(1).unwrap(),
-            );
-
-            unsafe { egl_display.create_window_surface(&egl_config, &attrs) }
-                .expect("Surface creation should succeed")
         };
 
         let egl_context = {
@@ -193,11 +168,9 @@ impl WaylandCompositor {
             // Wayland
             parent_surface,
             surface,
-            dummy_surface,
             subsurface,
             // EGL
             egl_context,
-            egl_surface,
             egl_image,
             // OpenGL
             gl,

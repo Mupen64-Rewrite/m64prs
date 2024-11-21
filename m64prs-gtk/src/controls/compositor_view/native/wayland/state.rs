@@ -135,9 +135,10 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
 
         // Bind EGL display (GTK has a function for this but it isn't exposed)
         let egl_display = unsafe {
-            EGLDisplay::new(WaylandDisplayHandle::new(
-                NonNull::new(display.id().as_ptr() as *mut _).unwrap(),
-            ).into())
+            EGLDisplay::new(
+                WaylandDisplayHandle::new(NonNull::new(display.id().as_ptr() as *mut _).unwrap())
+                    .into(),
+            )
             .expect("EGL display creation should succeed")
         };
 

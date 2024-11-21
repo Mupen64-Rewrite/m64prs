@@ -5,7 +5,7 @@ use gdk_x11::ffi::{gdk_x11_display_get_xdisplay, GdkX11Display};
 use glib::translate::{Stash, ToGlibPtr};
 use gtk::prelude::*;
 use m64prs_core::error::M64PError;
-use x11rb::{connection::Connection, protocol::xproto, xcb_ffi::XCBConnection};
+use x11rb::xcb_ffi::XCBConnection;
 
 pub struct DisplayState {
     pub conn: XCBConnection,

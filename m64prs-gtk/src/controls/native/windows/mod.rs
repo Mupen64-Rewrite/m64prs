@@ -16,7 +16,10 @@ use state::{DisplayState, Win32DisplayExt};
 use windows::Win32::{
     Foundation::HWND,
     UI::WindowsAndMessaging::{
-        CreateWindowExW, DestroyWindow, GetWindowLongPtrW, MoveWindow, SetParent, SetWindowLongPtrW, ShowWindowAsync, GWL_STYLE, HMENU, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WINDOW_STYLE, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU
+        CreateWindowExW, DestroyWindow, GetWindowLongPtrW, MoveWindow, SetParent,
+        SetWindowLongPtrW, ShowWindowAsync, GWL_STYLE, HMENU, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE,
+        WINDOW_STYLE, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_OVERLAPPED,
+        WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU,
     },
 };
 

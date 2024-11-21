@@ -1,7 +1,6 @@
 use glutin::{
     api::egl::{
-        config::Config as EGLConfig,
-        context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
+        config::Config as EGLConfig, context::PossiblyCurrentContext as EGLPossiblyCurrentContext,
         display::Display as EGLDisplay,
     },
     config::GetGlConfig,
@@ -9,10 +8,10 @@ use glutin::{
     display::{AsRawDisplay, GetGlDisplay, RawDisplay},
 };
 use glutin_egl_sys::egl::{self, types::EGLClientBuffer};
-use wayland_backend::client::ObjectId;
 use std::{ffi::c_void, ptr::null};
+use wayland_backend::client::ObjectId;
 
-use crate::utils::gl::{types::GLenum};
+use crate::utils::gl::types::GLenum;
 
 use wayland_client::{protocol::wl_buffer::WlBuffer, Connection, Proxy};
 
@@ -90,13 +89,12 @@ impl EGLImage {
             _ => unreachable!(),
         };
 
-        unsafe { 
+        unsafe {
             let wl_buffer_ptr = egl.CreateWaylandBufferFromImageWL(display_ptr, self.raw_image);
             let wl_buffer_id = ObjectId::from_ptr(WlBuffer::interface(), wl_buffer_ptr as *mut _)
                 .expect("eglCreateWaylandBufferFromImageWL should return a wl_buffer*");
 
-            WlBuffer::from_id(conn, wl_buffer_id)
-                .expect("eglCreateWaylandBuffer")
+            WlBuffer::from_id(conn, wl_buffer_id).expect("eglCreateWaylandBuffer")
         }
     }
 }
@@ -114,7 +112,6 @@ impl Drop for EGLImage {
         unsafe {
             egl.DestroyImage(display_ptr, self.raw_image);
         }
-
     }
 }
 

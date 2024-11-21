@@ -7,8 +7,9 @@ macro_rules! empty_dispatch {
                 _: <$object as ::wayland_client::Proxy>::Event,
                 _: &$data,
                 _: &::wayland_client::Connection,
-                _: &::wayland_client::QueueHandle<Self>
-            ) {}
+                _: &::wayland_client::QueueHandle<Self>,
+            ) {
+            }
         }
     };
 }

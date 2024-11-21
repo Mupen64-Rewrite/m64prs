@@ -99,7 +99,10 @@ impl Core {
         future
     }
 
-    fn await_emu_state_inner(&self, state: EmuState) -> impl Future<Output = Result<(), M64PError>> {
+    fn await_emu_state_inner(
+        &self,
+        state: EmuState,
+    ) -> impl Future<Output = Result<(), M64PError>> {
         let (mut future, waiter) = emu_pair(state as c_int);
         self.emu_sender
             .send(waiter)

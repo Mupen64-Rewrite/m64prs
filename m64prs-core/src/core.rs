@@ -132,10 +132,8 @@ impl Core {
             panic!("Only one instance of Core may be created");
         }
 
-        let config_c_path =
-            config_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
-        let data_c_path =
-            data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+        let config_c_path = config_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
+        let data_c_path = data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
 
         // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
         let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
