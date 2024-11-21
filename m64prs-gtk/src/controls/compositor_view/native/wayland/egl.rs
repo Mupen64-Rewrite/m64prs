@@ -101,6 +101,23 @@ impl EGLImage {
     }
 }
 
+impl Drop for EGLImage {
+    fn drop(&mut self) {
+        let display = self.display();
+
+        let egl = display.egl();
+        let display_ptr = match display.raw_display() {
+            RawDisplay::Egl(ptr) => ptr,
+            _ => unreachable!(),
+        };
+
+        unsafe {
+            egl.DestroyImage(display_ptr, self.raw_image);
+        }
+
+    }
+}
+
 fn check_error(disp: &EGLDisplay) -> Result<(), glutin::error::Error> {
     use glutin::error::ErrorKind;
     let egl = disp.egl();

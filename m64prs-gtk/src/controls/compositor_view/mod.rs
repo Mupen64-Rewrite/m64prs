@@ -5,14 +5,14 @@ use native::{NativeView, NativeViewAttributes, NativeViewKey, StackOrder};
 pub mod native;
 
 mod inner {
-    use std::cell::RefCell;
+    use std::cell::{OnceCell, RefCell};
 
     use glib::subclass::{
         object::ObjectImpl,
         types::{ObjectSubclass, ObjectSubclassExt},
     };
-    use gtk::{prelude::*, subclass::widget::WidgetImplExt};
     use gtk::subclass::widget::WidgetImpl;
+    use gtk::{prelude::*, subclass::widget::WidgetImplExt};
 
     use crate::utils::dpi_conv;
 
@@ -20,12 +20,14 @@ mod inner {
 
     pub struct CompositorView {
         compositor: RefCell<Option<Box<dyn NativeCompositor>>>,
+        click_ct: OnceCell<gtk::GestureClick>,
     }
 
     impl Default for CompositorView {
         fn default() -> Self {
             Self {
                 compositor: RefCell::new(None),
+                click_ct: OnceCell::new(),
             }
         }
     }
@@ -52,7 +54,16 @@ mod inner {
         type ParentType = gtk::Widget;
     }
 
-    impl ObjectImpl for CompositorView {}
+    impl ObjectImpl for CompositorView {
+        fn constructed(&self) {
+            let ct = gtk::GestureClick::new();
+            ct.connect_pressed(|_, n_press, x, y| {
+                eprintln!("clicc! ({}, {}, {})", n_press, x, y);
+            });
+            self.obj().add_controller(ct.clone());
+            self.click_ct.get_or_init(move || ct);
+        }
+    }
 
     impl WidgetImpl for CompositorView {
         fn realize(&self) {
@@ -85,13 +96,11 @@ mod inner {
 
         fn map(&self) {
             self.parent_map();
-            log::info!("gtk map");
             self.with_compositor(|comp| comp.set_mapped(true));
         }
 
         fn unmap(&self) {
             self.parent_unmap();
-            log::info!("gtk unmap");
             self.with_compositor(|comp| comp.set_mapped(false));
         }
 
@@ -100,6 +109,7 @@ mod inner {
                 .obj()
                 .native()
                 .expect("widget should be bound to a gtk::Native");
+            let gdk_surface = native.surface().expect("gtk::Native should have a surface");
 
             // compute position relative to the window's coordinate system
             let win_pos = self
@@ -108,18 +118,26 @@ mod inner {
                 .unwrap();
 
             self.with_compositor(|comp| {
-                let physical_pos =
-                    dpi_conv::into_dpi_position(win_pos).to_physical(comp.scale_factor());
+                let physical_pos = dpi_conv::into_dpi_position(win_pos)
+                    .to_physical(comp.scale_factor().unwrap_or_else(|| gdk_surface.scale()));
                 comp.set_position(physical_pos)
             });
         }
 
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
+            let native = self
+                .obj()
+                .native()
+                .expect("widget should be bound to a gtk::Native");
+            let gdk_surface = native.surface().expect("gtk::Native should have a surface");
+
             // compute bounds relative to GTK's coordinate system
             let gtk_bounds = self
                 .with_compositor(|comp| {
                     let bounds = comp.total_bounds();
-                    dpi_conv::into_graphene_size(bounds.to_logical::<f32>(comp.scale_factor()))
+                    dpi_conv::into_graphene_size(bounds.to_logical::<f32>(
+                        comp.scale_factor().unwrap_or_else(|| gdk_surface.scale()),
+                    ))
                 })
                 .unwrap_or(graphene::Size::new(100.0, 100.0));
             log::debug!("bounds: {:?}", &gtk_bounds);

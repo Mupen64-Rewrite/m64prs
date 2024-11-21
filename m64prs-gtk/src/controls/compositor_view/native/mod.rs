@@ -1,4 +1,3 @@
-
 use glib::object::{Cast, ObjectExt};
 use glutin::display::DisplayApiPreference;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
@@ -86,7 +85,11 @@ pub trait NativeCompositor {
     fn set_mapped(&mut self, mapped: bool);
 
     /// Returns the conversion factor between compositor coordinates and surface coordinates.
-    fn scale_factor(&self) -> f64;
+    /// If no scaling factor is specified, the compositor widget will use the scale returned
+    /// by [`gdk_surface_get_scale`][`gdk::prelude::SurfaceExt::scale`]
+    fn scale_factor(&self) -> Option<f64> {
+        None
+    }
 }
 
 pub trait NativeView: Send + Sync {
@@ -118,14 +121,17 @@ impl dyn NativeCompositor {
         {
             #[cfg(feature = "x11")]
             if surface.is::<gdk_x11::X11Surface>() {
-                todo!()
+                return Box::new(xcb::XcbCompositor::new(
+                    surface.downcast_ref().unwrap(),
+                    position,
+                ));
             }
             #[cfg(feature = "wayland")]
             if surface.is::<gdk_wayland::WaylandSurface>() {
                 return Box::new(wayland::WaylandCompositor::new(
                     surface.downcast_ref().unwrap(),
                     position,
-                ))
+                ));
             }
             unreachable!()
         }
@@ -135,12 +141,16 @@ impl dyn NativeCompositor {
 }
 
 impl HasWindowHandle for dyn NativeView {
-    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
-        return self.window_handle_src().window_handle()
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        return self.window_handle_src().window_handle();
     }
 }
 impl HasDisplayHandle for dyn NativeView {
-    fn display_handle(&self) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
-        return self.display_handle_src().display_handle()
+    fn display_handle(
+        &self,
+    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        return self.display_handle_src().display_handle();
     }
 }

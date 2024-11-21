@@ -206,7 +206,7 @@ impl WaylandCompositor {
         }
     }
 
-    fn compute_bounds(&self) -> dpi::PhysicalSize<u32> {
+    fn recompute_bounds(&mut self) {
         let (max_w, max_h) = self
             .views
             .iter()
@@ -215,14 +215,11 @@ impl WaylandCompositor {
                 let max_h = u32::max(max_h, (view.position.y + view.size.height as i32) as u32);
                 (max_w, max_h)
             });
-        dpi::PhysicalSize::new(max_w, max_h)
+        self.current_bounds = dpi::PhysicalSize::new(max_w, max_h);
+        self.on_bounds_changed();
     }
 
     fn on_bounds_changed(&mut self) {
-        self.egl_context
-            .make_current_surfaceless()
-            .expect("context being made current should succeed");
-
         log::info!("updating bounds to {:?}", self.current_bounds);
 
         let st = &*self.display_state;
@@ -242,6 +239,8 @@ impl WaylandCompositor {
 
         // resize and repaint the buffer
         unsafe {
+            self.egl_context.make_current_surfaceless()
+                .expect("internal EGL context should be current");
             gl.NamedRenderbufferStorage(self.rbo, gl::RGBA8, size.width as i32, size.height as i32);
 
             gl.BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
@@ -304,8 +303,7 @@ impl NativeCompositor for WaylandCompositor {
         let display = st.display.clone();
 
         // recompute bounds
-        self.current_bounds = self.compute_bounds();
-        self.on_bounds_changed();
+        self.recompute_bounds();
 
         Box::new(WaylandViewHandle {
             view_key,
@@ -322,8 +320,7 @@ impl NativeCompositor for WaylandCompositor {
         self.surface.commit();
 
         // recompute bounds
-        self.current_bounds = self.compute_bounds();
-        self.on_bounds_changed();
+        self.recompute_bounds();
     }
 
     fn set_view_bounds(
@@ -350,8 +347,7 @@ impl NativeCompositor for WaylandCompositor {
         self.surface.commit();
 
         // recompute bounds
-        self.current_bounds = self.compute_bounds();
-        self.on_bounds_changed();
+        self.recompute_bounds();
     }
 
     fn restack_view(&mut self, view_key: NativeViewKey, stack_order: super::StackOrder) {
@@ -389,23 +385,27 @@ impl NativeCompositor for WaylandCompositor {
     }
 
     fn set_mapped(&mut self, mapped: bool) {
-        log::info!("set_mapped: {}", mapped);
+        // A subsurface is visible if:
+        // a) it has a buffer attached, and
+        // b) its parent is visible
+        // Thus, by attaching or removing this surface's buffer, we can 
+        // hide or show all the views attached to this compositor.
         if mapped {
             let st = &*self.display_state;
             let buffer = unsafe { self.egl_image.get_wayland_buffer(&st.connection) };
 
             self.surface.attach(Some(&buffer), 0, 0);
-            self.surface.commit();
         }
         else {
             self.surface.attach(None, 0, 0);
-            self.surface.commit();
         }
+            self.surface.commit();
         self.mapped = mapped;
     }
 
-    fn scale_factor(&self) -> f64 {
-        1.0
+    fn scale_factor(&self) -> Option<f64> {
+        // Wayland does positioning in logical coordinates.
+        Some(1.0)
     }
 }
 
