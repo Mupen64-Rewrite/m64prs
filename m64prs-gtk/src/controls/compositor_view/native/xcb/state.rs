@@ -1,4 +1,4 @@
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, LazyLock, OnceLock};
 
 use as_raw_xcb_connection::AsRawXcbConnection;
 use gdk_x11::ffi::{gdk_x11_display_get_xdisplay, GdkX11Display};
@@ -7,9 +7,9 @@ use gtk::prelude::*;
 use m64prs_core::error::M64PError;
 use x11rb::{
     connection::Connection,
-    cookie::VoidCookie,
-    errors::{ReplyError, ReplyOrIdError},
-    protocol::xproto::{self, ConnectionExt},
+    cookie::{Cookie, VoidCookie},
+    errors::{ConnectionError, ReplyError, ReplyOrIdError},
+    protocol::{xfixes::ConnectionExt as XFixesConnectionExt, xproto::{self, ConnectionExt}},
     xcb_ffi::XCBConnection,
 };
 
@@ -18,6 +18,7 @@ use crate::controls::compositor_view::native::NativeViewAttributes;
 pub struct DisplayState {
     pub conn: XCBConnection,
     pub screen: i32,
+    xfixes_version: OnceLock<(u32, u32)>
 }
 
 impl DisplayState {
@@ -97,6 +98,32 @@ impl DisplayState {
             // unwrap the resut
             .expect("checked XCB request (with ID) should succeed")
     }
+
+    pub(super) fn request<R, F>(&self, f: F) -> R
+    where
+        R: x11rb::x11_utils::TryParse,
+        F: FnOnce(
+            &XCBConnection,
+        ) -> Result<Cookie<'_, XCBConnection, R>, ConnectionError>
+    {
+        // do the request
+        f(&self.conn)
+            .map_err(ReplyError::from)
+            // check the cookie
+            .and_then(|cookie| cookie.reply())
+            // unwrap the result
+            .expect("checked XCB request should succeed")
+    }
+
+    pub(super) fn init_xfixes(&self) -> (u32, u32) {
+        self.xfixes_version.get_or_init(|| {
+            let reply = self.conn.xfixes_query_version(5, 0)
+                .map_err(ReplyError::from)
+                .and_then(Cookie::reply)
+                .expect("XFixes init failed");
+            (reply.major_version, reply.minor_version)
+        }).clone()
+    }
 }
 
 mod sealed {
@@ -132,7 +159,7 @@ impl X11DisplayExt for gdk_x11::X11Display {
 
         debug_assert!(screen == self.screen().screen_number());
 
-        let state = Arc::new(DisplayState { conn, screen });
+        let state = Arc::new(DisplayState { conn, screen, xfixes_version: OnceLock::new() });
         // set the state now
         unsafe {
             // SAFETY: this key is always used with Arc<DisplayState>.

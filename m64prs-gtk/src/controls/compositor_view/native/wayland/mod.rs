@@ -239,9 +239,15 @@ impl WaylandCompositor {
 
         // resize and repaint the buffer
         unsafe {
-            self.egl_context.make_current_surfaceless()
+            self.egl_context
+                .make_current_surfaceless()
                 .expect("internal EGL context should be current");
-            gl.NamedRenderbufferStorage(self.rbo, gl::RGBA8, size.width as i32, size.height as i32);
+            gl.NamedRenderbufferStorage(
+                self.rbo,
+                gl::RGBA8,
+                size.width.max(1) as i32,
+                size.height.max(1) as i32,
+            );
 
             gl.BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
             gl.ClearColor(0.0, 0.0, 0.0, 1.0);
@@ -388,18 +394,17 @@ impl NativeCompositor for WaylandCompositor {
         // A subsurface is visible if:
         // a) it has a buffer attached, and
         // b) its parent is visible
-        // Thus, by attaching or removing this surface's buffer, we can 
+        // Thus, by attaching or removing this surface's buffer, we can
         // hide or show all the views attached to this compositor.
         if mapped {
             let st = &*self.display_state;
             let buffer = unsafe { self.egl_image.get_wayland_buffer(&st.connection) };
 
             self.surface.attach(Some(&buffer), 0, 0);
-        }
-        else {
+        } else {
             self.surface.attach(None, 0, 0);
         }
-            self.surface.commit();
+        self.surface.commit();
         self.mapped = mapped;
     }
 

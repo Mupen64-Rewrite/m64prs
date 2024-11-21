@@ -7,8 +7,12 @@ use raw_window_handle::{
     XcbWindowHandle,
 };
 use slotmap::DenseSlotMap;
-use state::{DisplayState, X11DisplayExt};
-use x11rb::protocol::xproto::{self, ConfigureWindowAux, ConnectionExt, CreateWindowAux};
+use state::{DisplayState, ScopeGuard, X11DisplayExt};
+use x11rb::protocol::{
+    shape,
+    xfixes::ConnectionExt as XFixesConnectionExt,
+    xproto::{self, ConfigureWindowAux, ConnectionExt, CreateWindowAux},
+};
 
 use super::{NativeCompositor, NativeView, NativeViewAttributes, NativeViewKey};
 
@@ -91,6 +95,20 @@ impl XcbCompositor {
             conn.configure_window(window, &aux)
         });
 
+        {
+            let (ver_major, _) = st.init_xfixes();
+            debug_assert!(ver_major >= 2);
+
+            let region = st.request_with_new_id(|id, conn| conn.xfixes_create_region(id, &[]));
+            let _guard = ScopeGuard::new(|| {
+                let _ = st.conn.xfixes_destroy_region(region);
+            });
+
+            st.request_void(|conn| {
+                conn.xfixes_set_window_shape_region(window, shape::SK::INPUT, 0, 0, region)
+            });
+        }
+
         Self {
             display_state: st,
             views: DenseSlotMap::with_key(),
@@ -123,8 +141,8 @@ impl XcbCompositor {
 
         st.request_void(|conn| {
             let aux = ConfigureWindowAux::new()
-                .width(self.current_bounds.width)
-                .height(self.current_bounds.height);
+                .width(self.current_bounds.width.max(1))
+                .height(self.current_bounds.height.max(1));
 
             conn.configure_window(self.window, &aux)
         });
@@ -178,6 +196,20 @@ impl NativeCompositor for XcbCompositor {
                 .height(size.height as u32);
             conn.configure_window(window, &aux)
         });
+
+        {
+            let (ver_major, _) = st.init_xfixes();
+            debug_assert!(ver_major >= 2);
+
+            let region = st.request_with_new_id(|id, conn| conn.xfixes_create_region(id, &[]));
+            let _guard = ScopeGuard::new(|| {
+                let _ = st.conn.xfixes_destroy_region(region);
+            });
+
+            st.request_void(|conn| {
+                conn.xfixes_set_window_shape_region(window, shape::SK::INPUT, 0, 0, region)
+            });
+        }
 
         st.request_void(|conn| conn.map_window(window));
 
