@@ -6,7 +6,7 @@ import shutil
 import platform
 import os
 
-# UTILITY FUNCTIONS
+# INSTALL FUNCTIONS
 # ======================
 
 def copy_if_newer(src: Path, dst: Path) -> None:
@@ -79,6 +79,9 @@ def install_plugin(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None
 def install_data(srcdir: Path, dstdir: Path):
     for item in srcdir.iterdir():
         copy_if_newer(item, dstdir.joinpath(item.name))
+    
+# 
+# ======================
 
 # COMMANDS
 # ======================
@@ -178,6 +181,11 @@ def clean(args: argparse.Namespace, extra: list[str]):
     shutil.rmtree(root_dir.joinpath("install"))
     pass
 
+def git_setup(args: argparse.Namespace, extra: list[str]):
+    if platform.system() == "Windows":
+        pass
+        
+
 # CLI
 # ======================
 
@@ -222,6 +230,12 @@ def create_cli():
         help="Cleans all build artifacts."
     )
     clean_cli.set_defaults(func=clean)
+
+    git_setup_cli = subclis.add_parser(
+        "git_setup",
+        help="Add extra gitignores where necessary."
+    )
+    git_setup_cli.set_defaults(func=git_setup)
 
     return cli
 

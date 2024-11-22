@@ -36,14 +36,14 @@ mod sealed {
 }
 
 pub trait Win32DisplayExt: sealed::Sealed {
-    fn display_state(&self) -> Result<Arc<DisplayState>, M64PError>;
+    fn display_state(&self) -> Arc<DisplayState>;
 }
 
 pub const SUBSURFACE_WINDOW_CLASS: PCWSTR = w!("m64prs_subsurface");
 
 impl sealed::Sealed for gdk_win32::Win32Display {}
 impl Win32DisplayExt for gdk_win32::Win32Display {
-    fn display_state(&self) -> Result<Arc<DisplayState>, M64PError> {
+    fn display_state(&self) -> Arc<DisplayState> {
         static M64PRS_WIN32_DISPLAY_STATE: LazyLock<glib::Quark> = LazyLock::new(|| {
             const QUARK_NAME: &glib::GStr =
                 glib::gstr!("io.github.jgcodes2020.m64prs.win32_display_state");
@@ -54,12 +54,12 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
         unsafe {
             // SAFETY: this key is always used with Arc<DisplayState>.
             if let Some(p_data) = self.qdata::<Arc<DisplayState>>(*M64PRS_WIN32_DISPLAY_STATE) {
-                return Ok(Arc::clone(p_data.as_ref()));
+                return Arc::clone(p_data.as_ref());
             }
         }
 
         let hinstance: HINSTANCE = unsafe { GetModuleHandleA(None) }
-            .map_err(|_| M64PError::SystemFail)?
+            .expect("handle to own module should be available")
             .into();
 
         let bg_brush: HBRUSH = unsafe { CreateSolidBrush(rgb(0, 0, 0)) };
@@ -91,11 +91,11 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
         unsafe {
             // SAFETY: this key is always used with Arc<DisplayState>.
             self.set_qdata(*M64PRS_WIN32_DISPLAY_STATE, state);
-            Ok(Arc::clone(
+            Arc::clone(
                 self.qdata::<Arc<DisplayState>>(*M64PRS_WIN32_DISPLAY_STATE)
                     .unwrap()
                     .as_ref(),
-            ))
+            )
         }
     }
 }
