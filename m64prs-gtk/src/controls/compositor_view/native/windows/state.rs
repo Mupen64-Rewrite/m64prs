@@ -1,23 +1,21 @@
 use std::{
     mem,
-    ptr::{null, null_mut},
+    ptr::null_mut,
     sync::{Arc, LazyLock},
 };
 
 use glib::object::ObjectExt;
 use windows::{
-    core::{s, w, PCSTR, PCWSTR},
+    core::{w, PCWSTR},
     Win32::{
         Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
-        Graphics::Gdi::{CreateSolidBrush, HBRUSH},
         UI::WindowsAndMessaging::{
-            DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW, HICON,
-            IDC_ARROW, WM_NCHITTEST, WNDCLASSA, WNDCLASSEXW,
+            DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW,
+            IDC_ARROW, WM_NCHITTEST, WNDCLASSEXW,
         },
     },
 };
 
-use m64prs_core::error::M64PError;
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 
 // GDI RGB macro
@@ -62,7 +60,7 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
             .into();
 
         // Register the compositor window class
-        unsafe { 
+        unsafe {
             let comp_window_class = WNDCLASSEXW {
                 cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
                 style: CS_OWNDC | CS_HREDRAW | CS_VREDRAW,
@@ -76,9 +74,7 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
             RegisterClassExW(&comp_window_class);
         }
 
-        let state = Arc::new(DisplayState {
-            hinstance,
-        });
+        let state = Arc::new(DisplayState { hinstance });
 
         // set the state now
         unsafe {

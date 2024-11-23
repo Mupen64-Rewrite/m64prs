@@ -4,7 +4,6 @@ use gdk::prelude::*;
 use glutin::display::DisplayApiPreference;
 use raw_window_handle::{
     DisplayHandle, HandleError, HasDisplayHandle, HasWindowHandle, Win32WindowHandle, WindowHandle,
-    WindowsDisplayHandle,
 };
 use slotmap::DenseSlotMap;
 use state::{DisplayState, Win32DisplayExt};
@@ -31,10 +30,12 @@ use windows::{
                 CreateDXGIFactory2, IDXGIAdapter, IDXGIDevice, IDXGIFactory2, IDXGISurface1,
                 DXGI_CREATE_FACTORY_FLAGS,
             },
-            Gdi::{self, CreateRectRgn, HRGN},
+            Gdi::{self, CreateRectRgn},
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DestroyWindow, GetWindowRect, SetWindowPos, ShowWindow, HMENU, SET_WINDOW_POS_FLAGS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOW, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WS_CHILD, WS_EX_TOOLWINDOW, WS_POPUP
+            CreateWindowExW, DestroyWindow, GetWindowRect, SetWindowPos, ShowWindow, HMENU,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE,
+            SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WS_CHILD, WS_EX_TOOLWINDOW, WS_POPUP,
         },
     },
 };
@@ -243,8 +244,10 @@ impl WindowsCompositor {
             SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE,
         )?;
 
-        self.bg_transform.SetScaleX2(self.current_bounds.width as f32)?;
-        self.bg_transform.SetScaleY2(self.current_bounds.height as f32)?;
+        self.bg_transform
+            .SetScaleX2(self.current_bounds.width as f32)?;
+        self.bg_transform
+            .SetScaleY2(self.current_bounds.height as f32)?;
         self.dcomp_device.Commit()?;
 
         Ok(())
@@ -398,9 +401,7 @@ impl WindowsCompositor {
 
         // Setup a visual that can be passed to DComp
         let visual = self.dcomp_device.CreateVisual()?;
-        let surface = self
-            .dcomp_device
-            .CreateSurfaceFromHwnd(window)?;
+        let surface = self.dcomp_device.CreateSurfaceFromHwnd(window)?;
 
         visual.SetContent(&surface)?;
         visual.SetOffsetX2(position.x as f32)?;
