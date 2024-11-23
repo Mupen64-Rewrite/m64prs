@@ -86,3 +86,5 @@ x11 = [
 [build-dependencies]
 gl_generator = "0.14.0"
 m64prs-native = { path = "../m64prs-native" }
+
+embed-manifest = "1.4.0"

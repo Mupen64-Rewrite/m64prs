@@ -185,6 +185,7 @@ impl SimpleComponent for Model {
 
         Self::register_menu_actions(&sender);
         let app = relm4::main_application();
+        log::info!("Using GTK {}.{}.{}", gtk::major_version(), gtk::minor_version(), gtk::micro_version());
         app.set_menubar(Some(&menu_root));
 
         ComponentParts { model, widgets }

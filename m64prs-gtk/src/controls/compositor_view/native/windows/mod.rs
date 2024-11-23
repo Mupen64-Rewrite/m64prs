@@ -224,9 +224,8 @@ impl WindowsCompositor {
             self.views
                 .iter_mut()
                 .fold((0u32, 0u32), |(max_w, max_h), (_, view)| {
-                    let (position, size) = unsafe { view.bounds() };
-                    let max_w = u32::max(max_w, (position.x + size.width as i32) as u32);
-                    let max_h = u32::max(max_h, (position.y + size.height as i32) as u32);
+                    let max_w = u32::max(max_w, (view.position.x + view.size.width as i32) as u32);
+                    let max_h = u32::max(max_h, (view.position.y + view.size.height as i32) as u32);
                     (max_w, max_h)
                 });
         self.current_bounds = dpi::PhysicalSize::new(max_w, max_h);
@@ -344,6 +343,10 @@ impl NativeCompositor for WindowsCompositor {
             let _ = ShowWindow(self.window, sw_command);
         }
     }
+
+    // fn scale_factor(&self) -> Option<f64> {
+    //     Some(1.0)
+    // }
 }
 impl WindowsCompositor {
     unsafe fn new_view_inner(
@@ -450,16 +453,6 @@ impl WindowsView {
             SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREPOSITION,
         )
         .expect("SetWindowPos should succeed");
-    }
-
-    unsafe fn bounds(&mut self) -> (dpi::PhysicalPosition<i32>, dpi::PhysicalSize<u32>) {
-        let mut rect = RECT::default();
-        GetWindowRect(self.window, &mut rect).expect("GetWindowRect failed");
-
-        let position = dpi::PhysicalPosition::new(rect.top, rect.left);
-        let size =
-            dpi::PhysicalSize::new(rect.right - rect.left, rect.bottom - rect.top).cast::<u32>();
-        (position, size)
     }
 }
 impl Drop for WindowsView {
