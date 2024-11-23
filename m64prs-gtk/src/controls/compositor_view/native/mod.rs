@@ -64,17 +64,17 @@ pub trait NativeCompositor {
     /// Creates a new view.
     fn new_view(&mut self, attrs: NativeViewAttributes) -> Box<dyn NativeView>;
     /// Closes a currently open view.
-    fn delete_view(&mut self, view: NativeViewKey);
+    fn delete_view(&mut self, view_key: NativeViewKey);
 
     /// Sets the bounds of a view within the compositor.
     fn set_view_bounds(
         &mut self,
-        key: NativeViewKey,
+        view_key: NativeViewKey,
         position: Option<dpi::PhysicalPosition<i32>>,
         size: Option<dpi::PhysicalSize<u32>>,
     );
     /// Restacks a view relative to another.
-    fn restack_view(&mut self, key: NativeViewKey, stack_order: StackOrder);
+    fn restack_view(&mut self, view_key: NativeViewKey, stack_order: StackOrder);
 
     /// Computes the total bounds of all views in the compositor.
     fn total_bounds(&self) -> dpi::PhysicalSize<u32>;
