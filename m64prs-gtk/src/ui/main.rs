@@ -104,6 +104,7 @@ impl SimpleComponent for Model {
             set_default_width: -1,
             set_default_height: -1,
             set_show_menubar: true,
+            set_size_request: (200, 200),
 
             match model.main_view {
                 MainViewState::RomBrowser => gtk::Button::with_label("test") {

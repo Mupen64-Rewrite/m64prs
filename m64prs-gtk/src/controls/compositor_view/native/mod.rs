@@ -113,7 +113,10 @@ impl dyn NativeCompositor {
         #[cfg(target_os = "windows")]
         {
             if surface.is::<gdk_win32::Win32Surface>() {
-                todo!()
+                return Box::new(windows::WindowsCompositor::new(
+                    surface.downcast_ref().unwrap(),
+                    position,
+                ));
             }
             unreachable!()
         }

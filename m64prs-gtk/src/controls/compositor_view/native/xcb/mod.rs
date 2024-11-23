@@ -149,8 +149,6 @@ impl XcbCompositor {
     }
 }
 
-impl XcbView {}
-
 impl NativeCompositor for XcbCompositor {
     fn new_view(&mut self, attrs: NativeViewAttributes) -> Box<dyn super::NativeView> {
         let st = &self.display_state;

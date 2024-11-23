@@ -28,7 +28,6 @@ const fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
 
 pub struct DisplayState {
     pub hinstance: HINSTANCE,
-    pub wndclass_atom: u16,
 }
 
 mod sealed {
@@ -39,7 +38,7 @@ pub trait Win32DisplayExt: sealed::Sealed {
     fn display_state(&self) -> Arc<DisplayState>;
 }
 
-pub const SUBSURFACE_WINDOW_CLASS: PCWSTR = w!("m64prs_subsurface");
+pub const COMP_WINDOW_CLASS: PCWSTR = w!("m64prs_compositor");
 
 impl sealed::Sealed for gdk_win32::Win32Display {}
 impl Win32DisplayExt for gdk_win32::Win32Display {
@@ -62,29 +61,23 @@ impl Win32DisplayExt for gdk_win32::Win32Display {
             .expect("handle to own module should be available")
             .into();
 
-        let bg_brush: HBRUSH = unsafe { CreateSolidBrush(rgb(0, 0, 0)) };
-
-        let wndclass_data = WNDCLASSEXW {
-            cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
-            style: CS_OWNDC | CS_HREDRAW | CS_VREDRAW,
-            lpfnWndProc: Some(window_proc),
-            cbClsExtra: 0,
-            cbWndExtra: 0,
-            hInstance: hinstance,
-            hIcon: HICON(null_mut()),
-            hCursor: unsafe { LoadCursorW(HINSTANCE(null_mut()), IDC_ARROW) }
-                .expect("default cursor should be loadable"),
-            hbrBackground: bg_brush,
-            lpszMenuName: PCWSTR(null()),
-            lpszClassName: SUBSURFACE_WINDOW_CLASS,
-            hIconSm: HICON(null_mut()),
-        };
-
-        let wndclass_atom = unsafe { RegisterClassExW(&wndclass_data) };
+        // Register the compositor window class
+        unsafe { 
+            let comp_window_class = WNDCLASSEXW {
+                cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
+                style: CS_OWNDC | CS_HREDRAW | CS_VREDRAW,
+                lpfnWndProc: Some(window_proc),
+                hInstance: hinstance,
+                hCursor: LoadCursorW(HINSTANCE(null_mut()), IDC_ARROW)
+                    .expect("default cursor should be loadable"),
+                lpszClassName: COMP_WINDOW_CLASS,
+                ..Default::default()
+            };
+            RegisterClassExW(&comp_window_class);
+        }
 
         let state = Arc::new(DisplayState {
             hinstance,
-            wndclass_atom,
         });
 
         // set the state now
