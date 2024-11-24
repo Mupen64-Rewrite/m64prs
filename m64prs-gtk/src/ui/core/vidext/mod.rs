@@ -7,7 +7,6 @@ use std::{
 };
 
 use ash::vk;
-use graphene::Point;
 use m64prs_core::{
     error::M64PError,
     vidext::{VideoExtension, VidextResult},
@@ -17,7 +16,7 @@ use opengl::OpenGlState;
 use relm4::ComponentSender;
 use request::RequestManager;
 
-use crate::controls::SubsurfaceHandle;
+use crate::controls::compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey};
 
 mod opengl;
 mod request;
@@ -26,17 +25,24 @@ mod request;
 pub enum VidextRequest {
     EnterGameView,
     ExitGameView,
-    CreateSubsurface {
-        position: Point,
-        size: dpi::Size,
-        transparent: bool,
-    },
+    CreateView(NativeViewAttributes),
+    DeleteView(NativeViewKey),
 }
 
-#[derive(Debug)]
 pub enum VidextResponse {
     Done,
-    NewSubsurface(Result<SubsurfaceHandle, M64PError>),
+    NewView(Box<dyn NativeView>),
+}
+impl Debug for VidextResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Done => write!(f, "Done"),
+            Self::NewView(native_view) => {
+                let q = &**native_view as *const dyn NativeView;
+                write!(f, "NewSubsurface({:?})", q)
+            }
+        }
+    }
 }
 
 enum GraphicsState {
@@ -121,6 +127,15 @@ impl VideoExtension for VideoExtensionState {
             graphics,
             request_mgr,
         } = self;
+
+        match &graphics {
+            GraphicsState::OpenGl(Some(OpenGlState::Active(active_state))) => {
+                // delete the view
+                let _ =
+                    request_mgr.request(VidextRequest::DeleteView(active_state.native_view_key()));
+            }
+            _ => (),
+        }
         drop(graphics);
 
         let _ = request_mgr.request(VidextRequest::ExitGameView);
@@ -160,26 +175,21 @@ impl VideoExtension for VideoExtensionState {
                 (return_value, *opengl_state) = match opengl_state.take().unwrap() {
                     OpenGlState::Config(config_state) => 'config_state: {
                         // Get window request parameters from the config state
-                        let (position, size, transparent) =
-                            config_state.window_request_params(width, height);
+                        let attrs = config_state.window_request_params(width, height);
 
                         // Request a subsurface
                         let subsurface_handle = match self
                             .request_mgr
-                            .request(VidextRequest::CreateSubsurface {
-                                position,
-                                size: size.into(),
-                                transparent,
-                            })
+                            .request(VidextRequest::CreateView(attrs))
                             .map_err(|_| M64PError::SystemFail)?
                         {
-                            VidextResponse::Done => {
+                            VidextResponse::NewView(native_view) => native_view,
+                            _ => {
                                 break 'config_state (
                                     Err(M64PError::SystemFail),
                                     Some(OpenGlState::Config(config_state)),
                                 )
                             }
-                            VidextResponse::NewSubsurface(subsurface_handle) => subsurface_handle?,
                         };
 
                         // Initialize OpenGL with that subsurface

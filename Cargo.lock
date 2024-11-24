@@ -490,6 +490,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
+name = "embed-manifest"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41cd446c890d6bed1d8b53acef5f240069ebef91d6fae7c5f52efe61fe8b5eae"
+
+[[package]]
 name = "env_filter"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -769,6 +775,8 @@ dependencies = [
  "gio",
  "glib",
  "libc",
+ "wayland-backend",
+ "wayland-client",
 ]
 
 [[package]]
@@ -1316,6 +1324,7 @@ dependencies = [
  "as-raw-xcb-connection",
  "ash",
  "dpi",
+ "embed-manifest",
  "env_logger",
  "gdk4",
  "gdk4-wayland",
@@ -1324,6 +1333,7 @@ dependencies = [
  "gl_generator",
  "glib",
  "glutin",
+ "glutin_egl_sys",
  "graphene-rs",
  "gtk4",
  "log",
@@ -1336,9 +1346,11 @@ dependencies = [
  "raw-window-handle",
  "relm4",
  "send_wrapper",
+ "slotmap",
  "tiny-xlib",
  "wayland-backend",
  "wayland-client",
+ "wayland-protocols",
  "windows 0.58.0",
  "x11rb",
 ]
@@ -1883,6 +1895,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "slotmap"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbff4acf519f630b3a3ddcfaea6c06b42174d9a44bc70c620e9ed1649d58b82a"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2193,6 +2214,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "852e951cb7832cb45cb1169900d19760cfa39b82bc0ea9c0e5a14ae88411c98b"
 
 [[package]]
+name = "version_check"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
 name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2288,6 +2315,18 @@ dependencies = [
  "bitflags",
  "rustix",
  "wayland-backend",
+ "wayland-scanner",
+]
+
+[[package]]
+name = "wayland-protocols"
+version = "0.32.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cd0ade57c4e6e9a8952741325c30bf82f4246885dca8bf561898b86d0c1f58e"
+dependencies = [
+ "bitflags",
+ "wayland-backend",
+ "wayland-client",
  "wayland-scanner",
 ]
 

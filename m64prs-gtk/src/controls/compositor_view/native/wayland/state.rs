@@ -1,12 +1,14 @@
-use std::sync::{Arc, LazyLock, RwLock};
+use std::{
+    ptr::NonNull,
+    sync::{Arc, LazyLock, RwLock},
+};
 
 use gdk::prelude::*;
-use gdk_wayland::ffi::{
-    gdk_wayland_display_get_wl_display, gdk_wayland_surface_get_wl_surface, GdkWaylandDisplay,
-    GdkWaylandSurface,
-};
+use gdk_wayland::ffi::{gdk_wayland_display_get_wl_display, GdkWaylandDisplay};
 use glib::translate::*;
-use wayland_backend::client::{Backend, ObjectId};
+use glutin::api::egl::display::Display as EGLDisplay;
+use raw_window_handle::WaylandDisplayHandle;
+use wayland_backend::client::Backend;
 use wayland_client::{
     globals::{registry_queue_init, GlobalListContents},
     protocol::{
@@ -31,6 +33,8 @@ pub struct DisplayState {
 
     pub compositor: WlCompositor,
     pub subcompositor: WlSubcompositor,
+
+    pub egl_display: EGLDisplay,
 }
 
 pub struct Queue {
@@ -85,9 +89,6 @@ mod sealed {
 pub trait WaylandDisplayExt: sealed::Sealed {
     fn display_state(&self) -> Arc<DisplayState>;
 }
-pub trait WaylandSurfaceExt: sealed::Sealed {
-    fn wl_surface(&self) -> WlSurface;
-}
 
 impl sealed::Sealed for gdk_wayland::WaylandDisplay {}
 impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
@@ -106,7 +107,7 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
             }
         }
 
-        // acquire wl_display from GDK
+        // acquire FFI objects (wl_display) from GDK
         let (connection, display) = unsafe {
             let ffi_display: Stash<'_, *mut GdkWaylandDisplay, _> = self.to_glib_none();
             let display_ptr = gdk_wayland_display_get_wl_display(ffi_display.0);
@@ -114,22 +115,32 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
             let display_backend = Backend::from_foreign_display(display_ptr as *mut _);
             let conn = Connection::from_backend(display_backend);
             let display = conn.display();
+
             (conn, display)
         };
 
+        // create new event queue for our own stuff
         let (globals, event_queue) = registry_queue_init::<QueueState>(&connection)
             .expect("Failed to acquire Wayland globals");
-
         let queue_state = QueueState::default();
-
         let qh = event_queue.handle();
 
+        // bind compositor/subcompositor globals
         let compositor: WlCompositor = globals
-            .bind(&qh, 6..=6, ())
-            .expect("expected support for wl_compositor@v6");
+            .bind(&qh, 5..=6, ())
+            .expect("expected support for wl_compositor@v5 or @v6");
         let subcompositor: WlSubcompositor = globals
             .bind(&qh, 1..=1, ())
             .expect("expected support for wl_subcompositor@v1");
+
+        // Bind EGL display (GTK has a function for this but it isn't exposed)
+        let egl_display = unsafe {
+            EGLDisplay::new(
+                WaylandDisplayHandle::new(NonNull::new(display.id().as_ptr() as *mut _).unwrap())
+                    .into(),
+            )
+            .expect("EGL display creation should succeed")
+        };
 
         let state = Arc::new(DisplayState {
             connection,
@@ -140,6 +151,7 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
             }),
             compositor,
             subcompositor,
+            egl_display,
         });
 
         // set the state now
@@ -151,50 +163,6 @@ impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
                     .unwrap()
                     .as_ref(),
             )
-        }
-    }
-}
-
-impl sealed::Sealed for gdk_wayland::WaylandSurface {}
-impl WaylandSurfaceExt for gdk_wayland::WaylandSurface {
-    fn wl_surface(&self) -> WlSurface {
-        static M64PRS_WAYLAND_SURFACE: LazyLock<glib::Quark> = LazyLock::new(|| {
-            const QUARK_NAME: &glib::GStr =
-                glib::gstr!("io.github.jgcodes2020.m64prs.wayland_surface");
-            glib::Quark::from_static_str(QUARK_NAME)
-        });
-
-        unsafe {
-            // SAFETY: this key is always WlSurface.
-            if let Some(p_data) = self.qdata::<WlSurface>(*M64PRS_WAYLAND_SURFACE) {
-                return p_data.as_ref().clone();
-            }
-        }
-
-        let gdk_display = self
-            .display()
-            .downcast::<gdk_wayland::WaylandDisplay>()
-            .unwrap();
-        let st = gdk_display.display_state();
-
-        // acquire wl_surface from GDK
-        let surface = unsafe {
-            let ffi_surface: Stash<'_, *mut GdkWaylandSurface, _> = self.to_glib_none();
-            let surface_ptr = gdk_wayland_surface_get_wl_surface(ffi_surface.0);
-
-            let id = ObjectId::from_ptr(WlSurface::interface(), surface_ptr as *mut _)
-                .expect("gdk_wayland::WaylandSurface::wl_surface should return a valid wl_surface");
-            let surface = WlSurface::from_id(&st.connection, id);
-            surface
-        };
-
-        unsafe {
-            // SAFETY: this key is always WlSurface.
-            self.set_qdata(*M64PRS_WAYLAND_SURFACE, surface);
-            self.qdata::<WlSurface>(*M64PRS_WAYLAND_SURFACE)
-                .unwrap()
-                .as_ref()
-                .clone()
         }
     }
 }

@@ -17,22 +17,27 @@ glib = { version = "*", features = ["log"] }
 graphene-rs = { version = "*" }
 gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
 gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14"] }
+relm4 = "0.9.1"
 
 env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
-relm4 = "0.9.1"
 pollster = "0.4.0"
+
 glutin = "0.32.1"
 raw-window-handle = "0.6.2"
 ash = "0.38.0"
+
 num_enum = "0.7.3"
+slotmap = "1.0.7"
 
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Wayland
-gdk_wayland = { version = "0.9.3", package = "gdk4-wayland", optional = true }
+gdk_wayland = { version = "0.9.3", package = "gdk4-wayland", features = ["wayland_crate"], optional = true }
 wayland-client = { version = "0.31.7", optional = true }
 wayland-backend = { version = "*", features = ["client_system"], optional = true }
+glutin_egl_sys = { version = "*", optional = true }
+wayland-protocols = { version = "0.32.5", features = ["client", "staging"], optional = true }
 
 # X11
 gdk_x11 = { version = "0.9.3", package = "gdk4-x11", optional = true }
@@ -46,20 +51,40 @@ gdk_win32 = { version = "0.9.3", package = "gdk4-win32", features = ["windows"] 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
 version = "0.58.0"
 features = [
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_DirectComposition",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
     "Win32_Graphics_Gdi",
     "Win32_System_LibraryLoader",
     "Win32_UI_WindowsAndMessaging",
-    "Win32_UI_Input_KeyboardAndMouse"
+    "Win32_UI_Input_KeyboardAndMouse",
 ]
+
 
 [profile.dev]
 panic = "abort"
 
 [features]
 default = ["x11", "wayland"]
-wayland = ["dep:gdk_wayland", "dep:wayland-client", "dep:wayland-backend"]
-x11 = ["dep:gdk_x11", "dep:x11rb", "dep:tiny-xlib", "dep:as-raw-xcb-connection"]
+wayland = [
+    "dep:gdk_wayland", 
+    "dep:wayland-client", 
+    "dep:wayland-backend", 
+    "dep:glutin_egl_sys", 
+    "dep:wayland-protocols"
+]
+x11 = [
+    "dep:gdk_x11", 
+    "dep:x11rb", 
+    "dep:tiny-xlib", 
+    "dep:as-raw-xcb-connection"
+]
 
 [build-dependencies]
 gl_generator = "0.14.0"
 m64prs-native = { path = "../m64prs-native" }
+
+embed-manifest = "1.4.0"

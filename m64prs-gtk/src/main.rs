@@ -1,6 +1,7 @@
 mod controls;
 mod logging;
 mod ui;
+mod utils;
 
 fn main() {
     #[cfg(target_os = "windows")]

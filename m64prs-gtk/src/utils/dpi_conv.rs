@@ -10,6 +10,6 @@ pub fn into_dpi_size(size: graphene::Size) -> dpi::LogicalSize<f32> {
     dpi::LogicalSize::new(size.width(), size.height())
 }
 
-pub fn into_graphene_size<P: dpi::Pixel>(size: dpi::LogicalSize<f32>) -> graphene::Size {
-    graphene::Size::new(size.width, size.height)
+pub fn into_graphene_size<P: dpi::Pixel>(size: dpi::LogicalSize<P>) -> graphene::Size {
+    graphene::Size::new(size.width.cast::<f32>(), size.height.cast::<f32>())
 }

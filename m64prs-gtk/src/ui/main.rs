@@ -14,7 +14,7 @@ use relm4::{
 };
 
 use crate::{
-    controls::{self, native::conv},
+    controls::{self},
     ui::{actions::*, core},
 };
 
@@ -104,20 +104,19 @@ impl SimpleComponent for Model {
             set_default_width: -1,
             set_default_height: -1,
             set_show_menubar: true,
+            set_size_request: (200, 200),
 
             match model.main_view {
                 MainViewState::RomBrowser => gtk::Button::with_label("test") {
-                    set_size_request: (640, 480),
                     set_hexpand: true,
                     set_vexpand: true,
                 },
                 MainViewState::GameView =>
-                #[name(subsurface_container)]
-                controls::SubsurfaceContainer {
+                #[name(compositor)]
+                controls::compositor_view::CompositorView {
                     set_hexpand: true,
                     set_vexpand: true,
                 }
-
             }
         }
     }
@@ -186,6 +185,7 @@ impl SimpleComponent for Model {
 
         Self::register_menu_actions(&sender);
         let app = relm4::main_application();
+        log::info!("Using GTK {}.{}.{}", gtk::major_version(), gtk::minor_version(), gtk::micro_version());
         app.set_menubar(Some(&menu_root));
 
         ComponentParts { model, widgets }
@@ -256,20 +256,18 @@ impl SimpleComponent for Model {
 
         // Handle view-update requests (subsurfaces)
         let mut vidext_request = self.vidext_request.borrow_mut();
-        if let Some((
-            id,
-            VidextRequest::CreateSubsurface {
-                position,
-                size,
-                transparent,
-            },
-        )) = vidext_request.take()
-        {
-            let scale_factor = subsurface_container.scale_factor();
-            let size = conv::into_graphene_size::<f32>(size.to_logical(scale_factor as f64));
-
-            let subsurface = subsurface_container.new_subsurface(position, size, transparent);
-            let _ = vidext_inbound.send((id, VidextResponse::NewSubsurface(subsurface)));
+        if let Some((id, request)) = vidext_request.take() {
+            match request {
+                VidextRequest::CreateView(attrs) => {
+                    let view = compositor.new_view(attrs);
+                    let _ = vidext_inbound.send((id, VidextResponse::NewView(view)));
+                }
+                VidextRequest::DeleteView(view_key) => {
+                    compositor.del_view(view_key);
+                    let _ = vidext_inbound.send((id, VidextResponse::Done));
+                }
+                _ => (),
+            }
         }
     }
 }

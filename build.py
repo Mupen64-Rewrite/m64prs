@@ -6,7 +6,7 @@ import shutil
 import platform
 import os
 
-# UTILITY FUNCTIONS
+# INSTALL FUNCTIONS
 # ======================
 
 def copy_if_newer(src: Path, dst: Path) -> None:
@@ -52,21 +52,27 @@ def plugin_name(name: str) -> str:
         case _:
             return name
 
+def install_debug_info(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
+    if platform.system() != "Windows":
+        return
+    if not (srcdir/f"{srcfile}.pdb").exists():
+        return
+    if dstfile is None:
+        dstfile = srcfile
+    
+    copy_if_newer(srcdir/f"{srcfile}.pdb", dstdir/f"{dstfile}.pdb")
+
 def install_exe(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
         dstfile = srcfile
-    srcfile = exe_name(srcfile)
-    dstfile = exe_name(dstfile)
-
-    copy_if_newer(srcdir/srcfile, dstdir/dstfile)
+    
+    copy_if_newer(srcdir/exe_name(srcfile), dstdir/exe_name(dstfile))
 
 def install_dll(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
         dstfile = srcfile
-    srcfile = dll_name(srcfile)
-    dstfile = dll_name(dstfile)
 
-    copy_if_newer(srcdir/srcfile, dstdir/dstfile)
+    copy_if_newer(srcdir/dll_name(dstfile), dstdir/dll_name(srcfile))
 
 def install_plugin(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
@@ -79,6 +85,9 @@ def install_plugin(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None
 def install_data(srcdir: Path, dstdir: Path):
     for item in srcdir.iterdir():
         copy_if_newer(item, dstdir.joinpath(item.name))
+    
+# 
+# ======================
 
 # COMMANDS
 # ======================
@@ -116,13 +125,19 @@ def build(args: argparse.Namespace, extra: list[str]):
 
     # copy binaries
     install_exe(target_dir, bin_dir, "m64prs-gtk")
+    install_debug_info(target_dir, bin_dir, "m64prs_gtk")
     install_dll(native_target_dir, bin_dir, "mupen64plus")
+    install_debug_info(native_target_dir, bin_dir, "mupen64plus")
 
     # copy plugins
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-video-rice")
-    install_plugin(native_target_dir, plugins_dir, "mupen64plus-audio-sdl")
+    install_plugin(native_target_dir, plugins_dir, "mupen64plus-audio-sdl") 
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-input-sdl")
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-rsp-hle")
+    install_debug_info(native_target_dir, plugins_dir, "mupen64plus-video-rice")
+    install_debug_info(native_target_dir, plugins_dir, "mupen64plus-audio-sdl")
+    install_debug_info(native_target_dir, plugins_dir, "mupen64plus-input-sdl")
+    install_debug_info(native_target_dir, plugins_dir, "mupen64plus-rsp-hle")
 
     # copy Windows dependencies
     if platform.system() == "Windows":
@@ -178,6 +193,11 @@ def clean(args: argparse.Namespace, extra: list[str]):
     shutil.rmtree(root_dir.joinpath("install"))
     pass
 
+def git_setup(args: argparse.Namespace, extra: list[str]):
+    if platform.system() == "Windows":
+        pass
+        
+
 # CLI
 # ======================
 
@@ -222,6 +242,12 @@ def create_cli():
         help="Cleans all build artifacts."
     )
     clean_cli.set_defaults(func=clean)
+
+    git_setup_cli = subclis.add_parser(
+        "git_setup",
+        help="Add extra gitignores where necessary."
+    )
+    git_setup_cli.set_defaults(func=git_setup)
 
     return cli
 
