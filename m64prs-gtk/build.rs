@@ -15,7 +15,7 @@ fn gl_gen() {
 fn win_manifest() {
     use embed_manifest::{self, manifest::{ActiveCodePage, DpiAwareness, ManifestBuilder}};
     let manifest = embed_manifest::new_manifest("M64prs.Gtk")
-        .dpi_awareness(DpiAwareness::UnawareByDefault)
+        .dpi_awareness(DpiAwareness::PerMonitorV2)
         .active_code_page(ActiveCodePage::Utf8);
     embed_manifest::embed_manifest(manifest)
         .expect("manifest embed failed!");
@@ -30,6 +30,7 @@ fn main() {
     
     if std::env::var_os("CARGO_CFG_WINDOWS").is_some() {
         win_manifest();
+        println!("cargo::warning=Windows is not supported at the moment due to some outstanding issues in GTK. Proceed with caution.")
     }
 
 }
