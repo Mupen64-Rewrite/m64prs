@@ -16,14 +16,14 @@ use super::Core;
 impl Core {
     /// Saves game state to the current slot.
     pub async fn save_state(&self) -> Result<(), SavestateError> {
-        let _lock = self.save_mutex.lock().await;
+        let _lock = self.st_mutex.lock().await;
         let res = self.save_state_inner().await;
         res
     }
 
     /// Loads game state from the current slot.
     pub async fn load_state(&self) -> Result<(), SavestateError> {
-        let _lock = self.save_mutex.lock().await;
+        let _lock = self.st_mutex.lock().await;
         let res = self.load_state_inner().await;
         res
     }
@@ -31,7 +31,7 @@ impl Core {
     fn save_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
         // create transmission channel for savestate result
         let (mut future, waiter) = save_pair(CoreParam::StateSaveComplete);
-        self.save_sender
+        self.st_sender
             .send(waiter)
             .expect("save waiter queue should still be connected");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
@@ -44,7 +44,7 @@ impl Core {
 
     fn load_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
         let (mut future, waiter) = save_pair(CoreParam::StateLoadComplete);
-        self.save_sender
+        self.st_sender
             .send(waiter)
             .expect("save waiter queue should still be connected");
 

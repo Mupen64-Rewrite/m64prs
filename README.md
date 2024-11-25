@@ -1,19 +1,27 @@
 # m64prs
-A WIP TASing emulator based on Mupen64Plus and written in Rust. This project is currently waiting on
-[`winit`](https://github.com/rust-windowing/winit) to add a few features (popups and child windows).
-Beyond that, it is mostly working.
+A WIP TASing emulator based on Mupen64Plus and written in Rust. The 
 
 ## Building
-***Dependencies (Linux, MacOS):***
+
+### Linux
+***Dependencies:***
 - SDL, SDL_net (v2.x)
 - libpng
 - FreeType
 - zlib
+- GTK (at least v4.14)
 
-Use **`./build.py run`** to compile and setup all files in the install directory.
+Use **`./build.py run`** to compile and setup all files.
 
-***DO NOT*** run `cargo run` directly, as the executable locates its libraries and data files
-using paths relative to it self.
+### Windows
+***Dependencies:***
+- GTK (at least v4.14, from `gvsbuild`)
+
+Use **`./build.py run`** to compile and setup all files. Note that while the codebase
+does theoretically support Windows, there are some outstanding bugs in GTK that make it
+less than ideal to use. Known bugs include:
+
+- Potential desktop freezes when moving the window ([link](https://gitlab.gnome.org/GNOME/gtk/-/issues/7175)) in mixed-DPI environments
 
 ## Currently implemented features
 - Callback system on top of Mupen64Plus to hook into input, audio, and savestates
@@ -21,6 +29,10 @@ using paths relative to it self.
 - Half-working GTK-based UI on Linux (Windows soon(tm))
 
 ## To-do list
+- Remaining emulator commands
+  - Pause, resume, frame advance, reset
+  - Saving and loading state
+- Key input passthrough
 - Video encoding via `rsmpeg`
 - VCR features (input recording, savestate linkage)
 - Scripting (potentially not via Lua)

@@ -8,10 +8,11 @@ use std::{
 
 use async_std::sync::Mutex as AsyncMutex;
 use dlopen2::wrapper::Container;
-use emu_state::{EmulatorWaitManager, EmulatorWaiter};
+use emu_state::{EmuStateWaitManager, EmuStateWaiter};
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
 use plugin::PluginSet;
+use slotmap::HopSlotMap;
 use tas_callbacks::ffi::FFIHandler;
 
 use crate::error::{M64PError, StartupError};
@@ -30,64 +31,28 @@ pub mod vidext;
 pub use config::ConfigSection;
 pub use plugin::Plugin;
 
-/// Internal helper function to convert C results to Rust errors.
-#[inline(always)]
-fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
-    match err {
-        m64prs_sys::Error::Success => Ok(()),
-        err => Err(M64PError::try_from(err).unwrap()),
-    }
-}
-
-#[allow(unused)]
-unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
-    let log_level =
-        match MsgLevel::try_from(level as <MsgLevel as TryFromPrimitive>::Primitive).unwrap() {
-            MsgLevel::Error => Level::Error,
-            MsgLevel::Warning => Level::Warn,
-            MsgLevel::Info => Level::Info,
-            MsgLevel::Status => Level::Debug,
-            MsgLevel::Verbose => Level::Trace,
-            _ => panic!("Received invalid message level {}", level),
-        };
-
-    let target = CStr::from_ptr(context as *const c_char).to_str().unwrap();
-
-    log!(target: target, log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
-}
-
-#[allow(unused)]
-extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_int) {
-    let pinned_state = unsafe { &mut *(context as *mut PinnedCoreState) };
-
-    match param {
-        CoreParam::StateSaveComplete | CoreParam::StateLoadComplete => {
-            pinned_state.st_wait_mgr.on_state_change(param, value);
-        }
-        CoreParam::EmuState => {
-            pinned_state.emu_wait_mgr.on_emu_state_changed(value);
-        }
-        _ => (),
-    }
-}
 
 struct PinnedCoreState {
     st_wait_mgr: SavestateWaitManager,
-    emu_wait_mgr: EmulatorWaitManager,
+    es_wait_mgr: EmuStateWaitManager,
+    core_handlers: HopSlotMap<StateHandlerKey, Box<dyn FnMut(CoreParam, c_int)>>
+}
+
+slotmap::new_key_type! {
+    pub struct StateHandlerKey;
 }
 
 static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 pub struct Core {
-    pin_state: Box<PinnedCoreState>,
+    pin_state: Box<Mutex<PinnedCoreState>>,
 
     plugins: Option<PluginSet>,
 
-    save_sender: mpsc::Sender<SavestateWaiter>,
-    save_mutex: AsyncMutex<()>,
+    st_sender: mpsc::Sender<SavestateWaiter>,
+    st_mutex: AsyncMutex<()>,
 
-    emu_sender: mpsc::Sender<EmulatorWaiter>,
-    emu_mutex: AsyncMutex<()>,
+    emu_sender: mpsc::Sender<EmuStateWaiter>,
 
     // These handlers represent some arbitrary object that
     // we are holding onto until we don't need it.
@@ -137,21 +102,20 @@ impl Core {
         let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
             .map_err(StartupError::Library)?;
 
-        let (save_tx, save_rx) = mpsc::channel();
-        let (emu_tx, emu_rx) = mpsc::channel();
+        let (st_tx, st_rx) = mpsc::channel();
+        let (es_tx, es_rx) = mpsc::channel();
 
-        let mut core = Self {
+        let core = Self {
             plugins: None,
-            pin_state: Box::new(PinnedCoreState {
-                st_wait_mgr: SavestateWaitManager::new(save_rx),
-                emu_wait_mgr: EmulatorWaitManager::new(emu_rx),
-            }),
-            // async waiters for savestates
-            save_sender: save_tx,
-            save_mutex: AsyncMutex::new(()),
-            // async waiters for emulators
-            emu_sender: emu_tx,
-            emu_mutex: AsyncMutex::new(()),
+            pin_state: Box::new(Mutex::new(PinnedCoreState {
+                st_wait_mgr: SavestateWaitManager::new(st_rx),
+                es_wait_mgr: EmuStateWaitManager::new(es_rx),
+                core_handlers: HopSlotMap::with_key(),
+            })),
+            // async waiters for state changes
+            st_sender: st_tx,
+            st_mutex: AsyncMutex::new(()),
+            emu_sender: es_tx,
             // frontend hooks
             input_handler: None,
             audio_handler: None,
@@ -169,7 +133,7 @@ impl Core {
                 data_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
                 CORE_DEBUG_ID.as_ptr() as *mut c_void,
                 debug_callback,
-                &mut *core.pin_state as *mut PinnedCoreState as *mut c_void,
+                &*core.pin_state as *const Mutex<PinnedCoreState> as *mut c_void,
                 state_callback,
             ))
             .map_err(StartupError::CoreInit)?;
@@ -238,8 +202,64 @@ impl Core {
         self.do_command(Command::RomClose)
     }
 
+    pub fn listen_state<F: FnMut(CoreParam, c_int) + 'static>(&mut self, f: F) -> StateHandlerKey {
+        let mut pin_state = self.pin_state.lock().unwrap();
+        pin_state.core_handlers.insert(Box::new(f))
+    }
+
+    pub fn unlisten_state(&mut self, handler: StateHandlerKey) {
+        let mut pin_state = self.pin_state.lock().unwrap();
+        pin_state.core_handlers.remove(handler);
+    }
+
     /// Executes the currently-open ROM.
     pub fn execute(&self) -> Result<(), M64PError> {
         self.do_command(Command::Execute)
+    }
+}
+
+/// Internal helper function to convert C results to Rust errors.
+#[inline(always)]
+fn core_fn(err: m64prs_sys::Error) -> Result<(), M64PError> {
+    match err {
+        m64prs_sys::Error::Success => Ok(()),
+        err => Err(M64PError::try_from(err).unwrap()),
+    }
+}
+
+#[allow(unused)]
+unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message: *const c_char) {
+    let log_level =
+        match MsgLevel::try_from(level as <MsgLevel as TryFromPrimitive>::Primitive).unwrap() {
+            MsgLevel::Error => Level::Error,
+            MsgLevel::Warning => Level::Warn,
+            MsgLevel::Info => Level::Info,
+            MsgLevel::Status => Level::Debug,
+            MsgLevel::Verbose => Level::Trace,
+            _ => panic!("Received invalid message level {}", level),
+        };
+
+    let target = CStr::from_ptr(context as *const c_char).to_str().unwrap();
+
+    log!(target: target, log_level, "{}", CStr::from_ptr(message).to_str().unwrap());
+}
+
+#[allow(unused)]
+extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_int) {
+    let pinned_state_ref = unsafe { &*(context as *const Mutex<PinnedCoreState>) };
+    let mut pinned_state = pinned_state_ref.lock().unwrap();
+
+    for (_, mut callback) in &mut pinned_state.core_handlers {
+        callback(param, value);
+    }
+
+    match param {
+        CoreParam::StateSaveComplete | CoreParam::StateLoadComplete => {
+            pinned_state.st_wait_mgr.on_state_change(param, value);
+        }
+        CoreParam::EmuState => {
+            pinned_state.es_wait_mgr.on_state_change(value);
+        }
+        _ => (),
     }
 }

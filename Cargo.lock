@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "m64prs-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ash",
  "async-std",
@@ -1314,6 +1314,7 @@ dependencies = [
  "log",
  "m64prs-sys",
  "num_enum",
+ "slotmap",
  "thiserror 2.0.3",
 ]
 

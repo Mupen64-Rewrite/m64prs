@@ -163,7 +163,12 @@ impl SimpleComponent for Model {
                 file_dialog::Response::Cancel => Message::NoOp,
             });
         let core_error_dialog = alert_dialog::Model::builder()
-            .launch(alert_dialog::Settings::new().with_buttons(["OK"], 0, Some(0)))
+            .launch(
+                alert_dialog::Settings::new()
+                    .with_buttons(["OK"], 0, Some(0))
+                    .with_transient_to(&root)
+                    .with_modal(true),
+            )
             .forward(sender.input_sender(), |msg| match msg {
                 alert_dialog::Response::Choice(_) => Message::NoOp,
             });
@@ -185,7 +190,12 @@ impl SimpleComponent for Model {
 
         Self::register_menu_actions(&sender);
         let app = relm4::main_application();
-        log::info!("Using GTK {}.{}.{}", gtk::major_version(), gtk::minor_version(), gtk::micro_version());
+        log::info!(
+            "Using GTK {}.{}.{}",
+            gtk::major_version(),
+            gtk::minor_version(),
+            gtk::micro_version()
+        );
         app.set_menubar(Some(&menu_root));
 
         ComponentParts { model, widgets }

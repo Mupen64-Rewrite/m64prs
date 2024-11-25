@@ -207,9 +207,6 @@ impl Model {
             })
         };
 
-        pollster::block_on(core_ref.await_emu_state(EmuState::Running));
-        let _ = sender.output(Response::EmuStateChange(EmuState::Running));
-
         ModelInner::Running {
             join_handle,
             core_ref,
@@ -221,7 +218,7 @@ impl Model {
         core_ref: Arc<m64prs_core::Core>,
         _sender: &ComponentSender<Self>,
     ) -> m64prs_core::Core {
-        pollster::block_on(core_ref.stop()).expect("the core should be running");
+        core_ref.request_stop().expect("Core::stop should succeed");
         join_handle.join().expect("the core thread shouldn't panic");
 
         Arc::into_inner(core_ref)
