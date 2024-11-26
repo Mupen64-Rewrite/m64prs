@@ -32,17 +32,18 @@ pub use config::ConfigSection;
 pub use plugin::Plugin;
 
 
-struct PinnedCoreState {
-    st_wait_mgr: SavestateWaitManager,
-    es_wait_mgr: EmuStateWaitManager,
-    core_handlers: HopSlotMap<StateHandlerKey, Box<dyn FnMut(CoreParam, c_int)>>
-}
 
 slotmap::new_key_type! {
     pub struct StateHandlerKey;
 }
 
-static CORE_GUARD: Mutex<bool> = Mutex::new(false);
+/// Trait alias for closures that can handle state changes from Mupen.
+pub trait StateHandler: FnMut(CoreParam, c_int) + Send + Sync {}
+
+impl<F> StateHandler for F
+where
+    F: FnMut(CoreParam, c_int) + Send + Sync {}
+
 
 pub struct Core {
     pin_state: Box<Mutex<PinnedCoreState>>,
@@ -66,6 +67,12 @@ impl Debug for Core {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("Core {}")
     }
+}
+
+struct PinnedCoreState {
+    st_wait_mgr: SavestateWaitManager,
+    es_wait_mgr: EmuStateWaitManager,
+    core_handlers: HopSlotMap<StateHandlerKey, Box<dyn StateHandler>>
 }
 
 unsafe impl Sync for Core {}
@@ -202,7 +209,7 @@ impl Core {
         self.do_command(Command::RomClose)
     }
 
-    pub fn listen_state<F: FnMut(CoreParam, c_int) + 'static>(&mut self, f: F) -> StateHandlerKey {
+    pub fn listen_state<F: StateHandler + 'static>(&mut self, f: F) -> StateHandlerKey {
         let mut pin_state = self.pin_state.lock().unwrap();
         pin_state.core_handlers.insert(Box::new(f))
     }
@@ -217,6 +224,8 @@ impl Core {
         self.do_command(Command::Execute)
     }
 }
+
+static CORE_GUARD: Mutex<bool> = Mutex::new(false);
 
 /// Internal helper function to convert C results to Rust errors.
 #[inline(always)]
@@ -248,6 +257,8 @@ unsafe extern "C" fn debug_callback(context: *mut c_void, level: c_int, message:
 extern "C" fn state_callback(context: *mut c_void, param: CoreParam, value: c_int) {
     let pinned_state_ref = unsafe { &*(context as *const Mutex<PinnedCoreState>) };
     let mut pinned_state = pinned_state_ref.lock().unwrap();
+
+    log::debug!("state change: {:?} -> {:?}", param, value);
 
     for (_, mut callback) in &mut pinned_state.core_handlers {
         callback(param, value);

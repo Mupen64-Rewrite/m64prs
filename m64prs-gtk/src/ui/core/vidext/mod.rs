@@ -255,7 +255,6 @@ impl VideoExtension for VideoExtensionState {
     ) -> VidextResult<()> {
         match &mut self.graphics {
             GraphicsState::OpenGl(Some(OpenGlState::Config(config_state))) => {
-                log::info!("Setting attribute {:?} = {:?}", attr, value);
                 config_state.gl_set_attribute(attr, value)
             }
             _ => Err(M64PError::Internal),

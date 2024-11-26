@@ -5,7 +5,7 @@ use std::{
     sync::mpsc,
 };
 
-use gtk::{prelude::*, FileFilter};
+use gtk::{gio, prelude::*, FileFilter};
 use m64prs_sys::EmuState;
 use relm4::{
     actions::{RelmAction, RelmActionGroup},
@@ -13,15 +13,10 @@ use relm4::{
     WorkerController,
 };
 
-use crate::{
-    controls::{self},
-    ui::{actions::*, core},
-};
+use crate::controls;
 
 use super::{
-    alert_dialog,
-    core::vidext::{VidextRequest, VidextResponse},
-    file_dialog,
+    actions::{self, *}, alert_dialog, core::{self, vidext::{VidextRequest, VidextResponse}}, file_dialog
 };
 
 #[derive(Debug)]
@@ -57,33 +52,21 @@ pub struct Model {
     vidext_inbound: OnceCell<mpsc::Sender<(usize, VidextResponse)>>,
 
     main_view: MainViewState,
-    vidext_request: RefCell<Option<(usize, VidextRequest)>>,
 
     rom_file_dialog: Controller<file_dialog::Model>,
     core_error_dialog: Controller<alert_dialog::Model>,
 }
 
-impl Model {
-    fn register_menu_actions(sender: &ComponentSender<Self>) {
-        let mut file_actions = RelmActionGroup::<AppActions>::new();
-        file_actions.add_action(RelmAction::<OpenRomAction>::new_stateless({
-            let sender = sender.clone();
-            move |_| sender.input(Message::MenuRomOpen)
-        }));
-        file_actions.add_action(RelmAction::<CloseRomAction>::new_stateless({
-            let sender = sender.clone();
-            move |_| sender.input(Message::MenuRomClose)
-        }));
-        file_actions.register_for_main_application();
-    }
-}
+impl Model {}
 
 #[relm4::component(pub)]
-impl SimpleComponent for Model {
+impl Component for Model {
     type Input = Message;
 
     type Output = ();
     type Init = ();
+
+    type CommandOutput = ();
 
     menu! {
         menu_root: {
@@ -98,6 +81,7 @@ impl SimpleComponent for Model {
     }
 
     view! {
+        #[root]
         #[name(root)]
         gtk::ApplicationWindow::new(&relm4::main_application()) {
             set_title: Some("m64prs"),
@@ -105,6 +89,7 @@ impl SimpleComponent for Model {
             set_default_height: -1,
             set_show_menubar: true,
             set_size_request: (200, 200),
+
 
             match model.main_view {
                 MainViewState::RomBrowser => gtk::Button::with_label("test") {
@@ -118,6 +103,11 @@ impl SimpleComponent for Model {
                     set_vexpand: true,
                 }
             }
+        },
+        #[name(app_actions)]
+        actions::AppActions::new(&sender) {
+            #[watch]
+            set_mupen_state: model.core_state
         }
     }
 
@@ -177,18 +167,16 @@ impl SimpleComponent for Model {
             // core state
             core,
             core_ready: false,
-            core_state: None,
+            core_state: Some(EmuState::Stopped),
             vidext_inbound: OnceCell::new(),
             // view state
             main_view: MainViewState::RomBrowser,
-            vidext_request: RefCell::new(None),
             // dialogs
             rom_file_dialog,
             core_error_dialog,
         };
         let widgets = view_output!();
 
-        Self::register_menu_actions(&sender);
         let app = relm4::main_application();
         log::info!(
             "Using GTK {}.{}.{}",
@@ -201,7 +189,13 @@ impl SimpleComponent for Model {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: relm4::ComponentSender<Self>) {
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        message: Self::Input,
+        sender: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
         match message {
             Message::NoOp => (),
 
@@ -228,7 +222,9 @@ impl SimpleComponent for Model {
                     detail: error.to_string(),
                 })
             }
-            Message::CoreStateChange(emu_state) => self.core_state = Some(emu_state),
+            Message::CoreStateChange(emu_state) => {
+                self.core_state = Some(emu_state);
+            },
             Message::CoreVidextRequest(id, request) => {
                 match request {
                     VidextRequest::EnterGameView => {
@@ -249,35 +245,26 @@ impl SimpleComponent for Model {
                         self.main_view = MainViewState::RomBrowser;
                         let _ = vidext_inbound.send((id, VidextResponse::Done));
                     }
-                    _ => {
-                        // Some requests can only be handled during the view update
-                        self.vidext_request.replace(Some((id, request)));
+                    VidextRequest::CreateView(attrs) => {
+                        let vidext_inbound = self
+                            .vidext_inbound
+                            .get()
+                            .expect("vidext request should be active");
+                        let view = widgets.compositor.new_view(attrs);
+                        let _ = vidext_inbound.send((id, VidextResponse::NewView(view)));
+                    }
+                    VidextRequest::DeleteView(view_key) => {
+                        let vidext_inbound = self
+                            .vidext_inbound
+                            .get()
+                            .expect("vidext request should be active");
+                        widgets.compositor.del_view(view_key);
+                        let _ = vidext_inbound.send((id, VidextResponse::Done));
                     }
                 }
             }
         }
-    }
 
-    fn post_view() {
-        let vidext_inbound = self
-            .vidext_inbound
-            .get()
-            .expect("vidext request should be active");
-
-        // Handle view-update requests (subsurfaces)
-        let mut vidext_request = self.vidext_request.borrow_mut();
-        if let Some((id, request)) = vidext_request.take() {
-            match request {
-                VidextRequest::CreateView(attrs) => {
-                    let view = compositor.new_view(attrs);
-                    let _ = vidext_inbound.send((id, VidextResponse::NewView(view)));
-                }
-                VidextRequest::DeleteView(view_key) => {
-                    compositor.del_view(view_key);
-                    let _ = vidext_inbound.send((id, VidextResponse::Done));
-                }
-                _ => (),
-            }
-        }
+        self.update_view(widgets, sender);
     }
 }

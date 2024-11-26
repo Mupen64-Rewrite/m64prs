@@ -14,6 +14,7 @@ send_wrapper = "0.6.0"
 dpi = "0.1.1"
 
 glib = { version = "*", features = ["log"] }
+gio = { version = "*" }
 graphene-rs = { version = "*" }
 gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
 gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14"] }

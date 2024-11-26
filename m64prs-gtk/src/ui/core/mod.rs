@@ -9,7 +9,8 @@ use std::{
 };
 
 use m64prs_core::{plugin::PluginSet, Plugin};
-use m64prs_sys::EmuState;
+use m64prs_sys::{CoreParam, EmuState};
+use num_enum::TryFromPrimitive;
 use relm4::{ComponentSender, Worker};
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
@@ -20,6 +21,8 @@ pub enum Request {
     Init,
     StartRom(PathBuf),
     StopRom,
+
+    CoreEmuStateChange(EmuState),
 }
 
 #[derive(Debug)]
@@ -83,6 +86,19 @@ impl Model {
 
                 core.override_vidext::<VideoExtensionState>(param_box)
                     .expect("vidext override should succeed");
+
+                {
+                    let sender = sender.clone();
+                    core.listen_state(move |param, value| {
+                        if let CoreParam::EmuState = param {
+                            sender.input(Request::CoreEmuStateChange(
+                                (value as <EmuState as TryFromPrimitive>::Primitive)
+                                    .try_into()
+                                    .unwrap(),
+                            ));
+                        }
+                    });
+                }
 
                 ModelInner::Ready { core }
             }
@@ -243,6 +259,25 @@ impl Worker for Model {
             Request::Init => self.init(&sender),
             Request::StartRom(path) => self.start_rom(&path, &sender),
             Request::StopRom => self.stop_rom(&sender),
+            Request::CoreEmuStateChange(emu_state) => {
+                match (emu_state, mem::replace(&mut self.0, ModelInner::Uninit)) {
+                    (EmuState::Stopped, ModelInner::Running { join_handle, core_ref }) => {
+                        // The core has stopped and we are big fucked
+                        join_handle.join().expect("the core thread shouldn't panic");
+                
+                        let mut core = Arc::into_inner(core_ref)
+                            .expect("no refs to the core should exist outside of the emulator thread");
+
+                        core.detach_plugins();
+                        core.close_rom().expect("there should be an open ROM");
+
+                        self.0 = ModelInner::Ready { core };
+                    }
+                    (_, inner) => self.0 = inner,
+                }
+
+                let _ = sender.output(Response::EmuStateChange(emu_state));
+            },
         }
     }
 }
