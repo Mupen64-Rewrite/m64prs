@@ -3,8 +3,7 @@ use std::{cell::OnceCell, error::Error, path::PathBuf, sync::mpsc};
 use gtk::{prelude::*, FileFilter};
 use m64prs_sys::EmuState;
 use relm4::{
-    Component, ComponentController, ComponentParts, ComponentSender, Controller, SimpleComponent,
-    WorkerController,
+    Component, ComponentController, ComponentParts, ComponentSender, Controller, WorkerController,
 };
 
 use crate::{

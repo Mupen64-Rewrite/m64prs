@@ -1,7 +1,5 @@
-use std::cell::Cell;
-
 use gtk::{gio, prelude::*, Widget};
-use relm4::{RelmWidgetExt, SimpleComponent};
+use relm4::{Component, RelmWidgetExt};
 
 #[derive(Debug, Clone)]
 pub enum AlertDialogRequest {
@@ -97,12 +95,9 @@ pub struct AlertDialogWidgets {
 }
 
 #[derive(Debug)]
-pub struct AlertDialog {
-    next_request: Option<AlertDialogRequest>,
-    handled: Cell<bool>,
-}
+pub struct AlertDialog;
 
-impl SimpleComponent for AlertDialog {
+impl Component for AlertDialog {
     type Input = AlertDialogRequest;
 
     type Output = AlertDialogResponse;
@@ -113,6 +108,8 @@ impl SimpleComponent for AlertDialog {
 
     type Widgets = AlertDialogWidgets;
 
+    type CommandOutput = ();
+
     fn init_root() -> Self::Root {
         ()
     }
@@ -122,39 +119,35 @@ impl SimpleComponent for AlertDialog {
         _root: Self::Root,
         _sender: relm4::ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let model = Self {
-            next_request: None,
-            handled: Cell::new(true),
-        };
+        let model = Self;
         let widgets = settings.into_widgets();
 
         relm4::ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: relm4::ComponentSender<Self>) {
-        self.next_request = Some(message);
-        self.handled.set(false);
-    }
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        request: Self::Input,
+        sender: relm4::ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
+        let transient = widgets.transient_window.as_ref();
 
-    fn update_view(&self, widgets: &mut Self::Widgets, sender: relm4::ComponentSender<Self>) {
-        if let (false, Some(request)) = (self.handled.get(), &self.next_request) {
-            let transient = widgets.transient_window.as_ref();
+        match request {
+            AlertDialogRequest::Show { detail, message } => {
+                widgets.dialog.set_message(&message);
+                widgets.dialog.set_detail(&detail);
 
-            match request {
-                AlertDialogRequest::Show { detail, message } => {
-                    widgets.dialog.set_message(message);
-                    widgets.dialog.set_detail(detail);
-
-                    widgets.dialog.choose(
-                        transient,
-                        Option::<&gio::Cancellable>::None,
-                        move |result| {
-                            if let Ok(index) = result {
-                                let _ = sender.output(AlertDialogResponse::Choice(index as usize));
-                            }
-                        },
-                    );
-                }
+                widgets.dialog.choose(
+                    transient,
+                    Option::<&gio::Cancellable>::None,
+                    move |result| {
+                        if let Ok(index) = result {
+                            let _ = sender.output(AlertDialogResponse::Choice(index as usize));
+                        }
+                    },
+                );
             }
         }
     }

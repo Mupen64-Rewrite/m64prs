@@ -13,14 +13,14 @@ use super::main;
 // ACTION DEFINITIONS
 // ==========================
 
-new_action_group!(pub AppActionGroup, "app");
+new_action_group!(pub AppActionsGroup, "app");
 
-new_stateless_action!(pub OpenRomAction, AppActionGroup, "file.open_rom");
-new_stateless_action!(pub CloseRomAction, AppActionGroup, "file.close_rom");
+new_stateless_action!(pub OpenRomAction, AppActionsGroup, "file.open_rom");
+new_stateless_action!(pub CloseRomAction, AppActionsGroup, "file.close_rom");
 
-new_stateful_action!(pub TogglePauseAction, AppActionGroup, "emu.toggle_pause", (), bool);
-new_stateless_action!(pub FrameAdvanceAction, AppActionGroup, "emu.frame_advance");
-new_stateless_action!(pub ResetRomAction, AppActionGroup, "emu.reset_rom");
+new_stateful_action!(pub TogglePauseAction, AppActionsGroup, "emu.toggle_pause", (), bool);
+new_stateless_action!(pub FrameAdvanceAction, AppActionsGroup, "emu.frame_advance");
+new_stateless_action!(pub ResetRomAction, AppActionsGroup, "emu.reset_rom");
 
 pub(super) struct AppActions {
     open_rom: RelmAction<OpenRomAction>,
@@ -32,6 +32,7 @@ pub(super) struct AppActions {
 
 impl AppActions {
     pub(super) fn new(sender: &ComponentSender<main::Model>) -> Self {
+        // Adds an action to a group and returns it.
         macro_rules! a {
             ($group:ident, $action:expr) => {{
                 let a = $action;
@@ -39,6 +40,7 @@ impl AppActions {
                 a
             }};
         }
+        // Handy macro for a stateless action that simply sends a message.
         macro_rules! send_message {
             ($msg:expr) => {
                 ::relm4::actions::RelmAction::new_stateless({
@@ -46,18 +48,21 @@ impl AppActions {
                     move |_| sender.input($msg)
                 })
             };
+            ($msg:expr, state: $state:expr) => {
+                ::relm4::actions::RelmAction::new_stateful($state, {
+                    let sender = sender.clone();
+                    move |_, _| sender.input($msg)
+                })
+            };
         }
 
-        let mut group = RelmActionGroup::<AppActionGroup>::new();
+        let mut group = RelmActionGroup::<AppActionsGroup>::new();
         let inst = Self {
             open_rom: a!(group, send_message!(main::Message::MenuOpenRom)),
             close_rom: a!(group, send_message!(main::Message::MenuCloseRom)),
             toggle_pause: a!(
                 group,
-                RelmAction::new_stateful(&false, {
-                    let sender = sender.clone();
-                    move |_, _| sender.input(main::Message::MenuTogglePause)
-                })
+                send_message!(main::Message::MenuTogglePause, state: &false)
             ),
             frame_advance: a!(group, send_message!(main::Message::MenuFrameAdvance)),
             reset_rom: a!(group, send_message!(main::Message::MenuResetRom)),
