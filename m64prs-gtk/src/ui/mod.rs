@@ -1,9 +1,8 @@
 use relm4::RelmApp;
 
 mod actions;
-mod alert_dialog;
+mod dialogs;
 mod core;
-mod file_dialog;
 mod main;
 
 mod gl {

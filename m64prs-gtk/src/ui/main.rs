@@ -1,9 +1,4 @@
-use std::{
-    cell::OnceCell,
-    error::Error,
-    path::PathBuf,
-    sync::mpsc,
-};
+use std::{cell::OnceCell, error::Error, path::PathBuf, sync::mpsc};
 
 use gtk::{prelude::*, FileFilter};
 use m64prs_sys::EmuState;
@@ -12,16 +7,20 @@ use relm4::{
     WorkerController,
 };
 
-use crate::controls;
+use crate::{
+    controls,
+    ui::dialogs::{
+        alert::{AlertDialog, AlertDialogRequest, AlertDialogResponse, AlertDialogSettings},
+        file::{FileDialog, FileDialogResponse, FileDialogSettings},
+    },
+};
 
 use super::{
     actions::{self, *},
-    alert_dialog,
     core::{
         self,
         vidext::{VidextRequest, VidextResponse},
-    },
-    file_dialog,
+    }, dialogs::file::FileDialogRequest,
 };
 
 #[derive(Debug)]
@@ -64,8 +63,8 @@ pub struct Model {
 
     main_view: MainViewState,
 
-    rom_file_dialog: Controller<file_dialog::Model>,
-    core_error_dialog: Controller<alert_dialog::Model>,
+    rom_file_dialog: Controller<FileDialog>,
+    core_error_dialog: Controller<AlertDialog>,
 }
 
 impl Model {}
@@ -142,9 +141,9 @@ impl Component for Model {
                 }
             });
 
-        let rom_file_dialog = file_dialog::Model::builder()
+        let rom_file_dialog = FileDialog::builder()
             .launch(
-                file_dialog::Settings::new()
+                FileDialogSettings::new()
                     .with_transient_to(&root)
                     .with_title("Open ROM...")
                     .with_filters(
@@ -162,18 +161,18 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                file_dialog::Response::Accept(path) => Message::MenuOpenRom2(path),
-                file_dialog::Response::Cancel => Message::NoOp,
+                FileDialogResponse::Accept(path) => Message::MenuOpenRom2(path),
+                FileDialogResponse::Cancel => Message::NoOp,
             });
-        let core_error_dialog = alert_dialog::Model::builder()
+        let core_error_dialog = AlertDialog::builder()
             .launch(
-                alert_dialog::Settings::new()
+                AlertDialogSettings::new()
                     .with_buttons(["OK"], 0, Some(0))
                     .with_transient_to(&root)
                     .with_modal(true),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                alert_dialog::Response::Choice(_) => Message::NoOp,
+                AlertDialogResponse::Choice(_) => Message::NoOp,
             });
 
         let model = Self {
@@ -215,7 +214,7 @@ impl Component for Model {
             // MENU ACTIONS
             // ===============
             Message::MenuOpenRom => {
-                self.rom_file_dialog.emit(file_dialog::Request::Open);
+                self.rom_file_dialog.emit(FileDialogRequest::Open);
             }
             Message::MenuOpenRom2(path) => {
                 self.core.emit(core::Request::StartRom(path));
@@ -241,10 +240,11 @@ impl Component for Model {
             Message::CoreError(error) => {
                 const MESSAGE: &str = "Error occurred!";
 
-                self.core_error_dialog.emit(alert_dialog::Request::Show {
-                    message: MESSAGE.to_owned(),
-                    detail: error.to_string(),
-                })
+                self.core_error_dialog
+                    .emit(AlertDialogRequest::Show {
+                        message: MESSAGE.to_owned(),
+                        detail: error.to_string(),
+                    })
             }
 
             Message::CoreStateChange(emu_state) => {

@@ -1,4 +1,4 @@
-use std::{cell::Cell, path::PathBuf};
+use std::path::PathBuf;
 
 use glib::object::IsA;
 use gtk::{
@@ -6,21 +6,21 @@ use gtk::{
     prelude::*,
     Widget,
 };
-use relm4::{ComponentParts, RelmWidgetExt, SimpleComponent};
+use relm4::{Component, ComponentParts, RelmWidgetExt};
 
 #[derive(Debug, Clone, Copy)]
-pub enum Request {
+pub enum FileDialogRequest {
     Open,
     Save,
 }
 
 #[derive(Debug)]
-pub enum Response {
+pub enum FileDialogResponse {
     Accept(PathBuf),
     Cancel,
 }
 
-pub struct Settings {
+pub struct FileDialogSettings {
     transient_to: Option<gtk::Window>,
     default_filter: Option<gtk::FileFilter>,
     filters: Vec<gtk::FileFilter>,
@@ -28,7 +28,7 @@ pub struct Settings {
     accept_label: Option<String>,
     modal: bool,
 }
-impl Default for Settings {
+impl Default for FileDialogSettings {
     fn default() -> Self {
         Self {
             transient_to: None,
@@ -40,7 +40,7 @@ impl Default for Settings {
         }
     }
 }
-impl Settings {
+impl FileDialogSettings {
     pub fn new() -> Self {
         Self::default()
     }
@@ -67,7 +67,7 @@ impl Settings {
         self
     }
 
-    fn into_widgets(self) -> Widgets {
+    fn into_widgets(self) -> FileDialogWidgets {
         let dialog = gtk::FileDialog::new();
 
         if !self.filters.is_empty() {
@@ -81,7 +81,7 @@ impl Settings {
         dialog.set_accept_label(self.accept_label.as_deref());
         dialog.set_modal(self.modal);
 
-        Widgets {
+        FileDialogWidgets {
             dialog,
             transient_window: self.transient_to,
         }
@@ -89,26 +89,26 @@ impl Settings {
 }
 
 #[derive(Debug)]
-pub struct Widgets {
+pub struct FileDialogWidgets {
     dialog: gtk::FileDialog,
     transient_window: Option<gtk::Window>,
 }
 
 #[derive(Debug)]
-pub struct Model {
-    next_request: Cell<Option<Request>>,
-}
+pub struct FileDialog;
 
-impl SimpleComponent for Model {
-    type Input = Request;
+impl Component for FileDialog {
+    type Input = FileDialogRequest;
 
-    type Output = Response;
+    type Output = FileDialogResponse;
 
-    type Init = Settings;
+    type Init = FileDialogSettings;
 
     type Root = ();
 
-    type Widgets = Widgets;
+    type Widgets = FileDialogWidgets;
+
+    type CommandOutput = ();
 
     fn init_root() -> Self::Root {
         ()
@@ -119,44 +119,42 @@ impl SimpleComponent for Model {
         _root: Self::Root,
         _sender: relm4::ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let model = Self {
-            next_request: Cell::new(None),
-        };
+        let model = Self;
         let widgets = settings.into_widgets();
 
         ComponentParts::<Self> { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: relm4::ComponentSender<Self>) {
-        self.next_request.set(Some(message));
-    }
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        request: Self::Input,
+        sender: relm4::ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
+        let transient = widgets.transient_window.as_ref();
 
-    fn update_view(&self, widgets: &mut Self::Widgets, sender: relm4::ComponentSender<Self>) {
-        if let Some(request) = self.next_request.take() {
-            let transient = widgets.transient_window.as_ref();
-
-            match request {
-                Request::Open => widgets.dialog.open(
-                    transient,
-                    Option::<&gio::Cancellable>::None,
-                    move |result| {
-                        let _ = match result {
-                            Ok(file) => sender.output(Response::Accept(file.path().unwrap())),
-                            Err(_) => sender.output(Response::Cancel),
-                        };
-                    },
-                ),
-                Request::Save => widgets.dialog.save(
-                    transient,
-                    Option::<&gio::Cancellable>::None,
-                    move |result| {
-                        let _ = match result {
-                            Ok(file) => sender.output(Response::Accept(file.path().unwrap())),
-                            Err(_) => sender.output(Response::Cancel),
-                        };
-                    },
-                ),
-            }
+        match request {
+            FileDialogRequest::Open => widgets.dialog.open(
+                transient,
+                Option::<&gio::Cancellable>::None,
+                move |result| {
+                    let _ = match result {
+                        Ok(file) => sender.output(FileDialogResponse::Accept(file.path().unwrap())),
+                        Err(_) => sender.output(FileDialogResponse::Cancel),
+                    };
+                },
+            ),
+            FileDialogRequest::Save => widgets.dialog.save(
+                transient,
+                Option::<&gio::Cancellable>::None,
+                move |result| {
+                    let _ = match result {
+                        Ok(file) => sender.output(FileDialogResponse::Accept(file.path().unwrap())),
+                        Err(_) => sender.output(FileDialogResponse::Cancel),
+                    };
+                },
+            ),
         }
     }
 }

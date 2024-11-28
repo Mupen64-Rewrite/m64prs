@@ -4,16 +4,16 @@ use gtk::{gio, prelude::*, Widget};
 use relm4::{RelmWidgetExt, SimpleComponent};
 
 #[derive(Debug, Clone)]
-pub enum Request {
+pub enum AlertDialogRequest {
     Show { message: String, detail: String },
 }
 
 #[derive(Debug)]
-pub enum Response {
+pub enum AlertDialogResponse {
     Choice(usize),
 }
 
-pub struct Settings {
+pub struct AlertDialogSettings {
     transient_to: Option<gtk::Window>,
     buttons: Vec<String>,
     cancel_index: usize,
@@ -21,7 +21,7 @@ pub struct Settings {
     modal: bool,
 }
 
-impl Default for Settings {
+impl Default for AlertDialogSettings {
     fn default() -> Self {
         Self {
             transient_to: None,
@@ -33,7 +33,7 @@ impl Default for Settings {
     }
 }
 
-impl Settings {
+impl AlertDialogSettings {
     pub fn new() -> Self {
         Self::default()
     }
@@ -72,7 +72,7 @@ impl Settings {
         self
     }
 
-    fn into_widgets(self) -> Widgets {
+    fn into_widgets(self) -> AlertDialogWidgets {
         let dialog = gtk::AlertDialog::builder()
             .buttons(self.buttons)
             .cancel_button(self.cancel_index.try_into().unwrap())
@@ -83,7 +83,7 @@ impl Settings {
             .modal(self.modal)
             .build();
 
-        Widgets {
+        AlertDialogWidgets {
             dialog,
             transient_window: self.transient_to,
         }
@@ -91,27 +91,27 @@ impl Settings {
 }
 
 #[derive(Debug)]
-pub struct Widgets {
+pub struct AlertDialogWidgets {
     dialog: gtk::AlertDialog,
     transient_window: Option<gtk::Window>,
 }
 
 #[derive(Debug)]
-pub struct Model {
-    next_request: Option<Request>,
+pub struct AlertDialog {
+    next_request: Option<AlertDialogRequest>,
     handled: Cell<bool>,
 }
 
-impl SimpleComponent for Model {
-    type Input = Request;
+impl SimpleComponent for AlertDialog {
+    type Input = AlertDialogRequest;
 
-    type Output = Response;
+    type Output = AlertDialogResponse;
 
-    type Init = Settings;
+    type Init = AlertDialogSettings;
 
     type Root = ();
 
-    type Widgets = Widgets;
+    type Widgets = AlertDialogWidgets;
 
     fn init_root() -> Self::Root {
         ()
@@ -141,7 +141,7 @@ impl SimpleComponent for Model {
             let transient = widgets.transient_window.as_ref();
 
             match request {
-                Request::Show { detail, message } => {
+                AlertDialogRequest::Show { detail, message } => {
                     widgets.dialog.set_message(message);
                     widgets.dialog.set_detail(detail);
 
@@ -150,7 +150,7 @@ impl SimpleComponent for Model {
                         Option::<&gio::Cancellable>::None,
                         move |result| {
                             if let Ok(index) = result {
-                                let _ = sender.output(Response::Choice(index as usize));
+                                let _ = sender.output(AlertDialogResponse::Choice(index as usize));
                             }
                         },
                     );
