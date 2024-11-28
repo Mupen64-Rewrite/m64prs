@@ -59,6 +59,7 @@ pub struct Core {
     // we are holding onto until we don't need it.
     input_handler: Option<Box<dyn FFIHandler>>,
     audio_handler: Option<Box<dyn FFIHandler>>,
+    save_handler: Option<Box<dyn FFIHandler>>,
 
     api: Container<FullCoreApi>,
 }
@@ -126,6 +127,7 @@ impl Core {
             // frontend hooks
             input_handler: None,
             audio_handler: None,
+            save_handler: None,
             api,
         };
 

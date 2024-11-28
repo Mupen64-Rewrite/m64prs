@@ -1,4 +1,4 @@
-use ffi::{AudioHandlerFFI, InputHandlerFFI};
+use ffi::{AudioHandlerFFI, InputHandlerFFI, SaveHandlerFFI};
 use m64prs_sys::{Buttons, Command};
 use std::ffi::{c_int, c_uint, c_void};
 
@@ -33,8 +33,8 @@ impl Core {
         Ok(())
     }
 
-    /// Sets a *frame handler* for the core, which can filter or replace controller inputs.
-    /// It may only be set once.
+    /// Sets a *frame handler* for the core, which executes a callback when
+    /// a new frame is presented to the screen.
     ///
     /// # Errors
     /// This function errors if the core fails to set the frame handler.
@@ -62,8 +62,8 @@ impl Core {
         unsafe { self.do_command_p(Command::SetFrameCallback, frame_handler as *mut _) }
     }
 
-    /// Sets a *frame handler* for the core, which can filter or replace controller inputs.
-    /// It may only be set once.
+    /// Sets an *audio handler* for the core, which can receive and process audio
+    /// samples secondary to the audio plugin.
     ///
     /// # Errors
     /// This function errors if the core fails to set the frame handler.
@@ -84,6 +84,21 @@ impl Core {
                 .set_audio_handler(&audio_handler.create_ffi_handler())
         })?;
         self.audio_handler = Some(Box::new(audio_handler));
+
+        Ok(())
+    }
+
+    pub fn set_save_handler<S: SaveHandler>(&mut self, handler: S) -> Result<(), M64PError> {
+        if self.save_handler.is_some() {
+            panic!("save handler already registered");
+        }
+
+        let save_handler = SaveHandlerFFI::new(handler);
+        
+        core_fn(unsafe {
+            self.api.tas.set_savestate_handler(&save_handler.create_ffi_handler())
+        })?;
+        self.save_handler = Some(Box::new(save_handler));
 
         Ok(())
     }
@@ -115,7 +130,7 @@ pub trait FrameHandler: Send + 'static {
 
 pub mod ffi {
     use super::*;
-    use std::mem;
+    use std::{ffi::c_char, mem};
 
     pub(crate) trait FFIHandler: Send {}
 
@@ -191,6 +206,67 @@ pub mod ffi {
             let context = context as *mut A;
             let data_ptr = data as *const u16;
             (*context).push_audio_samples(std::slice::from_raw_parts(data_ptr, length / 2));
+        }
+    }
+
+    impl<A: AudioHandler> Drop for AudioHandlerFFI<A> {
+        fn drop(&mut self) {
+            mem::drop(unsafe { Box::from_raw(self.0) });
+        }
+    }
+
+    pub(crate) struct SaveHandlerFFI<S: SaveHandler>(*mut S);
+
+    unsafe impl<S: SaveHandler> Send for SaveHandlerFFI<S> {}
+    impl<S: SaveHandler> FFIHandler for SaveHandlerFFI<S> {}
+
+    impl<S: SaveHandler> SaveHandlerFFI<S> {
+        pub fn new(handler: S) -> Self {
+            let heap_alloc = Box::into_raw(Box::new(handler));
+            Self(heap_alloc)
+        }
+
+        pub(super) unsafe fn create_ffi_handler(&self) -> m64prs_sys::TasSaveHandler {
+            m64prs_sys::TasSaveHandler {
+                context: self.0 as *mut c_void,
+                signature: S::SIGNATURE,
+                version: S::VERSION,
+                alloc_size: S::ALLOC_SIZE,
+                save_extra_data: Some(Self::ffi_save_extra_data),
+                load_extra_data: Some(Self::ffi_load_extra_data),
+                get_data_size: Some(Self::ffi_get_data_size),
+            }
+        }
+
+        unsafe extern "C" fn ffi_save_extra_data(
+            context: *mut c_void,
+            data: *mut c_char,
+            size: usize,
+        ) {
+            let context = context as *mut S;
+            (*context).save_extra_data(std::slice::from_raw_parts_mut(data as *mut u8, size));
+        }
+
+        unsafe extern "C" fn ffi_load_extra_data(
+            context: *mut c_void,
+            version: u32,
+            data: *const c_char,
+            size: usize,
+        ) {
+            let context = context as *mut S;
+            (*context)
+                .load_extra_data(version, std::slice::from_raw_parts(data as *const u8, size));
+        }
+
+        unsafe extern "C" fn ffi_get_data_size(context: *mut c_void, version: u32) -> usize {
+            let context = context as *mut S;
+            (*context).get_data_size(version)
+        }
+    }
+
+    impl<S: SaveHandler> Drop for SaveHandlerFFI<S> {
+        fn drop(&mut self) {
+            mem::drop(unsafe { Box::from_raw(self.0) });
         }
     }
 }
