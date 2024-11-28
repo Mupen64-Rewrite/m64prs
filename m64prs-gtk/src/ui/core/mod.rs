@@ -8,40 +8,55 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use m64prs_core::{plugin::PluginSet, Plugin};
+use m64prs_core::{error::SavestateError, plugin::PluginSet, Plugin};
 use m64prs_sys::{CoreParam, EmuState};
 use num_enum::TryFromPrimitive;
-use relm4::{ComponentSender, Worker};
+use relm4::{Component, ComponentParts, ComponentSender, Worker};
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
 pub mod vidext;
 
 #[derive(Debug)]
-pub enum Request {
+pub enum MupenCoreRequest {
     Init,
+    CoreEmuStateChange(EmuState),
 
     StartRom(PathBuf),
     StopRom,
+
     TogglePause,
     FrameAdvance,
     Reset,
 
-    CoreEmuStateChange(EmuState),
+    SaveSlot,
+    LoadSlot,
+    SetSaveSlot(u8),
+    SaveFile(PathBuf),
+    LoadFile(PathBuf),
 }
 
 #[derive(Debug)]
-pub enum Response {
+pub enum MupenCoreResponse {
     CoreReady {
         vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
     Error(Box<dyn Error + Send + 'static>),
-    EmuStateChange(EmuState),
+    EmuStateChanged(EmuState),
+    SavestateSlotChanged(u8),
+    StateRequestStarted,
+    StateRequestComplete,
     VidextRequest(usize, vidext::VidextRequest),
+}
+
+#[derive(Debug)]
+pub enum MupenCoreCommandResponse {
+    LoadComplete(Result<(), SavestateError>),
+    SaveComplete(Result<(), SavestateError>),
 }
 
 /// Inner enum representing the model's current state.
 #[derive(Debug)]
-enum ModelInner {
+enum MupenCoreInner {
     /// The core is not initialized yet.
     Uninit,
     /// The core is ready to use. It does not have a ROM open.
@@ -54,9 +69,9 @@ enum ModelInner {
 }
 
 #[derive(Debug)]
-pub struct Model(ModelInner);
+pub struct MupenCore(MupenCoreInner);
 
-impl Model {
+impl MupenCore {
     fn init(&mut self, sender: &ComponentSender<Self>) {
         #[cfg(target_os = "windows")]
         const MUPEN_FILENAME: &str = "mupen64plus.dll";
@@ -68,7 +83,7 @@ impl Model {
         let vidext_inbound: mpsc::Sender<(usize, VidextResponse)>;
 
         self.0 = match self.0 {
-            ModelInner::Uninit => {
+            MupenCoreInner::Uninit => {
                 let self_path = env::current_exe().expect("should be able to find current_exe");
                 let self_dir = self_path
                     .parent()
@@ -86,55 +101,58 @@ impl Model {
                 let vidext: VideoExtensionParameters;
                 (vidext, vidext_inbound) = VideoExtensionParameters::new(sender.clone());
 
-                let param_box: Box<dyn Any> = Box::new(Some(vidext));
-
-                core.override_vidext::<VideoExtensionState>(param_box)
+                core.override_vidext::<VideoExtensionState, _>(Some(vidext))
                     .expect("vidext override should succeed");
 
                 {
                     let sender = sender.clone();
-                    core.listen_state(move |param, value| {
-                        if let CoreParam::EmuState = param {
-                            sender.input(Request::CoreEmuStateChange(
+                    core.listen_state(move |param, value| match param {
+                        CoreParam::EmuState => {
+                            sender.input(MupenCoreRequest::CoreEmuStateChange(
                                 (value as <EmuState as TryFromPrimitive>::Primitive)
                                     .try_into()
                                     .unwrap(),
                             ));
                         }
+                        CoreParam::SavestateSlot => {
+                            let _ =
+                                sender.output(MupenCoreResponse::SavestateSlotChanged(value as u8));
+                        }
+                        _ => (),
                     });
                 }
 
-                ModelInner::Ready { core }
+                MupenCoreInner::Ready { core }
             }
             _ => panic!("core is already initialized"),
         };
         sender
-            .output(Response::CoreReady { vidext_inbound })
+            .output(MupenCoreResponse::CoreReady { vidext_inbound })
             .unwrap();
     }
 
     fn start_rom(&mut self, path: &Path, sender: &ComponentSender<Self>) {
-        self.0 = match mem::replace(&mut self.0, ModelInner::Uninit) {
-            ModelInner::Uninit => panic!("core should be initialized"),
-            ModelInner::Ready { core } => 'core_ready: {
+        self.0 = match mem::replace(&mut self.0, MupenCoreInner::Uninit) {
+            MupenCoreInner::Uninit => panic!("core should be initialized"),
+            MupenCoreInner::Ready { core } => 'core_ready: {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(Response::Error(Box::new(error)));
-                        break 'core_ready ModelInner::Ready { core };
+                        let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+                        break 'core_ready MupenCoreInner::Ready { core };
                     }
                 };
                 Self::start_rom_inner(&rom_data, core, sender)
             }
-            ModelInner::Running {
+            MupenCoreInner::Running {
                 join_handle,
                 core_ref,
             } => 'core_running: {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(Response::Error(Box::new(error)));
-                        break 'core_running ModelInner::Running {
+                        let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+                        break 'core_running MupenCoreInner::Running {
                             join_handle,
                             core_ref,
                         };
@@ -147,8 +165,8 @@ impl Model {
     }
 
     fn stop_rom(&mut self, sender: &ComponentSender<Self>) {
-        self.0 = match mem::replace(&mut self.0, ModelInner::Uninit) {
-            ModelInner::Running {
+        self.0 = match mem::replace(&mut self.0, MupenCoreInner::Uninit) {
+            MupenCoreInner::Running {
                 join_handle,
                 core_ref,
             } => {
@@ -157,43 +175,15 @@ impl Model {
                 core.detach_plugins();
                 core.close_rom().expect("there should be an open ROM");
 
-                ModelInner::Ready { core }
+                MupenCoreInner::Ready { core }
             }
             _ => panic!("core should be running"),
         };
     }
 
-    fn state_change(&mut self, emu_state: EmuState, sender: &ComponentSender<Self>) {
-        match (emu_state, mem::replace(&mut self.0, ModelInner::Uninit)) {
-            // The core has stopped on its own since we last started it
-            (
-                EmuState::Stopped,
-                ModelInner::Running {
-                    join_handle,
-                    core_ref,
-                },
-            ) => {
-                join_handle.join().expect("the core thread shouldn't panic");
-
-                let mut core = Arc::into_inner(core_ref)
-                    .expect("no refs to the core should exist outside of the emulator thread");
-
-                core.detach_plugins();
-                core.close_rom().expect("there should be an open ROM");
-
-                self.0 = ModelInner::Ready { core };
-            }
-            // Nothing interesting
-            (_, inner) => self.0 = inner,
-        }
-
-        // Forward state change to frontend
-        let _ = sender.output(Response::EmuStateChange(emu_state));
-    }
-
     fn toggle_pause(&mut self, _sender: &ComponentSender<Self>) {
         match &mut self.0 {
-            ModelInner::Running {
+            MupenCoreInner::Running {
                 join_handle: _,
                 core_ref,
             } => match core_ref.emu_state() {
@@ -208,7 +198,7 @@ impl Model {
 
     fn advance_frame(&mut self, _sender: &ComponentSender<Self>) {
         match &mut self.0 {
-            ModelInner::Running {
+            MupenCoreInner::Running {
                 join_handle: _,
                 core_ref,
             } => core_ref
@@ -220,7 +210,7 @@ impl Model {
 
     fn reset(&mut self, _sender: &ComponentSender<Self>) {
         match &mut self.0 {
-            ModelInner::Running {
+            MupenCoreInner::Running {
                 join_handle: _,
                 core_ref,
             } => core_ref
@@ -229,22 +219,105 @@ impl Model {
             _ => panic!("core should be running"),
         }
     }
+
+    fn state_change(&mut self, emu_state: EmuState, sender: &ComponentSender<Self>) {
+        match (emu_state, mem::replace(&mut self.0, MupenCoreInner::Uninit)) {
+            // The core has stopped on its own since we last started it
+            (
+                EmuState::Stopped,
+                MupenCoreInner::Running {
+                    join_handle,
+                    core_ref,
+                },
+            ) => {
+                join_handle.join().expect("the core thread shouldn't panic");
+
+                let mut core = Arc::into_inner(core_ref)
+                    .expect("no refs to the core should exist outside of the emulator thread");
+
+                core.detach_plugins();
+                core.close_rom().expect("there should be an open ROM");
+
+                self.0 = MupenCoreInner::Ready { core };
+            }
+            // Nothing interesting
+            (_, inner) => self.0 = inner,
+        }
+
+        // Forward state change to frontend
+        let _ = sender.output(MupenCoreResponse::EmuStateChanged(emu_state));
+    }
+
+    fn save_slot(&mut self, sender: &ComponentSender<Self>) {
+        let core_ref = match &self.0 {
+            MupenCoreInner::Running {
+                join_handle: _,
+                core_ref,
+            } => Arc::clone(core_ref),
+            _ => panic!("core should be running"),
+        };
+
+        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+
+        sender.oneshot_command(async move {
+            let result = core_ref.save_state().await;
+            MupenCoreCommandResponse::SaveComplete(result)
+        });
+    }
+
+    fn load_slot(&mut self, sender: &ComponentSender<Self>) {
+        let core_ref = match &self.0 {
+            MupenCoreInner::Running {
+                join_handle: _,
+                core_ref,
+            } => Arc::clone(core_ref),
+            _ => panic!("core should be running"),
+        };
+
+        sender.oneshot_command(async move {
+            let result = core_ref.load_state().await;
+            MupenCoreCommandResponse::LoadComplete(result)
+        });
+    }
+
+    fn save_op_complete(
+        &mut self,
+        result: Result<(), SavestateError>,
+        sender: &ComponentSender<Self>,
+    ) {
+        let _ = sender.output(MupenCoreResponse::StateRequestComplete);
+        if let Err(error) = result {
+            let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+        }
+    }
+
+    fn set_save_slot(&mut self, slot: u8, _sender: &ComponentSender<Self>) {
+        match &mut self.0 {
+            MupenCoreInner::Running {
+                join_handle: _,
+                core_ref,
+            } => core_ref
+                .set_savestate_slot(slot)
+                .expect("savestate slot set should succeed"),
+            _ => panic!("core should be running"),
+        }
+    }
 }
 
 /// Internal functions behind the requests.
-impl Model {
+impl MupenCore {
     fn start_rom_inner(
         rom_data: &[u8],
         mut core: m64prs_core::Core,
         sender: &ComponentSender<Self>,
-    ) -> ModelInner {
+    ) -> MupenCoreInner {
         macro_rules! check {
             ($res:expr) => {
                 match ($res) {
                     Ok(value) => value,
                     Err(err) => {
-                        let _ = sender.output(Response::Error(Box::new(err)));
-                        return ModelInner::Ready { core };
+                        let _ = sender.output(MupenCoreResponse::Error(Box::new(err)));
+                        return MupenCoreInner::Ready { core };
                     }
                 }
             };
@@ -280,9 +353,9 @@ impl Model {
         check!(core.open_rom(rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
-            let _ = sender.output(Response::Error(Box::new(err)));
+            let _ = sender.output(MupenCoreResponse::Error(Box::new(err)));
             core.close_rom().expect("there should be an open ROM");
-            return ModelInner::Ready { core };
+            return MupenCoreInner::Ready { core };
         }
 
         let core_ref = Arc::new(core);
@@ -294,7 +367,7 @@ impl Model {
             })
         };
 
-        ModelInner::Running {
+        MupenCoreInner::Running {
             join_handle,
             core_ref,
         }
@@ -313,27 +386,59 @@ impl Model {
     }
 }
 
-impl Worker for Model {
+impl Component for MupenCore {
     type Init = ();
 
-    type Input = Request;
-    type Output = Response;
+    type Input = MupenCoreRequest;
+    type Output = MupenCoreResponse;
 
-    fn init(_: Self::Init, sender: ComponentSender<Self>) -> Self {
-        let result = Self(ModelInner::Uninit);
-        sender.input(Request::Init);
-        result
+    type CommandOutput = MupenCoreCommandResponse;
+
+    type Root = ();
+    type Widgets = ();
+
+    fn init(_init: (), _root: (), sender: ComponentSender<Self>) -> ComponentParts<Self> {
+        let model = Self(MupenCoreInner::Uninit);
+        sender.input(MupenCoreRequest::Init);
+        ComponentParts { model, widgets: () }
     }
 
-    fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>) {
+    fn init_root() -> Self::Root {
+        ()
+    }
+
+    fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>, _root: &()) {
         match request {
-            Request::Init => self.init(&sender),
-            Request::StartRom(path) => self.start_rom(&path, &sender),
-            Request::StopRom => self.stop_rom(&sender),
-            Request::CoreEmuStateChange(emu_state) => self.state_change(emu_state, &sender),
-            Request::TogglePause => self.toggle_pause(&sender),
-            Request::FrameAdvance => self.advance_frame(&sender),
-            Request::Reset => self.reset(&sender),
+            MupenCoreRequest::Init => self.init(&sender),
+            MupenCoreRequest::CoreEmuStateChange(emu_state) => {
+                self.state_change(emu_state, &sender)
+            }
+            MupenCoreRequest::StartRom(path) => self.start_rom(&path, &sender),
+            MupenCoreRequest::StopRom => self.stop_rom(&sender),
+            MupenCoreRequest::TogglePause => self.toggle_pause(&sender),
+            MupenCoreRequest::FrameAdvance => self.advance_frame(&sender),
+            MupenCoreRequest::Reset => self.reset(&sender),
+            MupenCoreRequest::SaveSlot => self.save_slot(&sender),
+            MupenCoreRequest::LoadSlot => self.load_slot(&sender),
+            MupenCoreRequest::SetSaveSlot(slot) => self.set_save_slot(slot, &sender),
+            MupenCoreRequest::SaveFile(path) => todo!(),
+            MupenCoreRequest::LoadFile(path) => todo!(),
+        }
+    }
+
+    fn update_cmd(
+        &mut self,
+        response: Self::CommandOutput,
+        sender: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
+        match response {
+            MupenCoreCommandResponse::LoadComplete(result) => {
+                self.save_op_complete(result, &sender)
+            }
+            MupenCoreCommandResponse::SaveComplete(result) => {
+                self.save_op_complete(result, &sender)
+            }
         }
     }
 }

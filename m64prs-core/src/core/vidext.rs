@@ -17,12 +17,12 @@ use crate::error::M64PError;
 use super::{core_fn, Core};
 
 impl Core {
-    pub fn override_vidext<V: VideoExtension>(
+    pub fn override_vidext<V: VideoExtension, T: Any + 'static>(
         &mut self,
-        context: Box<dyn Any>,
+        context: T,
     ) -> Result<(), M64PError> {
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
-        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(None, context)));
+        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(None, Box::new(context))));
         drop(vidext_box);
 
         // SAFETY: VIDEXT_TABLE is 'static, so it should outlive the core.

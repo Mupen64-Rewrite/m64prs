@@ -19,7 +19,9 @@ use super::{
     core::{
         self,
         vidext::{VidextRequest, VidextResponse},
-    }, dialogs::file::FileDialogRequest,
+        MupenCore, MupenCoreRequest, MupenCoreResponse,
+    },
+    dialogs::file::FileDialogRequest,
 };
 
 #[derive(Debug)]
@@ -36,6 +38,9 @@ pub enum Message {
     MenuTogglePause,
     MenuFrameAdvance,
     MenuResetRom,
+    MenuSaveSlot,
+    MenuLoadSlot,
+    MenuSetSaveSlot(u8),
 
     // CORE CALLBACKS
     // ==================
@@ -43,7 +48,9 @@ pub enum Message {
         vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
     CoreError(Box<dyn Error + Send + 'static>),
-    CoreStateChange(EmuState),
+    CoreStateChanged(EmuState),
+    CoreIoStateChanged(bool),
+    CoreSavestateSlotChanged(u8),
     CoreVidextRequest(usize, VidextRequest),
 }
 
@@ -55,9 +62,11 @@ enum MainViewState {
 
 #[derive(Debug)]
 pub struct Model {
-    core: WorkerController<core::Model>,
+    core: WorkerController<MupenCore>,
     core_ready: bool,
     core_state: EmuState,
+    core_io_state: bool,
+    core_savestate_slot: u8,
     vidext_inbound: OnceCell<mpsc::Sender<(usize, VidextResponse)>>,
 
     main_view: MainViewState,
@@ -84,9 +93,26 @@ impl Component for Model {
                 "Close ROM" => CloseRomAction,
             },
             "Emulator" {
-                "Pause" => TogglePauseAction,
-                "Frame Advance" => FrameAdvanceAction,
-                "Reset ROM" => ResetRomAction,
+                section! {
+                    "Pause" => TogglePauseAction,
+                    "Frame Advance" => FrameAdvanceAction,
+                    "Reset ROM" => ResetRomAction,
+                },
+                section! {
+                    "Save State" => SaveSlotAction,
+                    "Load State" => LoadSlotAction,
+                    "Current Slot" {
+                        "1" => SetSaveSlotAction(1),
+                        "2" => SetSaveSlotAction(2),
+                        "3" => SetSaveSlotAction(3),
+                        "4" => SetSaveSlotAction(4),
+                        "5" => SetSaveSlotAction(5),
+                        "6" => SetSaveSlotAction(6),
+                        "7" => SetSaveSlotAction(7),
+                        "8" => SetSaveSlotAction(8),
+                        "9" => SetSaveSlotAction(9),
+                    }
+                }
             }
         }
     }
@@ -118,7 +144,11 @@ impl Component for Model {
         #[name(app_actions)]
         actions::AppActions::new(&sender) {
             #[watch]
-            set_mupen_state: model.core_state
+            set_core_state: model.core_state,
+            #[watch]
+            set_core_io_state: model.core_io_state,
+            #[watch]
+            set_core_savestate_slot: model.core_savestate_slot,
         }
     }
 
@@ -127,17 +157,22 @@ impl Component for Model {
         root: Self::Root,
         sender: relm4::ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let core = core::Model::builder()
+        let core = MupenCore::builder()
             .detach_worker(())
             .forward(sender.input_sender(), |msg| match msg {
-                core::Response::CoreReady { vidext_inbound } => {
+                MupenCoreResponse::CoreReady { vidext_inbound } => {
                     Message::CoreReady { vidext_inbound }
                 }
-                core::Response::Error(error) => Message::CoreError(error),
-                core::Response::EmuStateChange(emu_state) => Message::CoreStateChange(emu_state),
-                core::Response::VidextRequest(id, request) => {
+                MupenCoreResponse::Error(error) => Message::CoreError(error),
+                MupenCoreResponse::EmuStateChanged(emu_state) => {
+                    Message::CoreStateChanged(emu_state)
+                }
+                MupenCoreResponse::VidextRequest(id, request) => {
                     Message::CoreVidextRequest(id, request)
                 }
+                MupenCoreResponse::StateRequestStarted => Message::CoreIoStateChanged(true),
+                MupenCoreResponse::StateRequestComplete => Message::CoreIoStateChanged(false),
+                MupenCoreResponse::SavestateSlotChanged(slot) => Message::CoreSavestateSlotChanged(slot),
             });
 
         let rom_file_dialog = FileDialog::builder()
@@ -179,6 +214,8 @@ impl Component for Model {
             core,
             core_ready: false,
             core_state: EmuState::Stopped,
+            core_io_state: false,
+            core_savestate_slot: 1,
             vidext_inbound: OnceCell::new(),
             // view state
             main_view: MainViewState::RomBrowser,
@@ -212,23 +249,35 @@ impl Component for Model {
 
             // MENU ACTIONS
             // ===============
+            // File
             Message::MenuOpenRom => {
                 self.rom_file_dialog.emit(FileDialogRequest::Open);
             }
             Message::MenuOpenRom2(path) => {
-                self.core.emit(core::Request::StartRom(path));
+                self.core.emit(MupenCoreRequest::StartRom(path));
             }
             Message::MenuCloseRom => {
-                self.core.emit(core::Request::StopRom);
+                self.core.emit(MupenCoreRequest::StopRom);
             }
+            // Emulator
             Message::MenuTogglePause => {
-                self.core.emit(core::Request::TogglePause);
+                self.core.emit(MupenCoreRequest::TogglePause);
             }
             Message::MenuFrameAdvance => {
-                self.core.emit(core::Request::FrameAdvance);
+                self.core.emit(MupenCoreRequest::FrameAdvance);
             }
             Message::MenuResetRom => {
-                self.core.emit(core::Request::Reset);
+                self.core.emit(MupenCoreRequest::Reset);
+            }
+            // Shit
+            Message::MenuSaveSlot => {
+                self.core.emit(MupenCoreRequest::SaveSlot);
+            }
+            Message::MenuLoadSlot => {
+                self.core.emit(MupenCoreRequest::LoadSlot);
+            }
+            Message::MenuSetSaveSlot(slot) => {
+                self.core.emit(MupenCoreRequest::SetSaveSlot(slot));
             }
             // CORE FEEDBACK
             // ===============
@@ -239,15 +288,19 @@ impl Component for Model {
             Message::CoreError(error) => {
                 const MESSAGE: &str = "Error occurred!";
 
-                self.core_error_dialog
-                    .emit(AlertDialogRequest::Show {
-                        message: MESSAGE.to_owned(),
-                        detail: error.to_string(),
-                    })
+                self.core_error_dialog.emit(AlertDialogRequest::Show {
+                    message: MESSAGE.to_owned(),
+                    detail: error.to_string(),
+                })
             }
-
-            Message::CoreStateChange(emu_state) => {
+            Message::CoreStateChanged(emu_state) => {
                 self.core_state = emu_state;
+            }
+            Message::CoreIoStateChanged(io_state) => {
+                self.core_io_state = io_state;
+            }
+            Message::CoreSavestateSlotChanged(slot) => {
+                self.core_savestate_slot = slot;
             }
             Message::CoreVidextRequest(id, request) => match request {
                 VidextRequest::EnterGameView => {

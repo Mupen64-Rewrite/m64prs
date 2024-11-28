@@ -52,14 +52,14 @@ enum GraphicsState {
 }
 
 pub struct VideoExtensionParameters {
-    outbound: ComponentSender<super::Model>,
+    outbound: ComponentSender<super::MupenCore>,
     inbound: mpsc::Receiver<(usize, VidextResponse)>,
 }
 
 impl VideoExtensionParameters {
     /// Constructs the message queues.
     pub(super) fn new(
-        sender: ComponentSender<super::Model>,
+        sender: ComponentSender<super::MupenCore>,
     ) -> (Self, mpsc::Sender<(usize, VidextResponse)>) {
         let (tx, rx) = mpsc::channel();
 

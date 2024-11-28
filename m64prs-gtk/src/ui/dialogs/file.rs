@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use glib::object::IsA;
+use glib::{object::IsA, translate::ToGlibContainerFromSlice};
 use gtk::{
     gio::{self, ListStore},
     prelude::*,
@@ -70,20 +70,21 @@ impl FileDialogSettings {
     fn into_widgets(self) -> FileDialogWidgets {
         let dialog = gtk::FileDialog::new();
 
-        if !self.filters.is_empty() {
-            let store = ListStore::new::<gtk::FileFilter>();
-            store.extend_from_slice(&self.filters);
+        let Self { transient_to, default_filter, filters, title, accept_label, modal } = self;
+
+        if !filters.is_empty() {
+            let store: gio::ListStore = filters.into_iter().collect();
             dialog.set_filters(Some(&store));
-            dialog.set_default_filter(self.default_filter.as_ref());
+            dialog.set_default_filter(default_filter.as_ref());
         }
 
-        dialog.set_title(&self.title);
-        dialog.set_accept_label(self.accept_label.as_deref());
-        dialog.set_modal(self.modal);
+        dialog.set_title(&title);
+        dialog.set_accept_label(accept_label.as_deref());
+        dialog.set_modal(modal);
 
         FileDialogWidgets {
             dialog,
-            transient_window: self.transient_to,
+            transient_window: transient_to,
         }
     }
 }
