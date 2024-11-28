@@ -8,7 +8,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use m64prs_core::{error::SavestateError, plugin::PluginSet, Plugin};
+use m64prs_core::{error::SavestateError, plugin::PluginSet, save::SavestateFormat, Plugin};
 use m64prs_sys::{CoreParam, EmuState};
 use num_enum::TryFromPrimitive;
 use relm4::{Component, ComponentParts, ComponentSender, Worker};
@@ -280,6 +280,40 @@ impl MupenCore {
         });
     }
 
+    fn save_file(&mut self, path: PathBuf, sender: &ComponentSender<Self>) {
+        let core_ref = match &self.0 {
+            MupenCoreInner::Running {
+                join_handle: _,
+                core_ref,
+            } => Arc::clone(core_ref),
+            _ => panic!("core should be running"),
+        };
+
+        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+
+        sender.oneshot_command(async move {
+            let result = core_ref.save_file(path, SavestateFormat::Mupen64Plus).await;
+            MupenCoreCommandResponse::SaveComplete(result)
+        });
+    }
+
+    fn load_file(&mut self, path: PathBuf, sender: &ComponentSender<Self>) {
+        let core_ref = match &self.0 {
+            MupenCoreInner::Running {
+                join_handle: _,
+                core_ref,
+            } => Arc::clone(core_ref),
+            _ => panic!("core should be running"),
+        };
+
+        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+
+        sender.oneshot_command(async move {
+            let result = core_ref.load_file(path).await;
+            MupenCoreCommandResponse::SaveComplete(result)
+        });
+    }
+
     fn save_op_complete(
         &mut self,
         result: Result<(), SavestateError>,
@@ -408,21 +442,20 @@ impl Component for MupenCore {
     }
 
     fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>, _root: &()) {
+        use MupenCoreRequest::*;
         match request {
-            MupenCoreRequest::Init => self.init(&sender),
-            MupenCoreRequest::CoreEmuStateChange(emu_state) => {
-                self.state_change(emu_state, &sender)
-            }
-            MupenCoreRequest::StartRom(path) => self.start_rom(&path, &sender),
-            MupenCoreRequest::StopRom => self.stop_rom(&sender),
-            MupenCoreRequest::TogglePause => self.toggle_pause(&sender),
-            MupenCoreRequest::FrameAdvance => self.advance_frame(&sender),
-            MupenCoreRequest::Reset => self.reset(&sender),
-            MupenCoreRequest::SaveSlot => self.save_slot(&sender),
-            MupenCoreRequest::LoadSlot => self.load_slot(&sender),
-            MupenCoreRequest::SetSaveSlot(slot) => self.set_save_slot(slot, &sender),
-            MupenCoreRequest::SaveFile(path) => todo!(),
-            MupenCoreRequest::LoadFile(path) => todo!(),
+            Init => self.init(&sender),
+            CoreEmuStateChange(emu_state) => self.state_change(emu_state, &sender),
+            StartRom(path) => self.start_rom(&path, &sender),
+            StopRom => self.stop_rom(&sender),
+            TogglePause => self.toggle_pause(&sender),
+            FrameAdvance => self.advance_frame(&sender),
+            Reset => self.reset(&sender),
+            SaveSlot => self.save_slot(&sender),
+            LoadSlot => self.load_slot(&sender),
+            SetSaveSlot(slot) => self.set_save_slot(slot, &sender),
+            SaveFile(path) => self.save_file(path, &sender),
+            LoadFile(path) => self.load_file(path, &sender),
         }
     }
 

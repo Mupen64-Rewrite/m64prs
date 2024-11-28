@@ -25,6 +25,8 @@ new_stateless_action!(pub ResetRomAction, AppActionsGroup, "emu.reset_rom");
 new_stateless_action!(pub SaveSlotAction, AppActionsGroup, "emu.save_slot");
 new_stateless_action!(pub LoadSlotAction, AppActionsGroup, "emu.load_slot");
 new_stateful_action!(pub SetSaveSlotAction, AppActionsGroup, "emu.set_save_slot", u8, u8);
+new_stateless_action!(pub SaveFileAction, AppActionsGroup, "emu.save_file");
+new_stateless_action!(pub LoadFileAction, AppActionsGroup, "emu.load_file");
 
 pub(super) struct AppActions {
     emu_state: Cell<EmuState>,
@@ -38,6 +40,8 @@ pub(super) struct AppActions {
     save_slot: RelmAction<SaveSlotAction>,
     load_slot: RelmAction<LoadSlotAction>,
     set_save_slot: RelmAction<SetSaveSlotAction>,
+    save_file: RelmAction<SaveFileAction>,
+    load_file: RelmAction<LoadFileAction>
 }
 
 impl AppActions {
@@ -79,8 +83,8 @@ impl AppActions {
             ),
             frame_advance: a!(group, send_message!(main::Message::MenuFrameAdvance)),
             reset_rom: a!(group, send_message!(main::Message::MenuResetRom)),
-            load_slot: a!(group, send_message!(main::Message::MenuSaveSlot)),
-            save_slot: a!(group, send_message!(main::Message::MenuLoadSlot)),
+            save_slot: a!(group, send_message!(main::Message::MenuSaveSlot)),
+            load_slot: a!(group, send_message!(main::Message::MenuLoadSlot)),
             set_save_slot: a!(
                 group,
                 RelmAction::new_stateful_with_target_value(&1u8, {
@@ -88,6 +92,8 @@ impl AppActions {
                     move |_, _, slot| sender.input(main::Message::MenuSetSaveSlot(slot))
                 })
             ),
+            save_file: a!(group, send_message!(main::Message::MenuSaveFile)),
+            load_file: a!(group, send_message!(main::Message::MenuLoadFile)),
         };
         group.register_for_main_application();
 
@@ -117,6 +123,8 @@ impl AppActions {
         self.save_slot.set_enabled(is_save_ok);
         self.load_slot.set_enabled(is_save_ok);
         self.set_save_slot.set_enabled(is_save_ok);
+        self.save_file.set_enabled(is_save_ok);
+        self.load_file.set_enabled(is_save_ok);
     }
 
     pub(super) fn set_core_io_state(&self, io_state: bool) {
@@ -130,6 +138,8 @@ impl AppActions {
         self.save_slot.set_enabled(is_save_ok);
         self.load_slot.set_enabled(is_save_ok);
         self.set_save_slot.set_enabled(is_save_ok);
+        self.save_file.set_enabled(is_save_ok);
+        self.load_file.set_enabled(is_save_ok);
     }
 
     pub(super) fn set_core_savestate_slot(&self, slot: u8) {

@@ -41,6 +41,10 @@ pub enum Message {
     MenuSaveSlot,
     MenuLoadSlot,
     MenuSetSaveSlot(u8),
+    MenuSaveFile,
+    MenuSaveFile2(PathBuf),
+    MenuLoadFile,
+    MenuLoadFile2(PathBuf),
 
     // CORE CALLBACKS
     // ==================
@@ -73,6 +77,8 @@ pub struct Model {
 
     rom_file_dialog: Controller<FileDialog>,
     core_error_dialog: Controller<AlertDialog>,
+    state_load_dialog: Controller<FileDialog>,
+    state_save_dialog: Controller<FileDialog>,
 }
 
 impl Model {}
@@ -112,6 +118,10 @@ impl Component for Model {
                         "8" => SetSaveSlotAction(8),
                         "9" => SetSaveSlotAction(9),
                     }
+                },
+                section! {
+                    "Save State As..." => SaveFileAction,
+                    "Load State As..." => LoadFileAction,
                 }
             }
         }
@@ -172,7 +182,9 @@ impl Component for Model {
                 }
                 MupenCoreResponse::StateRequestStarted => Message::CoreIoStateChanged(true),
                 MupenCoreResponse::StateRequestComplete => Message::CoreIoStateChanged(false),
-                MupenCoreResponse::SavestateSlotChanged(slot) => Message::CoreSavestateSlotChanged(slot),
+                MupenCoreResponse::SavestateSlotChanged(slot) => {
+                    Message::CoreSavestateSlotChanged(slot)
+                }
             });
 
         let rom_file_dialog = FileDialog::builder()
@@ -198,6 +210,53 @@ impl Component for Model {
                 FileDialogResponse::Accept(path) => Message::MenuOpenRom2(path),
                 FileDialogResponse::Cancel => Message::NoOp,
             });
+
+        let state_save_dialog = FileDialog::builder()
+            .launch(
+                FileDialogSettings::new()
+                    .with_transient_to(&root)
+                    .with_title("Save State...")
+                    .with_filters(
+                        vec![{
+                            let filter = FileFilter::new();
+                            filter.set_name(Some("Savestates (*.st, *.savestate)"));
+
+                            filter.add_pattern("*.st");
+                            filter.add_pattern("*.savestate");
+
+                            filter
+                        }],
+                        Some(0),
+                    ),
+            )
+            .forward(sender.input_sender(), |msg| match msg {
+                FileDialogResponse::Accept(path) => Message::MenuSaveFile2(path),
+                FileDialogResponse::Cancel => Message::NoOp,
+            });
+
+        let state_load_dialog = FileDialog::builder()
+            .launch(
+                FileDialogSettings::new()
+                    .with_transient_to(&root)
+                    .with_title("Load State...")
+                    .with_filters(
+                        vec![{
+                            let filter = FileFilter::new();
+                            filter.set_name(Some("Savestates (*.st, *.savestate)"));
+
+                            filter.add_pattern("*.st");
+                            filter.add_pattern("*.savestate");
+
+                            filter
+                        }],
+                        Some(0),
+                    ),
+            )
+            .forward(sender.input_sender(), |msg| match msg {
+                FileDialogResponse::Accept(path) => Message::MenuSaveFile2(path),
+                FileDialogResponse::Cancel => Message::NoOp,
+            });
+
         let core_error_dialog = AlertDialog::builder()
             .launch(
                 AlertDialogSettings::new()
@@ -222,6 +281,8 @@ impl Component for Model {
             // dialogs
             rom_file_dialog,
             core_error_dialog,
+            state_load_dialog,
+            state_save_dialog,
         };
         let widgets = view_output!();
 
@@ -269,7 +330,6 @@ impl Component for Model {
             Message::MenuResetRom => {
                 self.core.emit(MupenCoreRequest::Reset);
             }
-            // Shit
             Message::MenuSaveSlot => {
                 self.core.emit(MupenCoreRequest::SaveSlot);
             }
@@ -278,6 +338,18 @@ impl Component for Model {
             }
             Message::MenuSetSaveSlot(slot) => {
                 self.core.emit(MupenCoreRequest::SetSaveSlot(slot));
+            }
+            Message::MenuSaveFile => {
+                self.state_save_dialog.emit(FileDialogRequest::Save);
+            }
+            Message::MenuSaveFile2(path) => {
+                self.core.emit(MupenCoreRequest::SaveFile(path));
+            }
+            Message::MenuLoadFile => {
+                self.state_load_dialog.emit(FileDialogRequest::Open);
+            }
+            Message::MenuLoadFile2(path) => {
+                self.core.emit(MupenCoreRequest::LoadFile(path));
             }
             // CORE FEEDBACK
             // ===============

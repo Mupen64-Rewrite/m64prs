@@ -1,12 +1,11 @@
 use std::{
-    ffi::c_int,
-    pin::Pin,
-    sync::mpsc,
-    task::{Context, Poll},
+    ffi::{c_int, CString}, path::Path, pin::Pin, sync::mpsc, task::{Context, Poll}
 };
 
+use std::path::PathBuf;
 use futures::{channel::oneshot, Future};
 use m64prs_sys::{Command, CoreParam};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::error::{M64PError, SavestateError};
 
@@ -17,38 +16,60 @@ impl Core {
     /// Saves game state to the current slot.
     pub async fn save_state(&self) -> Result<(), SavestateError> {
         let _lock = self.st_mutex.lock().await;
-        let res = self.save_state_inner().await;
-        res
+        self.save_op_inner(CoreParam::StateSaveComplete, || {
+            self.do_command(Command::StateSave)
+        })
+        .await
     }
 
     /// Loads game state from the current slot.
     pub async fn load_state(&self) -> Result<(), SavestateError> {
         let _lock = self.st_mutex.lock().await;
-        let res = self.load_state_inner().await;
-        res
+        self.save_op_inner(CoreParam::StateLoadComplete, || {
+            self.do_command(Command::StateLoad)
+        })
+        .await
     }
 
-    fn save_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
-        // create transmission channel for savestate result
-        let (mut future, waiter) = save_pair(CoreParam::StateSaveComplete);
+    pub async fn save_file<P: AsRef<Path>>(
+        &self,
+        path: P,
+        format: SavestateFormat,
+    ) -> Result<(), SavestateError> {
+        let _lock = self.st_mutex.lock().await;
+        let c_path = CString::new(path.as_ref().to_str().unwrap()).unwrap();
+
+        self.save_op_inner(CoreParam::StateSaveComplete, || unsafe {
+            self.do_command_ip(
+                Command::StateSave,
+                format as c_int,
+                c_path.as_ptr() as *mut _,
+            )
+        })
+        .await
+    }
+
+    pub async fn load_file<P: AsRef<Path>>(&self, path: P) -> Result<(), SavestateError> {
+        let _lock = self.st_mutex.lock().await;
+        let c_path = CString::new(path.as_ref().to_str().unwrap()).unwrap();
+
+        self.save_op_inner(CoreParam::StateSaveComplete, || unsafe {
+            self.do_command_p(Command::StateSave, c_path.as_ptr() as *mut _)
+        })
+        .await
+    }
+
+    fn save_op_inner<F: FnOnce() -> Result<(), M64PError>>(
+        &self,
+        param: CoreParam,
+        f: F,
+    ) -> impl Future<Output = Result<(), SavestateError>> {
+        let (mut future, waiter) = save_pair(param);
         self.st_sender
             .send(waiter)
             .expect("save waiter queue should still be connected");
         // initiate the save operation. This is guaranteed to trip the waiter at some point.
-        if let Err(error) = self.do_command(Command::StateSave) {
-            future.fail_early(error);
-        }
-
-        future
-    }
-
-    fn load_state_inner(&self) -> impl Future<Output = Result<(), SavestateError>> {
-        let (mut future, waiter) = save_pair(CoreParam::StateLoadComplete);
-        self.st_sender
-            .send(waiter)
-            .expect("save waiter queue should still be connected");
-
-        if let Err(error) = self.do_command(Command::StateSave) {
+        if let Err(error) = f() {
             future.fail_early(error);
         }
 
@@ -62,6 +83,14 @@ impl Core {
 
         self.do_command_i(Command::StateSetSlot, slot as i32)
     }
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
+pub enum SavestateFormat {
+    Mupen64Plus = 1,
+    Project64 = 2,
+    Project64Uncompressed = 3,
 }
 
 /// Class that waits for a state change and resolves a savestate future.
