@@ -19,8 +19,12 @@ pub mod vidext;
 #[derive(Debug)]
 pub enum Request {
     Init,
+
     StartRom(PathBuf),
     StopRom,
+    TogglePause,
+    FrameAdvance,
+    Reset,
 
     CoreEmuStateChange(EmuState),
 }
@@ -158,6 +162,73 @@ impl Model {
             _ => panic!("core should be running"),
         };
     }
+
+    fn state_change(&mut self, emu_state: EmuState, sender: &ComponentSender<Self>) {
+        match (emu_state, mem::replace(&mut self.0, ModelInner::Uninit)) {
+            // The core has stopped on its own since we last started it
+            (
+                EmuState::Stopped,
+                ModelInner::Running {
+                    join_handle,
+                    core_ref,
+                },
+            ) => {
+                join_handle.join().expect("the core thread shouldn't panic");
+
+                let mut core = Arc::into_inner(core_ref)
+                    .expect("no refs to the core should exist outside of the emulator thread");
+
+                core.detach_plugins();
+                core.close_rom().expect("there should be an open ROM");
+
+                self.0 = ModelInner::Ready { core };
+            }
+            // Nothing interesting
+            (_, inner) => self.0 = inner,
+        }
+
+        // Forward state change to frontend
+        let _ = sender.output(Response::EmuStateChange(emu_state));
+    }
+
+    fn toggle_pause(&mut self, _sender: &ComponentSender<Self>) {
+        match &mut self.0 {
+            ModelInner::Running {
+                join_handle: _,
+                core_ref,
+            } => match core_ref.emu_state() {
+                EmuState::Running => core_ref.request_pause(),
+                EmuState::Paused => core_ref.request_resume(),
+                _ => unreachable!(),
+            }
+            .expect("command execution should not fail"),
+            _ => panic!("core should be running"),
+        };
+    }
+
+    fn advance_frame(&mut self, _sender: &ComponentSender<Self>) {
+        match &mut self.0 {
+            ModelInner::Running {
+                join_handle: _,
+                core_ref,
+            } => core_ref
+                .request_advance_frame()
+                .expect("command execution should not fail"),
+            _ => panic!("core should be running"),
+        }
+    }
+
+    fn reset(&mut self, _sender: &ComponentSender<Self>) {
+        match &mut self.0 {
+            ModelInner::Running {
+                join_handle: _,
+                core_ref,
+            } => core_ref
+                .reset(false)
+                .expect("command execution should not fail"),
+            _ => panic!("core should be running"),
+        }
+    }
 }
 
 /// Internal functions behind the requests.
@@ -259,25 +330,10 @@ impl Worker for Model {
             Request::Init => self.init(&sender),
             Request::StartRom(path) => self.start_rom(&path, &sender),
             Request::StopRom => self.stop_rom(&sender),
-            Request::CoreEmuStateChange(emu_state) => {
-                match (emu_state, mem::replace(&mut self.0, ModelInner::Uninit)) {
-                    (EmuState::Stopped, ModelInner::Running { join_handle, core_ref }) => {
-                        // The core has stopped and we are big fucked
-                        join_handle.join().expect("the core thread shouldn't panic");
-                
-                        let mut core = Arc::into_inner(core_ref)
-                            .expect("no refs to the core should exist outside of the emulator thread");
-
-                        core.detach_plugins();
-                        core.close_rom().expect("there should be an open ROM");
-
-                        self.0 = ModelInner::Ready { core };
-                    }
-                    (_, inner) => self.0 = inner,
-                }
-
-                let _ = sender.output(Response::EmuStateChange(emu_state));
-            },
+            Request::CoreEmuStateChange(emu_state) => self.state_change(emu_state, &sender),
+            Request::TogglePause => self.toggle_pause(&sender),
+            Request::FrameAdvance => self.advance_frame(&sender),
+            Request::Reset => self.reset(&sender),
         }
     }
 }

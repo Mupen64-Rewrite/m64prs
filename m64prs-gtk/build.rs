@@ -13,7 +13,7 @@ fn gl_gen() {
 
 
 fn win_manifest() {
-    use embed_manifest::{self, manifest::{ActiveCodePage, DpiAwareness, ManifestBuilder}};
+    use embed_manifest::{self, manifest::{ActiveCodePage, DpiAwareness}};
     let manifest = embed_manifest::new_manifest("M64prs.Gtk")
         .dpi_awareness(DpiAwareness::PerMonitorV2)
         .active_code_page(ActiveCodePage::Utf8);

@@ -1,14 +1,13 @@
 use std::{
-    cell::{OnceCell, RefCell},
+    cell::OnceCell,
     error::Error,
     path::PathBuf,
     sync::mpsc,
 };
 
-use gtk::{gio, prelude::*, FileFilter};
+use gtk::{prelude::*, FileFilter};
 use m64prs_sys::EmuState;
 use relm4::{
-    actions::{RelmAction, RelmActionGroup},
     Component, ComponentController, ComponentParts, ComponentSender, Controller, SimpleComponent,
     WorkerController,
 };
@@ -16,7 +15,13 @@ use relm4::{
 use crate::controls;
 
 use super::{
-    actions::{self, *}, alert_dialog, core::{self, vidext::{VidextRequest, VidextResponse}}, file_dialog
+    actions::{self, *},
+    alert_dialog,
+    core::{
+        self,
+        vidext::{VidextRequest, VidextResponse},
+    },
+    file_dialog,
 };
 
 #[derive(Debug)]
@@ -24,9 +29,15 @@ pub enum Message {
     NoOp,
     // MENU ITEMS
     // ==================
-    MenuRomOpen,
-    MenuRomOpen2(PathBuf),
-    MenuRomClose,
+
+    // File
+    MenuOpenRom,
+    MenuOpenRom2(PathBuf),
+    MenuCloseRom,
+    // Emulator
+    MenuTogglePause,
+    MenuFrameAdvance,
+    MenuResetRom,
 
     // CORE CALLBACKS
     // ==================
@@ -48,7 +59,7 @@ enum MainViewState {
 pub struct Model {
     core: WorkerController<core::Model>,
     core_ready: bool,
-    core_state: Option<EmuState>,
+    core_state: EmuState,
     vidext_inbound: OnceCell<mpsc::Sender<(usize, VidextResponse)>>,
 
     main_view: MainViewState,
@@ -76,6 +87,8 @@ impl Component for Model {
             },
             "Emulator" {
                 "Pause" => TogglePauseAction,
+                "Frame Advance" => FrameAdvanceAction,
+                "Reset ROM" => ResetRomAction,
             }
         }
     }
@@ -149,7 +162,7 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                file_dialog::Response::Accept(path) => Message::MenuRomOpen2(path),
+                file_dialog::Response::Accept(path) => Message::MenuOpenRom2(path),
                 file_dialog::Response::Cancel => Message::NoOp,
             });
         let core_error_dialog = alert_dialog::Model::builder()
@@ -167,7 +180,7 @@ impl Component for Model {
             // core state
             core,
             core_ready: false,
-            core_state: Some(EmuState::Stopped),
+            core_state: EmuState::Stopped,
             vidext_inbound: OnceCell::new(),
             // view state
             main_view: MainViewState::RomBrowser,
@@ -194,22 +207,33 @@ impl Component for Model {
         widgets: &mut Self::Widgets,
         message: Self::Input,
         sender: ComponentSender<Self>,
-        root: &Self::Root,
+        _root: &Self::Root,
     ) {
         match message {
             Message::NoOp => (),
 
-            Message::MenuRomOpen => {
+            // MENU ACTIONS
+            // ===============
+            Message::MenuOpenRom => {
                 self.rom_file_dialog.emit(file_dialog::Request::Open);
             }
-            Message::MenuRomOpen2(path) => {
+            Message::MenuOpenRom2(path) => {
                 self.core.emit(core::Request::StartRom(path));
             }
-
-            Message::MenuRomClose => {
+            Message::MenuCloseRom => {
                 self.core.emit(core::Request::StopRom);
             }
-
+            Message::MenuTogglePause => {
+                self.core.emit(core::Request::TogglePause);
+            }
+            Message::MenuFrameAdvance => {
+                self.core.emit(core::Request::FrameAdvance);
+            }
+            Message::MenuResetRom => {
+                self.core.emit(core::Request::Reset);
+            }
+            // CORE FEEDBACK
+            // ===============
             Message::CoreReady { vidext_inbound } => {
                 self.core_ready = true;
                 self.vidext_inbound.get_or_init(move || vidext_inbound);
@@ -222,47 +246,46 @@ impl Component for Model {
                     detail: error.to_string(),
                 })
             }
+
             Message::CoreStateChange(emu_state) => {
-                self.core_state = Some(emu_state);
-            },
-            Message::CoreVidextRequest(id, request) => {
-                match request {
-                    VidextRequest::EnterGameView => {
-                        let vidext_inbound = self
-                            .vidext_inbound
-                            .get()
-                            .expect("vidext request should be active");
-
-                        self.main_view = MainViewState::GameView;
-                        let _ = vidext_inbound.send((id, VidextResponse::Done));
-                    }
-                    VidextRequest::ExitGameView => {
-                        let vidext_inbound = self
-                            .vidext_inbound
-                            .get()
-                            .expect("vidext request should be active");
-
-                        self.main_view = MainViewState::RomBrowser;
-                        let _ = vidext_inbound.send((id, VidextResponse::Done));
-                    }
-                    VidextRequest::CreateView(attrs) => {
-                        let vidext_inbound = self
-                            .vidext_inbound
-                            .get()
-                            .expect("vidext request should be active");
-                        let view = widgets.compositor.new_view(attrs);
-                        let _ = vidext_inbound.send((id, VidextResponse::NewView(view)));
-                    }
-                    VidextRequest::DeleteView(view_key) => {
-                        let vidext_inbound = self
-                            .vidext_inbound
-                            .get()
-                            .expect("vidext request should be active");
-                        widgets.compositor.del_view(view_key);
-                        let _ = vidext_inbound.send((id, VidextResponse::Done));
-                    }
-                }
+                self.core_state = emu_state;
             }
+            Message::CoreVidextRequest(id, request) => match request {
+                VidextRequest::EnterGameView => {
+                    let vidext_inbound = self
+                        .vidext_inbound
+                        .get()
+                        .expect("vidext request should be active");
+
+                    self.main_view = MainViewState::GameView;
+                    let _ = vidext_inbound.send((id, VidextResponse::Done));
+                }
+                VidextRequest::ExitGameView => {
+                    let vidext_inbound = self
+                        .vidext_inbound
+                        .get()
+                        .expect("vidext request should be active");
+
+                    self.main_view = MainViewState::RomBrowser;
+                    let _ = vidext_inbound.send((id, VidextResponse::Done));
+                }
+                VidextRequest::CreateView(attrs) => {
+                    let vidext_inbound = self
+                        .vidext_inbound
+                        .get()
+                        .expect("vidext request should be active");
+                    let view = widgets.compositor.new_view(attrs);
+                    let _ = vidext_inbound.send((id, VidextResponse::NewView(view)));
+                }
+                VidextRequest::DeleteView(view_key) => {
+                    let vidext_inbound = self
+                        .vidext_inbound
+                        .get()
+                        .expect("vidext request should be active");
+                    widgets.compositor.del_view(view_key);
+                    let _ = vidext_inbound.send((id, VidextResponse::Done));
+                }
+            },
         }
 
         self.update_view(widgets, sender);

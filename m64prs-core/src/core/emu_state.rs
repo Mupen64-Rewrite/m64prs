@@ -34,8 +34,8 @@ impl Core {
         self.do_command(Command::AdvanceFrame)
     }
     /// Resets the current ROM.
-    pub fn reset(&self) -> Result<(), M64PError> {
-        self.do_command_i(Command::Reset, 1)
+    pub fn reset(&self, hard: bool) -> Result<(), M64PError> {
+        self.do_command_i(Command::Reset, hard as c_int)
     }
 
     /// Queries the emulator's current state.
