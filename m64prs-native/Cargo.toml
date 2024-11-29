@@ -9,4 +9,5 @@ build = "build/main.rs"
 
 [build-dependencies]
 os_pipe = "1.2.1"
+walkdir = "2.5.0"
 which = "6.0.3"

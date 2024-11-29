@@ -85,7 +85,13 @@ $(TARGET_DIR)/$(call pluginname,mupen64plus-rsp-hle): mupen64plus-rsp-hle/projec
 	@cp -fv mupen64plus-rsp-hle/projects/unix/$(call pluginname,mupen64plus-rsp-hle) $(TARGET_DIR)/
 
 .DEFAULT_GOAL := all
-.PHONY: all
+.PHONY: \
+	all \
+	mupen64plus-core/projects/unix/$(core_soname) \
+	mupen64plus-video-rice/projects/unix/$(call pluginname,mupen64plus-video-rice) \
+	mupen64plus-audio-sdl/projects/unix/$(call pluginname,mupen64plus-audio-sdl) \
+	mupen64plus-input-sdl/projects/unix/$(call pluginname,mupen64plus-input-sdl) \
+	mupen64plus-rsp-hle/projects/unix/$(call pluginname,mupen64plus-rsp-hle) \
 
 target_list = \
 	$(TARGET_DIR)/$(call libname,mupen64plus) \

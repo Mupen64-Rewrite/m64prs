@@ -20,11 +20,21 @@ pub fn setup_cargo_reruns() {
     // mupen64plus-core-tas
     {
         let core_dir = Path::new(dirs::M64P_CORE_DIR);
-        emit(&core_dir.join("src"));
+        for entry in walkdir::WalkDir::new(&core_dir.join("src")) {
+            emit(entry.unwrap().path());
+        }
         #[cfg(windows)]
-        emit(&core_dir.join("projects/msvc"));
+        {
+            let project_dir = &core_dir.join("projects/msvc");
+            emit(&project_dir.join("mupen64plus-core.vcxproj"));
+            emit(&project_dir.join("mupen64plus-core.vcxproj.filters"));
+        }
         #[cfg(unix)]
-        emit(&core_dir.join("projects/unix"));
+        {
+            let project_dir = &core_dir.join("projects/unix");
+            emit(&project_dir.join("Makefile"));
+        }
+
     }
 }
 

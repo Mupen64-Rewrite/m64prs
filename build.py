@@ -191,6 +191,11 @@ def clean(args: argparse.Namespace, extra: list[str]):
     root_dir = Path(__file__).parent
     shutil.rmtree(root_dir.joinpath("target"))
     shutil.rmtree(root_dir.joinpath("install"))
+
+    native_dir = root_dir.joinpath("m64prs-native")
+    shutil.rmtree(native_dir.joinpath("target"))
+    
+
     pass
 
 def git_setup(args: argparse.Namespace, extra: list[str]):
