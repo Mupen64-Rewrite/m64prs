@@ -66,10 +66,10 @@ impl Core {
     /// samples secondary to the audio plugin.
     ///
     /// # Errors
-    /// This function errors if the core fails to set the frame handler.
+    /// This function errors if the core fails to set the audio handler.
     ///
     /// # Panics
-    /// The function errors if the frame handler is already set.
+    /// The function errors if the audio handler is already set.
     pub fn set_audio_handler<A: AudioHandler>(&mut self, handler: A) -> Result<(), M64PError> {
         if self.audio_handler.is_some() {
             panic!("audio handler already registered");
@@ -77,7 +77,7 @@ impl Core {
 
         let audio_handler = AudioHandlerFFI::new(handler);
 
-        // This works the exact same way as input_handler.
+        // SAFETY: This works the exact same way as input_handler.
         core_fn(unsafe {
             self.api
                 .tas
@@ -88,6 +88,14 @@ impl Core {
         Ok(())
     }
 
+    /// Sets a *save handler* for the core, which can save and load
+    /// extra data appended onto savestates.
+    ///
+    /// # Errors
+    /// This function errors if the core fails to set the save handler.
+    ///
+    /// # Panics
+    /// The function errors if the save handler is already set.
     pub fn set_save_handler<S: SaveHandler>(&mut self, handler: S) -> Result<(), M64PError> {
         if self.save_handler.is_some() {
             panic!("save handler already registered");
@@ -95,6 +103,7 @@ impl Core {
 
         let save_handler = SaveHandlerFFI::new(handler);
         
+        // SAFETY: This also works the same way as input_handler.
         core_fn(unsafe {
             self.api.tas.set_savestate_handler(&save_handler.create_ffi_handler())
         })?;

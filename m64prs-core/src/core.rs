@@ -200,7 +200,7 @@ impl Core {
             // goes out of scope.
             self.do_command_ip(
                 Command::RomOpen,
-                rom_data.len() as c_int,
+                rom_data.len().try_into().expect("size of ROM should fit into c_int"),
                 rom_data.as_ptr() as *mut c_void,
             )
         }
@@ -211,11 +211,18 @@ impl Core {
         self.do_command(Command::RomClose)
     }
 
+    /// Installs a *state handler*, which can pick up on any changes to various core
+    /// state parameters; see [`m64prs_sys::CoreParam`] for a list of parameters that
+    /// you can listen to.
+    /// 
+    /// Returns a key that may be used to unregister the handler at a later time. See
+    /// [`Core::unlisten_state`] for details.
     pub fn listen_state<F: StateHandler + 'static>(&mut self, f: F) -> StateHandlerKey {
         let mut pin_state = self.pin_state.lock().unwrap();
         pin_state.core_handlers.insert(Box::new(f))
     }
 
+    /// Uninstalls a state handler previously set with [`Core::listen_state`].
     pub fn unlisten_state(&mut self, handler: StateHandlerKey) {
         let mut pin_state = self.pin_state.lock().unwrap();
         pin_state.core_handlers.remove(handler);

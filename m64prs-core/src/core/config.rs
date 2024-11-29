@@ -20,6 +20,7 @@ impl Core {
         if path_ptr.is_null() {
             None
         } else {
+            // SAFETY: Mupen should return a valid pointer.
             Some(
                 unsafe { CStr::from_ptr(path_ptr) }
                     .to_string_lossy()
@@ -116,6 +117,8 @@ impl ConfigSection<'_> {
             function(CStr::from_ptr(name), ptype);
         }
 
+        // SAFETY: the callback is only used within list_parameters,
+        // it is not used after that.
         core_fn(unsafe {
             self.core.api.config.list_parameters(
                 self.handle,

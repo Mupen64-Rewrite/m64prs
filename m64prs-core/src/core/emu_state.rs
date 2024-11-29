@@ -42,6 +42,8 @@ impl Core {
     pub fn emu_state(&self) -> EmuState {
         unsafe {
             let mut result: c_int = 0;
+            // SAFETY: the pointer cast is needed to pass the parameter.
+            // This command should not do anything stupid like holding onto said pointer.
             self.do_command_ip(
                 Command::CoreStateQuery,
                 CoreParam::EmuState as c_int,

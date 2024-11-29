@@ -12,7 +12,6 @@ use m64prs_core::{error::SavestateError, plugin::PluginSet, save::SavestateForma
 use m64prs_sys::{CoreParam, EmuState};
 use num_enum::TryFromPrimitive;
 use relm4::{Component, ComponentParts, ComponentSender, Worker};
-use vcr::TestSaveHandler;
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
 pub mod vidext;
@@ -106,9 +105,9 @@ impl MupenCore {
                 core.override_vidext::<VideoExtensionState, _>(Some(vidext))
                     .expect("vidext override should succeed");
 
-                let save_handler = TestSaveHandler::default();
-                core.set_save_handler(save_handler)
-                    .expect("save handler override should succeed");
+                // let save_handler = TestSaveHandler::default();
+                // core.set_save_handler(save_handler)
+                //     .expect("save handler override should succeed");
 
                 {
                     let sender = sender.clone();
