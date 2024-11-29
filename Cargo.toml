@@ -4,9 +4,9 @@ resolver = "2"
 members = [
     "m64prs-core",
     "m64prs-gtk",
-    "m64prs-sys",
-    "m64prs-movie", 
     "m64prs-native", 
+    "m64prs-sys",
+    "m64prs-vcr", 
 ]
 
 default-members = ["m64prs-gtk"]

@@ -1,5 +1,5 @@
 [package]
-name = "m64prs-movie"
+name = "m64prs-vcr"
 version = "0.1.0"
 edition = "2021"
 

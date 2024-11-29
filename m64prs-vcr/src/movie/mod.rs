@@ -1,4 +1,4 @@
-use helpers::{fix_buttons_order, AsciiField};
+use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
     fmt::Debug,
@@ -9,7 +9,7 @@ use std::{
 pub mod error;
 mod helpers;
 
-pub use helpers::StringField;
+pub use helpers::{StringField, AsciiField};
 
 pub const M64_MAGIC: [u8; 4] = [b'M', b'6', b'4', 0x1Au8];
 

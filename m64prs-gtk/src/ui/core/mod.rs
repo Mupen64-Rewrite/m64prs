@@ -15,7 +15,6 @@ use relm4::{Component, ComponentParts, ComponentSender, Worker};
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
 pub mod vidext;
-pub mod vcr;
 
 #[derive(Debug)]
 pub enum MupenCoreRequest {

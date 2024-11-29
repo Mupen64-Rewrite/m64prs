@@ -7,7 +7,7 @@ edition = "2021"
 m64prs-core = { path = "../m64prs-core" }
 m64prs-sys = { path = "../m64prs-sys" }
 m64prs-native = { path = "../m64prs-native" }
-m64prs-movie = { path = "../m64prs-movie" }
+m64prs-vcr = { path = "../m64prs-vcr" }
 
 send_wrapper = "0.6.0"
 

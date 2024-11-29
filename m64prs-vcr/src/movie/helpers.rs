@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::error::StringFieldError;
+use super::error::StringFieldError;
 
 /// Represents a fixed-capacity UTF-8 field containing a null-terminated string.
 #[derive(Clone, PartialEq, Eq, Hash)]

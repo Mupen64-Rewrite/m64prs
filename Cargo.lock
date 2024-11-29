@@ -1340,9 +1340,9 @@ dependencies = [
  "gtk4",
  "log",
  "m64prs-core",
- "m64prs-movie",
  "m64prs-native",
  "m64prs-sys",
+ "m64prs-vcr",
  "num_enum",
  "pollster",
  "raw-window-handle",
@@ -1355,16 +1355,6 @@ dependencies = [
  "wayland-protocols",
  "windows 0.58.0",
  "x11rb",
-]
-
-[[package]]
-name = "m64prs-movie"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "m64prs-core",
- "m64prs-sys",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1388,6 +1378,16 @@ dependencies = [
  "num_enum",
  "os_pipe",
  "regex",
+]
+
+[[package]]
+name = "m64prs-vcr"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "m64prs-core",
+ "m64prs-sys",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
