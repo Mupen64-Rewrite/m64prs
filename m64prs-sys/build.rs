@@ -36,14 +36,20 @@ impl ParseCallbacks for M64PParseCallbacks {
         match info.kind {
             TypeKind::Struct => vec![],
             TypeKind::Enum => {
-                if CORE_RR_BITFLAGS_RUST.contains(&info.name) {
-                    vec![]
-                } else {
-                    vec![
+                let mut derives = vec![];
+                if !CORE_RR_BITFLAGS_RUST.contains(&info.name) {
+                    derives.extend_from_slice(&[
                         "::num_enum::IntoPrimitive".to_owned(),
                         "::num_enum::TryFromPrimitive".to_owned(),
-                    ]
+                    ]);
                 }
+                if env::var_os("CARGO_FEATURE_SERDE").is_some() {
+                    derives.extend_from_slice(&[
+                        "::serde::Deserialize".to_owned(),
+                        "::serde::Serialize".to_owned(),
+                    ]);
+                }
+                derives
             }
             TypeKind::Union => vec![],
         }

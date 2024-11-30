@@ -9,7 +9,8 @@ edition = "2021"
 
 dlopen2 = "0.7.0"
 num_enum = "0.7.2"
-bitflags = "2.5.0"
+bitflags = { version = "2.5.0" }
+serde = { version = "1.0.215", optional = true, features = ["derive"] }
 
 [build-dependencies]
 m64prs-native = { path = "../m64prs-native" }
@@ -19,3 +20,6 @@ bindgen = "0.70.1"
 heck = "0.4.1"
 os_pipe = "1.2.1"
 regex = "1.11.1"
+
+[features]
+serde = ["dep:serde", "bitflags/serde"]

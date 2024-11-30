@@ -1,6 +1,6 @@
 use ffi::{AudioHandlerFFI, InputHandlerFFI, SaveHandlerFFI};
 use m64prs_sys::{Buttons, Command};
-use std::ffi::{c_int, c_uint, c_void};
+use std::{error::Error, ffi::{c_int, c_uint, c_void}};
 
 use crate::error::M64PError;
 
@@ -102,10 +102,12 @@ impl Core {
         }
 
         let save_handler = SaveHandlerFFI::new(handler);
-        
+
         // SAFETY: This also works the same way as input_handler.
         core_fn(unsafe {
-            self.api.tas.set_savestate_handler(&save_handler.create_ffi_handler())
+            self.api
+                .tas
+                .set_savestate_handler(&save_handler.create_ffi_handler())
         })?;
         self.save_handler = Some(Box::new(save_handler));
 
@@ -125,12 +127,9 @@ pub trait AudioHandler: Send + 'static {
 
 pub trait SaveHandler: Send + 'static {
     const SIGNATURE: u32;
-    const VERSION: u32;
-    const ALLOC_SIZE: usize;
 
-    fn save_extra_data(&mut self, data: &mut [u8]);
-    fn load_extra_data(&mut self, version: u32, data: &[u8]);
-    fn get_data_size(&mut self, version: u32) -> usize;
+    fn save_xd(&mut self) -> Result<Box<[u8]>, Box<dyn Error>>;
+    fn load_xd(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>>;
 }
 
 pub trait FrameHandler: Send + 'static {
@@ -139,7 +138,10 @@ pub trait FrameHandler: Send + 'static {
 
 pub mod ffi {
     use super::*;
-    use std::{ffi::c_char, mem};
+    use std::{
+        ffi::{c_char, c_uchar},
+        mem,
+    };
 
     pub(crate) trait FFIHandler: Send {}
 
@@ -224,14 +226,22 @@ pub mod ffi {
         }
     }
 
-    pub(crate) struct SaveHandlerFFI<S: SaveHandler>(*mut S);
+    pub(crate) struct SaveHandlerFFI<S: SaveHandler>(*mut SaveHandlerFFIInner<S>);
+
+    struct SaveHandlerFFIInner<S: SaveHandler> {
+        handler: S,
+        temp_buf: Option<Result<Box<[u8]>, Box<dyn Error>>>,
+    }
 
     unsafe impl<S: SaveHandler> Send for SaveHandlerFFI<S> {}
     impl<S: SaveHandler> FFIHandler for SaveHandlerFFI<S> {}
 
     impl<S: SaveHandler> SaveHandlerFFI<S> {
         pub fn new(handler: S) -> Self {
-            let heap_alloc = Box::into_raw(Box::new(handler));
+            let heap_alloc = Box::into_raw(Box::new(SaveHandlerFFIInner {
+                handler,
+                temp_buf: None,
+            }));
             Self(heap_alloc)
         }
 
@@ -239,37 +249,57 @@ pub mod ffi {
             m64prs_sys::TasSaveHandler {
                 context: self.0 as *mut c_void,
                 signature: S::SIGNATURE,
-                version: S::VERSION,
-                alloc_size: S::ALLOC_SIZE,
-                save_extra_data: Some(Self::ffi_save_extra_data),
-                load_extra_data: Some(Self::ffi_load_extra_data),
-                get_data_size: Some(Self::ffi_get_data_size),
+                get_xd_size: Some(Self::ffi_get_xd_size),
+                save_xd: Some(Self::ffi_save_xd),
+                load_xd: Some(Self::ffi_load_xd),
             }
         }
 
-        unsafe extern "C" fn ffi_save_extra_data(
-            context: *mut c_void,
-            data: *mut c_char,
-            size: usize,
-        ) {
-            let context = context as *mut S;
-            (*context).save_extra_data(std::slice::from_raw_parts_mut(data as *mut u8, size));
+        unsafe extern "C" fn ffi_get_xd_size(context: *mut c_void) -> u32 {
+            let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
+            let buf = context.handler.save_xd();
+
+            let size_usize = buf.as_ref().map(|data| data.len()).unwrap_or(1);
+            match size_usize.try_into() {
+                Ok(size) => {
+                    context.temp_buf = Some(buf);
+                    size
+                },
+                Err(err) => {
+                    context.temp_buf = Some(Err(err.into()));
+                    1
+                },
+            }
         }
 
-        unsafe extern "C" fn ffi_load_extra_data(
-            context: *mut c_void,
-            version: u32,
-            data: *const c_char,
-            size: usize,
-        ) {
-            let context = context as *mut S;
-            (*context)
-                .load_extra_data(version, std::slice::from_raw_parts(data as *const u8, size));
+        unsafe extern "C" fn ffi_save_xd(context: *mut c_void, data: *mut c_uchar, size: u32) -> bool {
+            let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
+            let src_slice = context.temp_buf.take().unwrap();
+            let dst_slice = std::slice::from_raw_parts_mut(data as *mut u8, size as usize);
+            
+            match src_slice {
+                Ok(src_slice) => {
+                    dst_slice.copy_from_slice(&src_slice);
+                    true
+                },
+                Err(error) => {
+                    log::error!("Failed to save savestate {}", error);
+                    false
+                },
+            }
         }
 
-        unsafe extern "C" fn ffi_get_data_size(context: *mut c_void, version: u32) -> usize {
-            let context = context as *mut S;
-            (*context).get_data_size(version)
+        unsafe extern "C" fn ffi_load_xd(context: *mut c_void, data: *const c_uchar, size: u32) -> bool {
+            let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
+            let src_slice = std::slice::from_raw_parts(data as *const u8, size as usize);
+
+            match context.handler.load_xd(src_slice) {
+                Ok(_) => true,
+                Err(error) => {
+                    log::error!("Failed to load savestate {}", error);
+                    false
+                },
+            }
         }
     }
 

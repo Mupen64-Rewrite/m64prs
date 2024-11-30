@@ -8,13 +8,35 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use m64prs_core::{error::SavestateError, plugin::PluginSet, save::SavestateFormat, Plugin};
+use m64prs_core::{error::SavestateError, plugin::PluginSet, save::SavestateFormat, tas_callbacks::SaveHandler, Plugin};
 use m64prs_sys::{CoreParam, EmuState};
 use num_enum::TryFromPrimitive;
 use relm4::{Component, ComponentParts, ComponentSender, Worker};
 use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
 
 pub mod vidext;
+
+#[derive(Default)]
+struct TestSaveHandler {
+    counter: u64,
+}
+
+impl SaveHandler for TestSaveHandler {
+    const SIGNATURE: u32 = 0xDEADBEEF;
+
+    fn save_xd(&mut self) -> Result<Box<[u8]>, Box<dyn Error>> {
+        log::debug!("Saved XD: {}", self.counter);
+        let result = Box::new(self.counter.to_le_bytes());
+        self.counter += 1;
+        Ok(result)
+    }
+
+    fn load_xd(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
+        let value = u64::from_le_bytes(<[u8; 8]>::try_from(&data[0..8]).unwrap());
+        log::debug!("Loaded XD: {}", value);
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
 pub enum MupenCoreRequest {
@@ -104,9 +126,9 @@ impl MupenCore {
                 core.override_vidext::<VideoExtensionState, _>(Some(vidext))
                     .expect("vidext override should succeed");
 
-                // let save_handler = TestSaveHandler::default();
-                // core.set_save_handler(save_handler)
-                //     .expect("save handler override should succeed");
+                let save_handler = TestSaveHandler::default();
+                core.set_save_handler(save_handler)
+                    .expect("save handler override should succeed");
 
                 {
                     let sender = sender.clone();
