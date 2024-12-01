@@ -60,6 +60,7 @@ impl NativeViewAttributes {
     }
 }
 
+/// Trait representing a compositing child window on a surface.
 pub trait NativeCompositor {
     /// Creates a new view.
     fn new_view(&mut self, attrs: NativeViewAttributes) -> Box<dyn NativeView>;
@@ -92,6 +93,7 @@ pub trait NativeCompositor {
     }
 }
 
+/// Trait representing a view on a [`NativeCompositor`].
 pub trait NativeView: Send + Sync {
     /// Returns a unique identifier for this view.
     fn key(&self) -> NativeViewKey;

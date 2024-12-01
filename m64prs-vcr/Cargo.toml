@@ -10,3 +10,4 @@ m64prs-sys = { path = "../m64prs-sys", features = ["serde"] }
 bitflags = "2.6.0"
 thiserror = "1.0.56"
 serde = { version = "1.0.215", features = ["derive"] }
+pollster = "0.4.0"
