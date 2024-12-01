@@ -32,7 +32,7 @@ impl RequestManager {
         let id = self.uid_counter.fetch_add(1, atomic::Ordering::AcqRel);
         // send out the request
         self.outbound
-            .output(core::MupenCoreResponse::VidextRequest(id, req))
+            .output(core::CoreResponse::VidextRequest(id, req))
             .expect("Sender should still be valid");
         // wait for a reply
         self.inbound.recv().map(|(reply_id, resp)| {

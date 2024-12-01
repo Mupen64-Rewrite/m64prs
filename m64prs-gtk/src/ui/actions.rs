@@ -3,10 +3,10 @@ use std::{cell::Cell, fmt::Debug};
 use m64prs_sys::EmuState;
 use relm4::{
     actions::{RelmAction, RelmActionGroup},
-    new_action_group, new_stateful_action, new_stateless_action, ComponentSender,
+    new_action_group, new_stateful_action, new_stateless_action, Sender,
 };
 
-use crate::utils::actions::RelmActionStateExt;
+use crate::{ui::core::CoreRequest, utils::actions::RelmActionStateExt};
 
 use super::main;
 
@@ -41,11 +41,11 @@ pub(super) struct AppActions {
     load_slot: RelmAction<LoadSlotAction>,
     set_save_slot: RelmAction<SetSaveSlotAction>,
     save_file: RelmAction<SaveFileAction>,
-    load_file: RelmAction<LoadFileAction>
+    load_file: RelmAction<LoadFileAction>,
 }
 
 impl AppActions {
-    pub(super) fn new(sender: &ComponentSender<main::Model>) -> Self {
+    pub(super) fn new(sender: &Sender<main::Message>) -> Self {
         /// Adds an action to a group and returns it.
         macro_rules! a {
             ($group:ident, $action:expr) => {{
@@ -55,17 +55,17 @@ impl AppActions {
             }};
         }
         /// Handy macro for an action that just sends a message.
-        macro_rules! send_message {
+        macro_rules! message {
             ($msg:expr) => {
                 ::relm4::actions::RelmAction::new_stateless({
                     let sender = sender.clone();
-                    move |_| sender.input($msg)
+                    move |_| sender.emit($msg)
                 })
             };
             ($msg:expr, state: $state:expr) => {
                 ::relm4::actions::RelmAction::new_stateful($state, {
                     let sender = sender.clone();
-                    move |_, _| sender.input($msg)
+                    move |_, _| sender.emit($msg)
                 })
             };
         }
@@ -75,25 +75,42 @@ impl AppActions {
             emu_state: Cell::new(EmuState::Stopped),
             io_state: Cell::new(false),
 
-            open_rom: a!(group, send_message!(main::Message::MenuOpenRom)),
-            close_rom: a!(group, send_message!(main::Message::MenuCloseRom)),
+            open_rom: a!(group, message!(main::Message::ShowOpenRomDialog)),
+            close_rom: a!(
+                group,
+                message!(main::Message::ForwardToCore(CoreRequest::StopRom))
+            ),
             toggle_pause: a!(
                 group,
-                send_message!(main::Message::MenuTogglePause, state: &false)
+                message!(main::Message::MenuTogglePause, state: &false)
             ),
-            frame_advance: a!(group, send_message!(main::Message::MenuFrameAdvance)),
-            reset_rom: a!(group, send_message!(main::Message::MenuResetRom)),
-            save_slot: a!(group, send_message!(main::Message::MenuSaveSlot)),
-            load_slot: a!(group, send_message!(main::Message::MenuLoadSlot)),
+            frame_advance: a!(
+                group,
+                message!(main::Message::ForwardToCore(CoreRequest::FrameAdvance))
+            ),
+            reset_rom: a!(
+                group,
+                message!(main::Message::ForwardToCore(CoreRequest::Reset(false)))
+            ),
+            save_slot: a!(
+                group,
+                message!(main::Message::ForwardToCore(CoreRequest::SaveSlot))
+            ),
+            load_slot: a!(
+                group,
+                message!(main::Message::ForwardToCore(CoreRequest::LoadSlot))
+            ),
             set_save_slot: a!(
                 group,
                 RelmAction::new_stateful_with_target_value(&1u8, {
                     let sender = sender.clone();
-                    move |_, _, slot| sender.input(main::Message::MenuSetSaveSlot(slot))
+                    move |_, _, slot| {
+                        sender.emit(main::Message::ForwardToCore(CoreRequest::SetSaveSlot(slot)))
+                    }
                 })
             ),
-            save_file: a!(group, send_message!(main::Message::MenuSaveFile)),
-            load_file: a!(group, send_message!(main::Message::MenuLoadFile)),
+            save_file: a!(group, message!(main::Message::ShowSaveFileDialog)),
+            load_file: a!(group, message!(main::Message::ShowLoadFileDialog)),
         };
         group.register_for_main_application();
 

@@ -1,5 +1,4 @@
 use std::{
-    any::Any,
     env,
     error::Error,
     fs, mem,
@@ -39,7 +38,7 @@ impl SaveHandler for TestSaveHandler {
 }
 
 #[derive(Debug)]
-pub enum MupenCoreRequest {
+pub enum CoreRequest {
     Init,
     CoreEmuStateChange(EmuState),
 
@@ -48,7 +47,7 @@ pub enum MupenCoreRequest {
 
     TogglePause,
     FrameAdvance,
-    Reset,
+    Reset(bool),
 
     SaveSlot,
     LoadSlot,
@@ -58,7 +57,7 @@ pub enum MupenCoreRequest {
 }
 
 #[derive(Debug)]
-pub enum MupenCoreResponse {
+pub enum CoreResponse {
     CoreReady {
         vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
@@ -134,7 +133,7 @@ impl MupenCore {
                     let sender = sender.clone();
                     core.listen_state(move |param, value| match param {
                         CoreParam::EmuState => {
-                            sender.input(MupenCoreRequest::CoreEmuStateChange(
+                            sender.input(CoreRequest::CoreEmuStateChange(
                                 (value as <EmuState as TryFromPrimitive>::Primitive)
                                     .try_into()
                                     .unwrap(),
@@ -142,7 +141,7 @@ impl MupenCore {
                         }
                         CoreParam::SavestateSlot => {
                             let _ =
-                                sender.output(MupenCoreResponse::SavestateSlotChanged(value as u8));
+                                sender.output(CoreResponse::SavestateSlotChanged(value as u8));
                         }
                         _ => (),
                     });
@@ -153,7 +152,7 @@ impl MupenCore {
             _ => panic!("core is already initialized"),
         };
         sender
-            .output(MupenCoreResponse::CoreReady { vidext_inbound })
+            .output(CoreResponse::CoreReady { vidext_inbound })
             .unwrap();
     }
 
@@ -164,7 +163,7 @@ impl MupenCore {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+                        let _ = sender.output(CoreResponse::Error(Box::new(error)));
                         break 'core_ready MupenCoreInner::Ready { core };
                     }
                 };
@@ -177,7 +176,7 @@ impl MupenCore {
                 let rom_data = match fs::read(path) {
                     Ok(data) => data,
                     Err(error) => {
-                        let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+                        let _ = sender.output(CoreResponse::Error(Box::new(error)));
                         break 'core_running MupenCoreInner::Running {
                             join_handle,
                             core_ref,
@@ -234,13 +233,13 @@ impl MupenCore {
         }
     }
 
-    fn reset(&mut self, _sender: &ComponentSender<Self>) {
+    fn reset(&mut self, hard: bool, _sender: &ComponentSender<Self>) {
         match &mut self.0 {
             MupenCoreInner::Running {
                 join_handle: _,
                 core_ref,
             } => core_ref
-                .reset(false)
+                .reset(hard)
                 .expect("command execution should not fail"),
             _ => panic!("core should be running"),
         }
@@ -271,7 +270,7 @@ impl MupenCore {
         }
 
         // Forward state change to frontend
-        let _ = sender.output(MupenCoreResponse::EmuStateChanged(emu_state));
+        let _ = sender.output(CoreResponse::EmuStateChanged(emu_state));
     }
 
     fn save_slot(&mut self, sender: &ComponentSender<Self>) {
@@ -283,7 +282,7 @@ impl MupenCore {
             _ => panic!("core should be running"),
         };
 
-        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+        let _ = sender.output(CoreResponse::StateRequestStarted);
 
         sender.oneshot_command(async move {
             let result = core_ref.save_state().await;
@@ -315,7 +314,7 @@ impl MupenCore {
             _ => panic!("core should be running"),
         };
 
-        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+        let _ = sender.output(CoreResponse::StateRequestStarted);
 
         sender.oneshot_command(async move {
             let result = core_ref.save_file(path, SavestateFormat::Mupen64Plus).await;
@@ -332,7 +331,7 @@ impl MupenCore {
             _ => panic!("core should be running"),
         };
 
-        let _ = sender.output(MupenCoreResponse::StateRequestStarted);
+        let _ = sender.output(CoreResponse::StateRequestStarted);
 
         sender.oneshot_command(async move {
             let result = core_ref.load_file(path).await;
@@ -345,9 +344,9 @@ impl MupenCore {
         result: Result<(), SavestateError>,
         sender: &ComponentSender<Self>,
     ) {
-        let _ = sender.output(MupenCoreResponse::StateRequestComplete);
+        let _ = sender.output(CoreResponse::StateRequestComplete);
         if let Err(error) = result {
-            let _ = sender.output(MupenCoreResponse::Error(Box::new(error)));
+            let _ = sender.output(CoreResponse::Error(Box::new(error)));
         }
     }
 
@@ -376,7 +375,7 @@ impl MupenCore {
                 match ($res) {
                     Ok(value) => value,
                     Err(err) => {
-                        let _ = sender.output(MupenCoreResponse::Error(Box::new(err)));
+                        let _ = sender.output(CoreResponse::Error(Box::new(err)));
                         return MupenCoreInner::Ready { core };
                     }
                 }
@@ -413,7 +412,7 @@ impl MupenCore {
         check!(core.open_rom(rom_data));
 
         if let Err(err) = core.attach_plugins(plugins) {
-            let _ = sender.output(MupenCoreResponse::Error(Box::new(err)));
+            let _ = sender.output(CoreResponse::Error(Box::new(err)));
             core.close_rom().expect("there should be an open ROM");
             return MupenCoreInner::Ready { core };
         }
@@ -449,8 +448,8 @@ impl MupenCore {
 impl Component for MupenCore {
     type Init = ();
 
-    type Input = MupenCoreRequest;
-    type Output = MupenCoreResponse;
+    type Input = CoreRequest;
+    type Output = CoreResponse;
 
     type CommandOutput = MupenCoreCommandResponse;
 
@@ -459,7 +458,7 @@ impl Component for MupenCore {
 
     fn init(_init: (), _root: (), sender: ComponentSender<Self>) -> ComponentParts<Self> {
         let model = Self(MupenCoreInner::Uninit);
-        sender.input(MupenCoreRequest::Init);
+        sender.input(CoreRequest::Init);
         ComponentParts { model, widgets: () }
     }
 
@@ -468,7 +467,7 @@ impl Component for MupenCore {
     }
 
     fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>, _root: &()) {
-        use MupenCoreRequest::*;
+        use CoreRequest::*;
         match request {
             Init => self.init(&sender),
             CoreEmuStateChange(emu_state) => self.state_change(emu_state, &sender),
@@ -476,7 +475,7 @@ impl Component for MupenCore {
             StopRom => self.stop_rom(&sender),
             TogglePause => self.toggle_pause(&sender),
             FrameAdvance => self.advance_frame(&sender),
-            Reset => self.reset(&sender),
+            Reset(is_hard) => self.reset(is_hard, &sender),
             SaveSlot => self.save_slot(&sender),
             LoadSlot => self.load_slot(&sender),
             SetSaveSlot(slot) => self.set_save_slot(slot, &sender),

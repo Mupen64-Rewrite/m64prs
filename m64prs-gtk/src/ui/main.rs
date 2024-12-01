@@ -1,4 +1,4 @@
-use std::{cell::OnceCell, error::Error, path::PathBuf, sync::mpsc};
+use std::{cell::OnceCell, error::Error, sync::mpsc};
 
 use gtk::{prelude::*, FileFilter};
 use m64prs_sys::EmuState;
@@ -19,7 +19,7 @@ use super::{
     core::{
         self,
         vidext::{VidextRequest, VidextResponse},
-        MupenCore, MupenCoreRequest, MupenCoreResponse,
+        MupenCore, CoreRequest, CoreResponse,
     },
     dialogs::file::FileDialogRequest,
 };
@@ -31,20 +31,15 @@ pub enum Message {
     // ==================
 
     // File
-    MenuOpenRom,
-    MenuOpenRom2(PathBuf),
-    MenuCloseRom,
+    ShowOpenRomDialog,
     // Emulator
     MenuTogglePause,
-    MenuFrameAdvance,
-    MenuResetRom,
-    MenuSaveSlot,
-    MenuLoadSlot,
-    MenuSetSaveSlot(u8),
-    MenuSaveFile,
-    MenuSaveFile2(PathBuf),
-    MenuLoadFile,
-    MenuLoadFile2(PathBuf),
+    ShowSaveFileDialog,
+    ShowLoadFileDialog,
+
+    // OUTBOUND REQUESTS
+    // =================
+    ForwardToCore(CoreRequest),
 
     // CORE CALLBACKS
     // ==================
@@ -100,7 +95,7 @@ impl Component for Model {
             },
             "Emulator" {
                 section! {
-                    "Pause" => TogglePauseAction,
+                    "Pause/Resume" => TogglePauseAction,
                     "Frame Advance" => FrameAdvanceAction,
                     "Reset ROM" => ResetRomAction,
                 },
@@ -152,7 +147,7 @@ impl Component for Model {
             }
         },
         #[name(app_actions)]
-        actions::AppActions::new(&sender) {
+        actions::AppActions::new(sender.input_sender()) {
             #[watch]
             set_core_state: model.core_state,
             #[watch]
@@ -170,19 +165,19 @@ impl Component for Model {
         let core = MupenCore::builder()
             .detach_worker(())
             .forward(sender.input_sender(), |msg| match msg {
-                MupenCoreResponse::CoreReady { vidext_inbound } => {
+                CoreResponse::CoreReady { vidext_inbound } => {
                     Message::CoreReady { vidext_inbound }
                 }
-                MupenCoreResponse::Error(error) => Message::CoreError(error),
-                MupenCoreResponse::EmuStateChanged(emu_state) => {
+                CoreResponse::Error(error) => Message::CoreError(error),
+                CoreResponse::EmuStateChanged(emu_state) => {
                     Message::CoreStateChanged(emu_state)
                 }
-                MupenCoreResponse::VidextRequest(id, request) => {
+                CoreResponse::VidextRequest(id, request) => {
                     Message::CoreVidextRequest(id, request)
                 }
-                MupenCoreResponse::StateRequestStarted => Message::CoreIoStateChanged(true),
-                MupenCoreResponse::StateRequestComplete => Message::CoreIoStateChanged(false),
-                MupenCoreResponse::SavestateSlotChanged(slot) => {
+                CoreResponse::StateRequestStarted => Message::CoreIoStateChanged(true),
+                CoreResponse::StateRequestComplete => Message::CoreIoStateChanged(false),
+                CoreResponse::SavestateSlotChanged(slot) => {
                     Message::CoreSavestateSlotChanged(slot)
                 }
             });
@@ -207,7 +202,7 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                FileDialogResponse::Accept(path) => Message::MenuOpenRom2(path),
+                FileDialogResponse::Accept(path) => Message::ForwardToCore(CoreRequest::StartRom(path)),
                 FileDialogResponse::Cancel => Message::NoOp,
             });
 
@@ -230,7 +225,9 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                FileDialogResponse::Accept(path) => Message::MenuSaveFile2(path),
+                FileDialogResponse::Accept(path) => {
+                    Message::ForwardToCore(CoreRequest::SaveFile(path))
+                }
                 FileDialogResponse::Cancel => Message::NoOp,
             });
 
@@ -253,7 +250,9 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                FileDialogResponse::Accept(path) => Message::MenuSaveFile2(path),
+                FileDialogResponse::Accept(path) => {
+                    Message::ForwardToCore(CoreRequest::LoadFile(path))
+                }
                 FileDialogResponse::Cancel => Message::NoOp,
             });
 
@@ -311,45 +310,24 @@ impl Component for Model {
             // MENU ACTIONS
             // ===============
             // File
-            Message::MenuOpenRom => {
+            Message::ShowOpenRomDialog => {
                 self.rom_file_dialog.emit(FileDialogRequest::Open);
-            }
-            Message::MenuOpenRom2(path) => {
-                self.core.emit(MupenCoreRequest::StartRom(path));
-            }
-            Message::MenuCloseRom => {
-                self.core.emit(MupenCoreRequest::StopRom);
             }
             // Emulator
             Message::MenuTogglePause => {
-                self.core.emit(MupenCoreRequest::TogglePause);
+                self.core.emit(CoreRequest::TogglePause);
             }
-            Message::MenuFrameAdvance => {
-                self.core.emit(MupenCoreRequest::FrameAdvance);
-            }
-            Message::MenuResetRom => {
-                self.core.emit(MupenCoreRequest::Reset);
-            }
-            Message::MenuSaveSlot => {
-                self.core.emit(MupenCoreRequest::SaveSlot);
-            }
-            Message::MenuLoadSlot => {
-                self.core.emit(MupenCoreRequest::LoadSlot);
-            }
-            Message::MenuSetSaveSlot(slot) => {
-                self.core.emit(MupenCoreRequest::SetSaveSlot(slot));
-            }
-            Message::MenuSaveFile => {
+            Message::ShowSaveFileDialog => {
                 self.state_save_dialog.emit(FileDialogRequest::Save);
             }
-            Message::MenuSaveFile2(path) => {
-                self.core.emit(MupenCoreRequest::SaveFile(path));
-            }
-            Message::MenuLoadFile => {
+            Message::ShowLoadFileDialog => {
                 self.state_load_dialog.emit(FileDialogRequest::Open);
             }
-            Message::MenuLoadFile2(path) => {
-                self.core.emit(MupenCoreRequest::LoadFile(path));
+
+            // OUTBOUND REQUESTS
+            // =================
+            Message::ForwardToCore(message) => {
+                self.core.emit(message);
             }
             // CORE FEEDBACK
             // ===============
