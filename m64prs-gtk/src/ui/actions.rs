@@ -28,20 +28,34 @@ new_stateful_action!(pub SetSaveSlotAction, AppActionsGroup, "emu.set_save_slot"
 new_stateless_action!(pub SaveFileAction, AppActionsGroup, "emu.save_file");
 new_stateless_action!(pub LoadFileAction, AppActionsGroup, "emu.load_file");
 
+new_stateless_action!(pub NewMovieAction, AppActionsGroup, "vcr.new_movie");
+new_stateless_action!(pub LoadMovieAction, AppActionsGroup, "vcr.load_movie");
+new_stateless_action!(pub SaveMovieAction, AppActionsGroup, "vcr.save_movie");
+new_stateless_action!(pub DiscardMovieAction, AppActionsGroup, "vcr.discard_movie");
+new_stateful_action!(pub ToggleReadOnlyAction, AppActionsGroup, "vcr.toggle_read_only", (), bool);
+
 pub(super) struct AppActions {
     emu_state: Cell<EmuState>,
     io_state: Cell<bool>,
 
     open_rom: RelmAction<OpenRomAction>,
     close_rom: RelmAction<CloseRomAction>,
+
     toggle_pause: RelmAction<TogglePauseAction>,
     frame_advance: RelmAction<FrameAdvanceAction>,
     reset_rom: RelmAction<ResetRomAction>,
+
     save_slot: RelmAction<SaveSlotAction>,
     load_slot: RelmAction<LoadSlotAction>,
     set_save_slot: RelmAction<SetSaveSlotAction>,
     save_file: RelmAction<SaveFileAction>,
     load_file: RelmAction<LoadFileAction>,
+
+    new_movie: RelmAction<NewMovieAction>,
+    load_movie: RelmAction<LoadMovieAction>,
+    save_movie: RelmAction<SaveMovieAction>,
+    discard_movie: RelmAction<DiscardMovieAction>,
+    toggle_read_only: RelmAction<ToggleReadOnlyAction>,
 }
 
 impl AppActions {
@@ -56,18 +70,30 @@ impl AppActions {
         }
         /// Handy macro for an action that just sends a message.
         macro_rules! message {
-            ($msg:expr) => {
-                ::relm4::actions::RelmAction::new_stateless({
+            ($target:ident => $msg:expr, state: $state:expr) => {{
+                let act = ::relm4::actions::RelmAction::new_stateful_with_target_value(&($state), {
                     let sender = sender.clone();
-                    move |_| sender.emit($msg)
-                })
-            };
-            ($msg:expr, state: $state:expr) => {
-                ::relm4::actions::RelmAction::new_stateful($state, {
+                    move |_, _, $target| sender.emit($msg)
+                });
+                act.set_enabled(false);
+                act
+            }};
+            ($msg:expr, state: $state:expr) => {{
+                let act = ::relm4::actions::RelmAction::new_stateful(&($state), {
                     let sender = sender.clone();
                     move |_, _| sender.emit($msg)
-                })
-            };
+                });
+                act.set_enabled(false);
+                act
+            }};
+            ($msg:expr) => {{
+                let act = ::relm4::actions::RelmAction::new_stateless({
+                    let sender = sender.clone();
+                    move |_| sender.emit($msg)
+                });
+                act.set_enabled(false);
+                act
+            }};
         }
 
         let mut group = RelmActionGroup::<AppActionsGroup>::new();
@@ -80,9 +106,10 @@ impl AppActions {
                 group,
                 message!(main::Message::ForwardToCore(CoreRequest::StopRom))
             ),
+
             toggle_pause: a!(
                 group,
-                message!(main::Message::MenuTogglePause, state: &false)
+                message!(main::Message::MenuTogglePause, state: false)
             ),
             frame_advance: a!(
                 group,
@@ -92,6 +119,7 @@ impl AppActions {
                 group,
                 message!(main::Message::ForwardToCore(CoreRequest::Reset(false)))
             ),
+
             save_slot: a!(
                 group,
                 message!(main::Message::ForwardToCore(CoreRequest::SaveSlot))
@@ -102,15 +130,18 @@ impl AppActions {
             ),
             set_save_slot: a!(
                 group,
-                RelmAction::new_stateful_with_target_value(&1u8, {
-                    let sender = sender.clone();
-                    move |_, _, slot| {
-                        sender.emit(main::Message::ForwardToCore(CoreRequest::SetSaveSlot(slot)))
-                    }
-                })
+                message!(slot => main::Message::ForwardToCore(CoreRequest::SetSaveSlot(slot)), state: 1)
             ),
             save_file: a!(group, message!(main::Message::ShowSaveFileDialog)),
             load_file: a!(group, message!(main::Message::ShowLoadFileDialog)),
+
+            new_movie: a!(group, message!(main::Message::NoOp)),
+            load_movie: a!(group, message!(main::Message::NoOp)),
+
+            save_movie: a!(group, message!(main::Message::NoOp)),
+            discard_movie: a!(group, message!(main::Message::NoOp)),
+
+            toggle_read_only: a!(group, message!(main::Message::ForwardToCore(CoreRequest::ToggleVcrReadOnly), state: false)),
         };
         group.register_for_main_application();
 
@@ -142,6 +173,12 @@ impl AppActions {
         self.set_save_slot.set_enabled(is_save_ok);
         self.save_file.set_enabled(is_save_ok);
         self.load_file.set_enabled(is_save_ok);
+
+        self.new_movie.set_enabled(is_running);
+        self.load_movie.set_enabled(is_running);
+        self.save_movie.set_enabled(is_running);
+        self.discard_movie.set_enabled(is_running);
+        self.toggle_read_only.set_enabled(is_running);
     }
 
     pub(super) fn set_core_io_state(&self, io_state: bool) {
@@ -161,6 +198,10 @@ impl AppActions {
 
     pub(super) fn set_core_savestate_slot(&self, slot: u8) {
         self.set_save_slot.set_state(slot);
+    }
+
+    pub(super) fn set_vcr_read_only(&self, read_only: bool) {
+        self.toggle_read_only.set_state(read_only);
     }
 }
 

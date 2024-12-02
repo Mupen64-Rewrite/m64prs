@@ -3,7 +3,7 @@ use std::sync::{
     mpsc,
 };
 
-use relm4::{ComponentSender, Sender};
+use relm4::Sender;
 
 use crate::ui::core::{self, CoreResponse};
 
@@ -31,7 +31,7 @@ impl RequestManager {
         // get request ID (used to verify that the request is indeed the correct one)
         let id = self.uid_counter.fetch_add(1, atomic::Ordering::AcqRel);
         // send out the request
-        self.outbound
+        let _ = self.outbound
             .send(core::CoreResponse::VidextRequest(id, req));
         // wait for a reply
         self.inbound.recv().map(|(reply_id, resp)| {

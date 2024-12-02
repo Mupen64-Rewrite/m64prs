@@ -17,9 +17,8 @@ use crate::{
 use super::{
     actions::{self, *},
     core::{
-        self,
         vidext::{VidextRequest, VidextResponse},
-        MupenCore, CoreRequest, CoreResponse,
+        CoreRequest, CoreResponse, MupenCore,
     },
     dialogs::file::FileDialogRequest,
 };
@@ -50,26 +49,32 @@ pub enum Message {
     CoreStateChanged(EmuState),
     CoreIoStateChanged(bool),
     CoreSavestateSlotChanged(u8),
+    CoreVcrReadOnlyChanged(bool),
     CoreVidextRequest(usize, VidextRequest),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MainViewState {
     RomBrowser,
     GameView,
 }
 
 #[derive(Debug)]
+#[tracker::track]
+struct ModelTracked {
+    main_view: MainViewState,
+    state: EmuState,
+    savestate_slot: u8,
+    vcr_read_only: bool,
+    io_state: bool,
+}
+
+#[derive(Debug)]
 pub struct Model {
-    core: WorkerController<MupenCore>,
-    core_ready: bool,
-    core_state: EmuState,
-    core_io_state: bool,
-    core_savestate_slot: u8,
+    tracked: ModelTracked,
     vidext_inbound: OnceCell<mpsc::Sender<(usize, VidextResponse)>>,
 
-    main_view: MainViewState,
-
+    core: WorkerController<MupenCore>,
     rom_file_dialog: Controller<FileDialog>,
     core_error_dialog: Controller<AlertDialog>,
     state_load_dialog: Controller<FileDialog>,
@@ -115,8 +120,21 @@ impl Component for Model {
                     }
                 },
                 section! {
-                    "Save State As..." => SaveFileAction,
-                    "Load State As..." => LoadFileAction,
+                    "Save State to..." => SaveFileAction,
+                    "Load State From..." => LoadFileAction,
+                }
+            },
+            "Movie" {
+                section! {
+                    "New Movie" => NewMovieAction,
+                    "Open Movie" => LoadMovieAction,
+                },
+                section! {
+                    "Save Movie" => SaveMovieAction,
+                    "Discard Movie" => DiscardMovieAction,
+                },
+                section! {
+                    "Read-only Mode" => ToggleReadOnlyAction,
                 }
             }
         }
@@ -132,8 +150,8 @@ impl Component for Model {
             set_show_menubar: true,
             set_size_request: (200, 200),
 
-
-            match model.main_view {
+            
+            match model.tracked.main_view {
                 MainViewState::RomBrowser => gtk::Button::with_label("test") {
                     set_hexpand: true,
                     set_vexpand: true,
@@ -148,12 +166,14 @@ impl Component for Model {
         },
         #[name(app_actions)]
         actions::AppActions::new(sender.input_sender()) {
-            #[watch]
-            set_core_state: model.core_state,
-            #[watch]
-            set_core_io_state: model.core_io_state,
-            #[watch]
-            set_core_savestate_slot: model.core_savestate_slot,
+            #[track = "model.tracked.changed(ModelTracked::state())"]
+            set_core_state: model.tracked.state,
+            #[track = "model.tracked.changed(ModelTracked::io_state())"]
+            set_core_io_state: model.tracked.io_state,
+            #[track = "model.tracked.changed(ModelTracked::savestate_slot())"]
+            set_core_savestate_slot: model.tracked.savestate_slot,
+            #[track = "model.tracked.changed(ModelTracked::vcr_read_only())"]
+            set_vcr_read_only: model.tracked.vcr_read_only,
         }
     }
 
@@ -165,20 +185,15 @@ impl Component for Model {
         let core = MupenCore::builder()
             .detach_worker(())
             .forward(sender.input_sender(), |msg| match msg {
-                CoreResponse::CoreReady { vidext_inbound } => {
-                    Message::CoreReady { vidext_inbound }
-                }
+                CoreResponse::CoreReady { vidext_inbound } => Message::CoreReady { vidext_inbound },
                 CoreResponse::Error(error) => Message::CoreError(error),
-                CoreResponse::EmuStateChanged(emu_state) => {
-                    Message::CoreStateChanged(emu_state)
-                }
-                CoreResponse::VidextRequest(id, request) => {
-                    Message::CoreVidextRequest(id, request)
-                }
+                CoreResponse::EmuStateChanged(emu_state) => Message::CoreStateChanged(emu_state),
+                CoreResponse::VidextRequest(id, request) => Message::CoreVidextRequest(id, request),
                 CoreResponse::StateRequestStarted => Message::CoreIoStateChanged(true),
                 CoreResponse::StateRequestComplete => Message::CoreIoStateChanged(false),
-                CoreResponse::SavestateSlotChanged(slot) => {
-                    Message::CoreSavestateSlotChanged(slot)
+                CoreResponse::SavestateSlotChanged(slot) => Message::CoreSavestateSlotChanged(slot),
+                CoreResponse::VcrReadOnlyChanged(read_only) => {
+                    Message::CoreVcrReadOnlyChanged(read_only)
                 }
             });
 
@@ -202,7 +217,9 @@ impl Component for Model {
                     ),
             )
             .forward(sender.input_sender(), |msg| match msg {
-                FileDialogResponse::Accept(path) => Message::ForwardToCore(CoreRequest::StartRom(path)),
+                FileDialogResponse::Accept(path) => {
+                    Message::ForwardToCore(CoreRequest::StartRom(path))
+                }
                 FileDialogResponse::Cancel => Message::NoOp,
             });
 
@@ -268,16 +285,25 @@ impl Component for Model {
             });
 
         let model = Self {
-            // core state
-            core,
-            core_ready: false,
-            core_state: EmuState::Stopped,
-            core_io_state: false,
-            core_savestate_slot: 1,
+            // state
+            // main_view: MainViewState::RomBrowser,
+            // core_ready: false,
+            // core_state: EmuState::Stopped,
+            // core_io_state: false,
+            // core_savestate_slot: 1,
+            // core_vcr_read_only: false,
+            tracked: ModelTracked {
+                main_view: MainViewState::RomBrowser,
+                state: EmuState::Stopped,
+                io_state: false,
+                savestate_slot: 1,
+                vcr_read_only: false,
+                tracker: 0,
+            },
+            // Messengers
             vidext_inbound: OnceCell::new(),
-            // view state
-            main_view: MainViewState::RomBrowser,
-            // dialogs
+            // controllers
+            core,
             rom_file_dialog,
             core_error_dialog,
             state_load_dialog,
@@ -304,6 +330,7 @@ impl Component for Model {
         sender: ComponentSender<Self>,
         _root: &Self::Root,
     ) {
+        self.tracked.reset();
         match message {
             Message::NoOp => (),
 
@@ -332,7 +359,6 @@ impl Component for Model {
             // CORE FEEDBACK
             // ===============
             Message::CoreReady { vidext_inbound } => {
-                self.core_ready = true;
                 self.vidext_inbound.get_or_init(move || vidext_inbound);
             }
             Message::CoreError(error) => {
@@ -344,13 +370,16 @@ impl Component for Model {
                 })
             }
             Message::CoreStateChanged(emu_state) => {
-                self.core_state = emu_state;
+                self.tracked.set_state(emu_state);
             }
             Message::CoreIoStateChanged(io_state) => {
-                self.core_io_state = io_state;
+                self.tracked.set_io_state(io_state);
             }
             Message::CoreSavestateSlotChanged(slot) => {
-                self.core_savestate_slot = slot;
+                self.tracked.set_savestate_slot(slot);
+            }
+            Message::CoreVcrReadOnlyChanged(read_only) => {
+                self.tracked.set_vcr_read_only(read_only);
             }
             Message::CoreVidextRequest(id, request) => match request {
                 VidextRequest::EnterGameView => {
@@ -359,7 +388,7 @@ impl Component for Model {
                         .get()
                         .expect("vidext request should be active");
 
-                    self.main_view = MainViewState::GameView;
+                    self.tracked.set_main_view(MainViewState::GameView);
                     let _ = vidext_inbound.send((id, VidextResponse::Done));
                 }
                 VidextRequest::ExitGameView => {
@@ -368,7 +397,7 @@ impl Component for Model {
                         .get()
                         .expect("vidext request should be active");
 
-                    self.main_view = MainViewState::RomBrowser;
+                    self.tracked.set_main_view(MainViewState::RomBrowser);
                     let _ = vidext_inbound.send((id, VidextResponse::Done));
                 }
                 VidextRequest::CreateView(attrs) => {

@@ -59,6 +59,8 @@ pub enum CoreRequest {
     SetSaveSlot(u8),
     SaveFile(PathBuf),
     LoadFile(PathBuf),
+
+    ToggleVcrReadOnly,
 }
 
 #[derive(Debug)]
@@ -71,6 +73,7 @@ pub enum CoreResponse {
     SavestateSlotChanged(u8),
     StateRequestStarted,
     StateRequestComplete,
+    VcrReadOnlyChanged(bool),
     VidextRequest(usize, vidext::VidextRequest),
 }
 
@@ -112,7 +115,11 @@ impl MupenCore {
         }
     }
 
-    fn start_rom(&mut self, path: &Path) -> Result<(), Box<dyn Error + Send + Sync>> {
+    fn start_rom(
+        &mut self,
+        path: &Path,
+        sender: &ComponentSender<Self>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let rom_data = fs::read(path)?;
 
         let plugins = {
@@ -144,7 +151,7 @@ impl MupenCore {
         };
 
         if let CoreState::Ready(ready_state) = self.0.take() {
-            match ready_state.start_rom(&rom_data, plugins) {
+            match ready_state.start_rom(&rom_data, plugins, sender.output_sender()) {
                 Ok(running_state) => {
                     self.0 = CoreState::Running(running_state);
                     Ok(())
@@ -254,15 +261,18 @@ impl MupenCore {
         result
     }
 
-    fn set_save_slot(
-        &mut self,
-        slot: u8,
-        _sender: &ComponentSender<Self>,
-    ) -> Result<(), M64PError> {
+    fn set_save_slot(&mut self, slot: u8, sender: &ComponentSender<Self>) -> Result<(), M64PError> {
         self.0
             .borrow_running()
             .expect("expected CoreState::Running for toggle_pause")
             .set_save_slot(slot)
+    }
+
+    fn toggle_vcr_read_only(&mut self, sender: &ComponentSender<Self>) {
+        self.0
+            .borrow_running()
+            .expect("expected CoreState::Running for toggle_pause")
+            .toggle_read_only(sender.output_sender());
     }
 }
 
@@ -291,10 +301,8 @@ impl Component for MupenCore {
         use CoreRequest::*;
         let result: Result<(), Box<dyn Error + Send + Sync>> = match request {
             Init => Ok(self.init(&sender)),
-            EmuStateChanged(emu_state) => {
-                self.state_change(emu_state, &sender).map_err(Into::into)
-            }
-            StartRom(path) => self.start_rom(&path),
+            EmuStateChanged(emu_state) => self.state_change(emu_state, &sender).map_err(Into::into),
+            StartRom(path) => self.start_rom(&path, &sender),
             StopRom => self.stop_rom().map_err(Into::into),
             TogglePause => self.toggle_pause().map_err(Into::into),
             FrameAdvance => self.advance_frame().map_err(Into::into),
@@ -304,6 +312,7 @@ impl Component for MupenCore {
             SetSaveSlot(slot) => self.set_save_slot(slot, &sender).map_err(Into::into),
             SaveFile(path) => self.save_file(path, &sender).map_err(Into::into),
             LoadFile(path) => self.load_file(path, &sender).map_err(Into::into),
+            ToggleVcrReadOnly => Ok(self.toggle_vcr_read_only(&sender)),
         };
         if let Err(error) = result {
             let _ = sender.output(CoreResponse::Error(error));

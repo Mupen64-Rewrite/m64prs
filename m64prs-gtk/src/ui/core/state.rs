@@ -124,6 +124,7 @@ impl CoreReadyState {
         mut self,
         rom_data: &[u8],
         plugins: PluginSet,
+        sender: &Sender<CoreResponse>
     ) -> Result<CoreRunningState, (Box<dyn Error + Send + Sync>, Self)> {
         if let Err(err) = self.core.open_rom(rom_data) {
             return Err((Box::new(err), self));
@@ -140,11 +141,14 @@ impl CoreReadyState {
         };
 
         let vcr_state = Arc::new(Mutex::new(None));
+        let vcr_read_only = true;
+
+        sender.emit(CoreResponse::VcrReadOnlyChanged(vcr_read_only));
 
         Ok(CoreRunningState {
             core,
             join_handle,
-            vcr_read_only: true,
+            vcr_read_only,
             vcr_state,
         })
     }
@@ -198,5 +202,10 @@ impl CoreRunningState {
 
     pub(super) async fn load_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await
+    }
+
+    pub(super) fn toggle_read_only(&mut self, sender: &Sender<CoreResponse>) {
+        self.vcr_read_only ^= true;
+        sender.emit(CoreResponse::VcrReadOnlyChanged(self.vcr_read_only));
     }
 }
