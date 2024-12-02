@@ -16,6 +16,7 @@ pub mod movie;
 
 /// Struct implementing movie recording state.
 /// Designed to play well with core hooks.
+#[derive(Debug)]
 pub struct VcrState {
     path: PathBuf,
     header: M64Header,

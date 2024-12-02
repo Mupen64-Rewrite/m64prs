@@ -3,21 +3,21 @@ use std::sync::{
     mpsc,
 };
 
-use relm4::ComponentSender;
+use relm4::{ComponentSender, Sender};
 
-use crate::ui::core;
+use crate::ui::core::{self, CoreResponse};
 
 use super::{VideoExtensionParameters, VidextRequest, VidextResponse};
 
 pub(super) struct RequestManager {
     uid_counter: AtomicUsize,
-    outbound: ComponentSender<core::MupenCore>,
+    outbound: Sender<CoreResponse>,
     inbound: mpsc::Receiver<(usize, VidextResponse)>,
 }
 
 impl RequestManager {
     pub(super) fn new(
-        outbound: ComponentSender<core::MupenCore>,
+        outbound: Sender<CoreResponse>,
         inbound: mpsc::Receiver<(usize, VidextResponse)>,
     ) -> Self {
         Self {
@@ -32,8 +32,7 @@ impl RequestManager {
         let id = self.uid_counter.fetch_add(1, atomic::Ordering::AcqRel);
         // send out the request
         self.outbound
-            .output(core::CoreResponse::VidextRequest(id, req))
-            .expect("Sender should still be valid");
+            .send(core::CoreResponse::VidextRequest(id, req));
         // wait for a reply
         self.inbound.recv().map(|(reply_id, resp)| {
             assert!(reply_id == id, "reply should correspond to request");

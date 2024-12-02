@@ -90,7 +90,7 @@ pub enum StartupError {
 #[derive(Debug, Error)]
 pub enum SavestateError {
     /// An error occurred while requesting the savestate operation.
-    #[error("core command failed immediately")]
+    #[error("core command failed immediately: {0}")]
     EarlyFail(#[source] M64PError),
 
     /// An error occurred while saving or loading the savestate.

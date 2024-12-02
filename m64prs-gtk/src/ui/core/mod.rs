@@ -1,18 +1,23 @@
 use std::{
-    env,
     error::Error,
-    fs, mem,
+    fs,
     path::{Path, PathBuf},
-    sync::{mpsc, Arc},
-    thread::{self, JoinHandle},
+    sync::mpsc,
 };
 
-use m64prs_core::{error::SavestateError, plugin::PluginSet, save::SavestateFormat, tas_callbacks::SaveHandler, Plugin};
-use m64prs_sys::{CoreParam, EmuState};
-use num_enum::TryFromPrimitive;
-use relm4::{Component, ComponentParts, ComponentSender, Worker};
-use vidext::{VideoExtensionParameters, VideoExtensionState, VidextResponse};
+use m64prs_core::{
+    error::{M64PError, SavestateError},
+    plugin::PluginSet,
+    tas_callbacks::SaveHandler,
+    Plugin,
+};
+use m64prs_sys::EmuState;
+use pollster::FutureExt;
+use relm4::{Component, ComponentParts, ComponentSender};
+use state::{CoreReadyState, CoreState};
+use vidext::VidextResponse;
 
+mod state;
 pub mod vidext;
 
 #[derive(Default)]
@@ -40,7 +45,7 @@ impl SaveHandler for TestSaveHandler {
 #[derive(Debug)]
 pub enum CoreRequest {
     Init,
-    CoreEmuStateChange(EmuState),
+    EmuStateChanged(EmuState),
 
     StartRom(PathBuf),
     StopRom,
@@ -61,7 +66,7 @@ pub enum CoreResponse {
     CoreReady {
         vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
-    Error(Box<dyn Error + Send + 'static>),
+    Error(Box<dyn Error + Send + Sync>),
     EmuStateChanged(EmuState),
     SavestateSlotChanged(u8),
     StateRequestStarted,
@@ -70,378 +75,194 @@ pub enum CoreResponse {
 }
 
 #[derive(Debug)]
-pub enum MupenCoreCommandResponse {
-    LoadComplete(Result<(), SavestateError>),
-    SaveComplete(Result<(), SavestateError>),
-}
-
-/// Inner enum representing the model's current state.
-#[derive(Debug)]
-enum MupenCoreInner {
-    /// The core is not initialized yet.
-    Uninit,
-    /// The core is ready to use. It does not have a ROM open.
-    Ready { core: m64prs_core::Core },
-    /// The core is running a ROM in a background thread.
-    Running {
-        join_handle: JoinHandle<()>,
-        core_ref: Arc<m64prs_core::Core>,
-    },
-}
-
-#[derive(Debug)]
-pub struct MupenCore(MupenCoreInner);
+pub struct MupenCore(CoreState);
 
 impl MupenCore {
     fn init(&mut self, sender: &ComponentSender<Self>) {
-        #[cfg(target_os = "windows")]
-        const MUPEN_FILENAME: &str = "mupen64plus.dll";
-        #[cfg(target_os = "macos")]
-        const MUPEN_FILENAME: &str = "libmupen64plus.dylib";
-        #[cfg(target_os = "linux")]
-        const MUPEN_FILENAME: &str = "libmupen64plus.so";
+        if !self.0.is_uninit() {
+            panic!("CoreRequest::Init should not be called externally");
+        }
 
-        let vidext_inbound: mpsc::Sender<(usize, VidextResponse)>;
-
-        self.0 = match self.0 {
-            MupenCoreInner::Uninit => {
-                let self_path = env::current_exe().expect("should be able to find current_exe");
-                let self_dir = self_path
-                    .parent()
-                    .expect("self path should be in a directory");
-
-                let mupen_dll_path = self_dir.join(MUPEN_FILENAME);
-                let data_dir = self_dir.join("data\\");
-
-                log::info!("Loading M64+ from {}", mupen_dll_path.display());
-                log::info!("Data path is {}", data_dir.display());
-
-                let mut core = m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
-                    .expect("core startup should succeed");
-
-                let vidext: VideoExtensionParameters;
-                (vidext, vidext_inbound) = VideoExtensionParameters::new(sender.clone());
-
-                core.override_vidext::<VideoExtensionState, _>(Some(vidext))
-                    .expect("vidext override should succeed");
-
-                let save_handler = TestSaveHandler::default();
-                core.set_save_handler(save_handler)
-                    .expect("save handler override should succeed");
-
-                {
-                    let sender = sender.clone();
-                    core.listen_state(move |param, value| match param {
-                        CoreParam::EmuState => {
-                            sender.input(CoreRequest::CoreEmuStateChange(
-                                (value as <EmuState as TryFromPrimitive>::Primitive)
-                                    .try_into()
-                                    .unwrap(),
-                            ));
-                        }
-                        CoreParam::SavestateSlot => {
-                            let _ =
-                                sender.output(CoreResponse::SavestateSlotChanged(value as u8));
-                        }
-                        _ => (),
-                    });
-                }
-
-                MupenCoreInner::Ready { core }
-            }
-            _ => panic!("core is already initialized"),
-        };
+        let (ready_state, vidext_inbound) = CoreReadyState::new(sender);
         sender
             .output(CoreResponse::CoreReady { vidext_inbound })
-            .unwrap();
+            .expect("GUI should be able to catch this event!");
+        self.0 = CoreState::Ready(ready_state);
     }
 
-    fn start_rom(&mut self, path: &Path, sender: &ComponentSender<Self>) {
-        self.0 = match mem::replace(&mut self.0, MupenCoreInner::Uninit) {
-            MupenCoreInner::Uninit => panic!("core should be initialized"),
-            MupenCoreInner::Ready { core } => 'core_ready: {
-                let rom_data = match fs::read(path) {
-                    Ok(data) => data,
-                    Err(error) => {
-                        let _ = sender.output(CoreResponse::Error(Box::new(error)));
-                        break 'core_ready MupenCoreInner::Ready { core };
-                    }
-                };
-                Self::start_rom_inner(&rom_data, core, sender)
-            }
-            MupenCoreInner::Running {
-                join_handle,
-                core_ref,
-            } => 'core_running: {
-                let rom_data = match fs::read(path) {
-                    Ok(data) => data,
-                    Err(error) => {
-                        let _ = sender.output(CoreResponse::Error(Box::new(error)));
-                        break 'core_running MupenCoreInner::Running {
-                            join_handle,
-                            core_ref,
-                        };
-                    }
-                };
-                let core = Self::stop_rom_inner(join_handle, core_ref, sender);
-                Self::start_rom_inner(&rom_data, core, sender)
-            }
-        };
-    }
-
-    fn stop_rom(&mut self, sender: &ComponentSender<Self>) {
-        self.0 = match mem::replace(&mut self.0, MupenCoreInner::Uninit) {
-            MupenCoreInner::Running {
-                join_handle,
-                core_ref,
-            } => {
-                let mut core = Self::stop_rom_inner(join_handle, core_ref, sender);
-
-                core.detach_plugins();
-                core.close_rom().expect("there should be an open ROM");
-
-                MupenCoreInner::Ready { core }
-            }
-            _ => panic!("core should be running"),
-        };
-    }
-
-    fn toggle_pause(&mut self, _sender: &ComponentSender<Self>) {
-        match &mut self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => match core_ref.emu_state() {
-                EmuState::Running => core_ref.request_pause(),
-                EmuState::Paused => core_ref.request_resume(),
-                _ => unreachable!(),
-            }
-            .expect("command execution should not fail"),
-            _ => panic!("core should be running"),
-        };
-    }
-
-    fn advance_frame(&mut self, _sender: &ComponentSender<Self>) {
-        match &mut self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => core_ref
-                .request_advance_frame()
-                .expect("command execution should not fail"),
-            _ => panic!("core should be running"),
-        }
-    }
-
-    fn reset(&mut self, hard: bool, _sender: &ComponentSender<Self>) {
-        match &mut self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => core_ref
-                .reset(hard)
-                .expect("command execution should not fail"),
-            _ => panic!("core should be running"),
-        }
-    }
-
-    fn state_change(&mut self, emu_state: EmuState, sender: &ComponentSender<Self>) {
-        match (emu_state, mem::replace(&mut self.0, MupenCoreInner::Uninit)) {
-            // The core has stopped on its own since we last started it
-            (
-                EmuState::Stopped,
-                MupenCoreInner::Running {
-                    join_handle,
-                    core_ref,
-                },
-            ) => {
-                join_handle.join().expect("the core thread shouldn't panic");
-
-                let mut core = Arc::into_inner(core_ref)
-                    .expect("no refs to the core should exist outside of the emulator thread");
-
-                core.detach_plugins();
-                core.close_rom().expect("there should be an open ROM");
-
-                self.0 = MupenCoreInner::Ready { core };
-            }
-            // Nothing interesting
-            (_, inner) => self.0 = inner,
-        }
-
-        // Forward state change to frontend
-        let _ = sender.output(CoreResponse::EmuStateChanged(emu_state));
-    }
-
-    fn save_slot(&mut self, sender: &ComponentSender<Self>) {
-        let core_ref = match &self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => Arc::clone(core_ref),
-            _ => panic!("core should be running"),
-        };
-
-        let _ = sender.output(CoreResponse::StateRequestStarted);
-
-        sender.oneshot_command(async move {
-            let result = core_ref.save_state().await;
-            MupenCoreCommandResponse::SaveComplete(result)
-        });
-    }
-
-    fn load_slot(&mut self, sender: &ComponentSender<Self>) {
-        let core_ref = match &self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => Arc::clone(core_ref),
-            _ => panic!("core should be running"),
-        };
-
-        sender.oneshot_command(async move {
-            let result = core_ref.load_state().await;
-            MupenCoreCommandResponse::LoadComplete(result)
-        });
-    }
-
-    fn save_file(&mut self, path: PathBuf, sender: &ComponentSender<Self>) {
-        let core_ref = match &self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => Arc::clone(core_ref),
-            _ => panic!("core should be running"),
-        };
-
-        let _ = sender.output(CoreResponse::StateRequestStarted);
-
-        sender.oneshot_command(async move {
-            let result = core_ref.save_file(path, SavestateFormat::Mupen64Plus).await;
-            MupenCoreCommandResponse::SaveComplete(result)
-        });
-    }
-
-    fn load_file(&mut self, path: PathBuf, sender: &ComponentSender<Self>) {
-        let core_ref = match &self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => Arc::clone(core_ref),
-            _ => panic!("core should be running"),
-        };
-
-        let _ = sender.output(CoreResponse::StateRequestStarted);
-
-        sender.oneshot_command(async move {
-            let result = core_ref.load_file(path).await;
-            MupenCoreCommandResponse::SaveComplete(result)
-        });
-    }
-
-    fn save_op_complete(
+    fn state_change(
         &mut self,
-        result: Result<(), SavestateError>,
+        emu_state: EmuState,
         sender: &ComponentSender<Self>,
-    ) {
-        let _ = sender.output(CoreResponse::StateRequestComplete);
-        if let Err(error) = result {
-            let _ = sender.output(CoreResponse::Error(Box::new(error)));
-        }
-    }
-
-    fn set_save_slot(&mut self, slot: u8, _sender: &ComponentSender<Self>) {
-        match &mut self.0 {
-            MupenCoreInner::Running {
-                join_handle: _,
-                core_ref,
-            } => core_ref
-                .set_savestate_slot(slot)
-                .expect("savestate slot set should succeed"),
-            _ => panic!("core should be running"),
-        }
-    }
-}
-
-/// Internal functions behind the requests.
-impl MupenCore {
-    fn start_rom_inner(
-        rom_data: &[u8],
-        mut core: m64prs_core::Core,
-        sender: &ComponentSender<Self>,
-    ) -> MupenCoreInner {
-        macro_rules! check {
-            ($res:expr) => {
-                match ($res) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        let _ = sender.output(CoreResponse::Error(Box::new(err)));
-                        return MupenCoreInner::Ready { core };
-                    }
+    ) -> Result<(), M64PError> {
+        let _ = sender.output(CoreResponse::EmuStateChanged(emu_state));
+        match (emu_state, self.0.take()) {
+            (EmuState::Stopped, CoreState::Running(running_state)) => {
+                let (ready_state, error) = running_state.stop_rom();
+                self.0 = CoreState::Ready(ready_state);
+                match error {
+                    Some(err) => Err(err),
+                    None => Ok(()),
                 }
-            };
-        }
-
-        let self_path = env::current_exe().expect("should be able to find current_exe");
-        let self_dir = self_path
-            .parent()
-            .expect("self path should be in a directory");
-
-        #[cfg(target_os = "windows")]
-        const DLL_EXT: &str = "dll";
-        #[cfg(target_os = "macos")]
-        const DLL_EXT: &str = "dylib";
-        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-        const DLL_EXT: &str = "so";
-
-        let plugins = PluginSet {
-            graphics: check!(Plugin::load(
-                self_dir.join(format!("plugins/mupen64plus-video-rice.{}", DLL_EXT))
-            )),
-            audio: check!(Plugin::load(
-                self_dir.join(format!("plugins/mupen64plus-audio-sdl.{}", DLL_EXT))
-            )),
-            input: check!(Plugin::load(
-                self_dir.join(format!("plugins/mupen64plus-input-sdl.{}", DLL_EXT))
-            )),
-            rsp: check!(Plugin::load(
-                self_dir.join(format!("plugins/mupen64plus-rsp-hle.{}", DLL_EXT))
-            )),
-        };
-
-        check!(core.open_rom(rom_data));
-
-        if let Err(err) = core.attach_plugins(plugins) {
-            let _ = sender.output(CoreResponse::Error(Box::new(err)));
-            core.close_rom().expect("there should be an open ROM");
-            return MupenCoreInner::Ready { core };
-        }
-
-        let core_ref = Arc::new(core);
-
-        let join_handle = {
-            let core = Arc::clone(&core_ref);
-            thread::spawn(move || {
-                let _ = core.execute();
-            })
-        };
-
-        MupenCoreInner::Running {
-            join_handle,
-            core_ref,
+            }
+            (_, inner) => {
+                self.0 = inner;
+                Ok(())
+            }
         }
     }
 
-    fn stop_rom_inner(
-        join_handle: JoinHandle<()>,
-        core_ref: Arc<m64prs_core::Core>,
-        _sender: &ComponentSender<Self>,
-    ) -> m64prs_core::Core {
-        core_ref.request_stop().expect("Core::stop should succeed");
-        join_handle.join().expect("the core thread shouldn't panic");
+    fn start_rom(&mut self, path: &Path) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let rom_data = fs::read(path)?;
 
-        Arc::into_inner(core_ref)
-            .expect("no refs to the core should exist outside of the emulator thread")
+        let plugins = {
+            let self_path = std::env::current_exe().unwrap();
+            let plugin_path = self_path.parent().unwrap().join("plugins");
+
+            fn plugin_name(name: &str) -> String {
+                #[cfg(target_os = "windows")]
+                {
+                    format!("{}.dll", name)
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    format!("{}.dylib", name)
+                }
+                #[cfg(target_os = "linux")]
+                {
+                    format!("{}.so", name)
+                }
+            }
+
+            // TODO: allow user to configure plugins
+            PluginSet {
+                graphics: Plugin::load(plugin_path.join(plugin_name("mupen64plus-video-rice")))?,
+                audio: Plugin::load(plugin_path.join(plugin_name("mupen64plus-audio-sdl")))?,
+                input: Plugin::load(plugin_path.join(plugin_name("mupen64plus-input-sdl")))?,
+                rsp: Plugin::load(plugin_path.join(plugin_name("mupen64plus-rsp-hle")))?,
+            }
+        };
+
+        if let CoreState::Ready(ready_state) = self.0.take() {
+            match ready_state.start_rom(&rom_data, plugins) {
+                Ok(running_state) => {
+                    self.0 = CoreState::Running(running_state);
+                    Ok(())
+                }
+                Err((error, ready_state)) => {
+                    self.0 = CoreState::Ready(ready_state);
+                    Err(error)
+                }
+            }
+        } else {
+            panic!("expected CoreState::Ready for start_rom");
+        }
+    }
+
+    fn stop_rom(&mut self) -> Result<(), M64PError> {
+        match self.0.take() {
+            CoreState::Running(running_state) => {
+                let (ready_state, error) = running_state.stop_rom();
+                self.0 = CoreState::Ready(ready_state);
+                match error {
+                    Some(err) => Err(err),
+                    None => Ok(()),
+                }
+            }
+            _ => panic!("expected CoreState::Running for stop_rom"),
+        }
+    }
+
+    fn toggle_pause(&mut self) -> Result<(), M64PError> {
+        self.0
+            .borrow_running()
+            .expect("expected CoreState::Running for toggle_pause")
+            .toggle_pause()
+    }
+
+    fn advance_frame(&mut self) -> Result<(), M64PError> {
+        self.0
+            .borrow_running()
+            .expect("expected CoreState::Running for advance_frame")
+            .advance_frame()
+    }
+
+    fn reset(&mut self, hard: bool) -> Result<(), M64PError> {
+        self.0
+            .borrow_running()
+            .expect("expected CoreState::Running for toggle_pause")
+            .reset(hard)
+    }
+
+    fn save_slot(&mut self, sender: &ComponentSender<Self>) -> Result<(), SavestateError> {
+        let running_state = self
+            .0
+            .borrow_running()
+            .expect("expected CoreState::Running for save_slot");
+
+        let _ = sender.output(CoreResponse::StateRequestStarted);
+        let result = running_state.save_slot().block_on();
+        let _ = sender.output(CoreResponse::StateRequestComplete);
+
+        result
+    }
+
+    fn load_slot(&mut self, sender: &ComponentSender<Self>) -> Result<(), SavestateError> {
+        let running_state = self
+            .0
+            .borrow_running()
+            .expect("expected CoreState::Running for save_slot");
+
+        let _ = sender.output(CoreResponse::StateRequestStarted);
+        let result = running_state.load_slot().block_on();
+        let _ = sender.output(CoreResponse::StateRequestComplete);
+
+        result
+    }
+
+    fn save_file(
+        &mut self,
+        path: PathBuf,
+        sender: &ComponentSender<Self>,
+    ) -> Result<(), SavestateError> {
+        let running_state = self
+            .0
+            .borrow_running()
+            .expect("expected CoreState::Running for save_slot");
+
+        let _ = sender.output(CoreResponse::StateRequestStarted);
+        let result = running_state.save_file(path).block_on();
+        let _ = sender.output(CoreResponse::StateRequestComplete);
+
+        result
+    }
+
+    fn load_file(
+        &mut self,
+        path: PathBuf,
+        sender: &ComponentSender<Self>,
+    ) -> Result<(), SavestateError> {
+        let running_state = self
+            .0
+            .borrow_running()
+            .expect("expected CoreState::Running for save_slot");
+
+        let _ = sender.output(CoreResponse::StateRequestStarted);
+        let result = running_state.load_file(path).block_on();
+        let _ = sender.output(CoreResponse::StateRequestComplete);
+
+        result
+    }
+
+    fn set_save_slot(
+        &mut self,
+        slot: u8,
+        _sender: &ComponentSender<Self>,
+    ) -> Result<(), M64PError> {
+        self.0
+            .borrow_running()
+            .expect("expected CoreState::Running for toggle_pause")
+            .set_save_slot(slot)
     }
 }
 
@@ -451,13 +272,13 @@ impl Component for MupenCore {
     type Input = CoreRequest;
     type Output = CoreResponse;
 
-    type CommandOutput = MupenCoreCommandResponse;
+    type CommandOutput = ();
 
     type Root = ();
     type Widgets = ();
 
     fn init(_init: (), _root: (), sender: ComponentSender<Self>) -> ComponentParts<Self> {
-        let model = Self(MupenCoreInner::Uninit);
+        let model = Self(CoreState::default());
         sender.input(CoreRequest::Init);
         ComponentParts { model, widgets: () }
     }
@@ -468,35 +289,24 @@ impl Component for MupenCore {
 
     fn update(&mut self, request: Self::Input, sender: ComponentSender<Self>, _root: &()) {
         use CoreRequest::*;
-        match request {
-            Init => self.init(&sender),
-            CoreEmuStateChange(emu_state) => self.state_change(emu_state, &sender),
-            StartRom(path) => self.start_rom(&path, &sender),
-            StopRom => self.stop_rom(&sender),
-            TogglePause => self.toggle_pause(&sender),
-            FrameAdvance => self.advance_frame(&sender),
-            Reset(is_hard) => self.reset(is_hard, &sender),
-            SaveSlot => self.save_slot(&sender),
-            LoadSlot => self.load_slot(&sender),
-            SetSaveSlot(slot) => self.set_save_slot(slot, &sender),
-            SaveFile(path) => self.save_file(path, &sender),
-            LoadFile(path) => self.load_file(path, &sender),
-        }
-    }
-
-    fn update_cmd(
-        &mut self,
-        response: Self::CommandOutput,
-        sender: ComponentSender<Self>,
-        root: &Self::Root,
-    ) {
-        match response {
-            MupenCoreCommandResponse::LoadComplete(result) => {
-                self.save_op_complete(result, &sender)
+        let result: Result<(), Box<dyn Error + Send + Sync>> = match request {
+            Init => Ok(self.init(&sender)),
+            EmuStateChanged(emu_state) => {
+                self.state_change(emu_state, &sender).map_err(Into::into)
             }
-            MupenCoreCommandResponse::SaveComplete(result) => {
-                self.save_op_complete(result, &sender)
-            }
+            StartRom(path) => self.start_rom(&path),
+            StopRom => self.stop_rom().map_err(Into::into),
+            TogglePause => self.toggle_pause().map_err(Into::into),
+            FrameAdvance => self.advance_frame().map_err(Into::into),
+            Reset(hard) => self.reset(hard).map_err(Into::into),
+            SaveSlot => self.save_slot(&sender).map_err(Into::into),
+            LoadSlot => self.load_slot(&sender).map_err(Into::into),
+            SetSaveSlot(slot) => self.set_save_slot(slot, &sender).map_err(Into::into),
+            SaveFile(path) => self.save_file(path, &sender).map_err(Into::into),
+            LoadFile(path) => self.load_file(path, &sender).map_err(Into::into),
+        };
+        if let Err(error) = result {
+            let _ = sender.output(CoreResponse::Error(error));
         }
     }
 }

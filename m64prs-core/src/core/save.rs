@@ -14,7 +14,7 @@ use super::Core;
 /// Functions dealing with savestates.
 impl Core {
     /// Saves game state to the current slot.
-    pub async fn save_state(&self) -> Result<(), SavestateError> {
+    pub async fn save_slot(&self) -> Result<(), SavestateError> {
         let _lock = self.st_mutex.lock().await;
         self.save_op_inner(CoreParam::StateSaveComplete, || {
             self.do_command(Command::StateSave)
@@ -23,7 +23,7 @@ impl Core {
     }
 
     /// Loads game state from the current slot.
-    pub async fn load_state(&self) -> Result<(), SavestateError> {
+    pub async fn load_slot(&self) -> Result<(), SavestateError> {
         let _lock = self.st_mutex.lock().await;
         self.save_op_inner(CoreParam::StateLoadComplete, || {
             self.do_command(Command::StateLoad)
@@ -53,8 +53,8 @@ impl Core {
         let _lock = self.st_mutex.lock().await;
         let c_path = CString::new(path.as_ref().to_str().unwrap()).unwrap();
 
-        self.save_op_inner(CoreParam::StateSaveComplete, || unsafe {
-            self.do_command_p(Command::StateSave, c_path.as_ptr() as *mut _)
+        self.save_op_inner(CoreParam::StateLoadComplete, || unsafe {
+            self.do_command_p(Command::StateLoad, c_path.as_ptr() as *mut _)
         })
         .await
     }
@@ -76,7 +76,7 @@ impl Core {
         future
     }
 
-    pub fn set_savestate_slot(&self, slot: u8) -> Result<(), M64PError> {
+    pub fn set_state_slot(&self, slot: u8) -> Result<(), M64PError> {
         if slot > 9 {
             panic!("Slot value must be between 0-9")
         }

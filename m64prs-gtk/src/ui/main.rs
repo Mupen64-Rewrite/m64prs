@@ -46,7 +46,7 @@ pub enum Message {
     CoreReady {
         vidext_inbound: mpsc::Sender<(usize, VidextResponse)>,
     },
-    CoreError(Box<dyn Error + Send + 'static>),
+    CoreError(Box<dyn Error + Send + Sync + 'static>),
     CoreStateChanged(EmuState),
     CoreIoStateChanged(bool),
     CoreSavestateSlotChanged(u8),

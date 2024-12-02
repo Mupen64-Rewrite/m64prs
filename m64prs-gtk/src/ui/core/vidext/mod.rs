@@ -13,10 +13,12 @@ use m64prs_core::{
 };
 use m64prs_sys::RenderMode;
 use opengl::OpenGlState;
-use relm4::ComponentSender;
+use relm4::Sender;
 use request::RequestManager;
 
 use crate::controls::compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey};
+
+use super::CoreResponse;
 
 mod opengl;
 mod request;
@@ -52,14 +54,14 @@ enum GraphicsState {
 }
 
 pub struct VideoExtensionParameters {
-    outbound: ComponentSender<super::MupenCore>,
+    outbound: Sender<CoreResponse>,
     inbound: mpsc::Receiver<(usize, VidextResponse)>,
 }
 
 impl VideoExtensionParameters {
     /// Constructs the message queues.
     pub(super) fn new(
-        sender: ComponentSender<super::MupenCore>,
+        sender: Sender<CoreResponse>,
     ) -> (Self, mpsc::Sender<(usize, VidextResponse)>) {
         let (tx, rx) = mpsc::channel();
 
