@@ -1,9 +1,7 @@
 use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
-    fmt::Debug,
-    io::{self, Read, Write},
-    mem::{self},
+    ffi::c_int, fmt::Debug, io::{self, Read, Write}, mem::{self}
 };
 
 pub mod error;
@@ -247,6 +245,24 @@ bitflags::bitflags! {
         const P3_RUMBLE_PAK = 1 << 10;
         /// Port 4 has a Rumble Pak attached to the controller.
         const P4_RUMBLE_PAK = 1 << 11;
+    }
+}
+
+impl ControllerFlags {
+    pub fn port_present(self, port: c_int) -> bool {
+        assert!((0..4).contains(&port));
+        
+        self.contains(Self::from_bits_retain(1 << port))
+    }
+    pub fn port_has_mempak(self, port: c_int) -> bool {
+        assert!((0..4).contains(&port));
+        
+        self.contains(Self::from_bits_retain((1 << 4) << port))
+    }
+    pub fn port_has_rumblepak(self, port: c_int) -> bool {
+        assert!((0..4).contains(&port));
+        
+        self.contains(Self::from_bits_retain((1 << 8) << port))
     }
 }
 

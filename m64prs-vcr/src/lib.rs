@@ -97,9 +97,14 @@ impl VcrState {
         Ok(())
     }
 
-    /// Implementation of [`m64prs_core::tas_callbacks::InputHandler`]. This method
-    /// will either play back inputs (read/write mode), or overwrite inputs.
-    pub fn filter_inputs(&mut self, _port: c_int, input: Buttons) -> Buttons {
+    /// Implementation of [`InputHandler::filter_inputs`][m64prs_core::tas_callbacks::InputHandler::filter_inputs].  
+    /// This method will either play back inputs (read/write mode), or overwrite inputs, depending on the read-only mode.
+    pub fn filter_inputs(&mut self, port: c_int, input: Buttons) -> Buttons {
+        // don't overwrite inputs we don't care about
+        if !self.header.controller_flags.port_present(port) {
+            return input;
+        }
+
         let index_usize: usize = self.index.try_into().unwrap();
         if self.read_only {
             if index_usize < self.inputs.len() {
@@ -119,6 +124,12 @@ impl VcrState {
         }
     }
 
+    /// Implementation of [`InputHandler::poll_present`][m64prs_core::tas_callbacks::InputHandler::poll_present].  
+    /// This method will return true for any port where input is being recorded.
+    pub fn poll_present(&self, port: c_int) -> bool {
+        self.header.controller_flags.port_present(port)
+    }
+
     /// Implementation of [`m64prs_core::tas_callbacks::FrameHandler`]. This method
     /// simply increments the VI count.
     pub fn tick_vi(&mut self) {
@@ -126,12 +137,10 @@ impl VcrState {
             if usize::try_from(self.index).unwrap() < self.inputs.len() {
                 self.vi_count = self.vi_count.saturating_add(1);
             }
-        }
-        else {
+        } else {
             self.vi_count = self.vi_count.saturating_add(1);
             self.header.length_vis = self.header.length_vis.max(self.vi_count);
         }
-        
     }
 
     /// Determines whether the VCR has exhausted all inputs.

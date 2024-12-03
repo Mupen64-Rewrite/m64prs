@@ -1,6 +1,6 @@
 use ffi::{AudioHandlerFFI, InputHandlerFFI, SaveHandlerFFI};
-use m64prs_sys::{Buttons, Command};
-use std::{error::Error, ffi::{c_int, c_uint, c_void}};
+use m64prs_sys::{Buttons, Command, EmuState};
+use std::{error::Error, ffi::{c_int, c_uint, c_void}, ptr::{null, null_mut}};
 
 use crate::error::M64PError;
 
@@ -8,17 +8,15 @@ use super::{core_fn, Core};
 
 impl Core {
     /// Sets an *input handler* for the core, which can filter or replace controller inputs.
-    /// It may only be set once.
     ///
     /// # Errors
     /// This function errors if the core fails to set the input handler.
-    ///
-    /// # Panics
-    /// This function panics if the input handler is already set.
     pub fn set_input_handler<I: InputHandler>(&mut self, handler: I) -> Result<(), M64PError> {
-        if self.input_handler.is_some() {
-            panic!("input handler already registered");
+        // SAFETY: if the core is running, handler is in use.
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
         }
+
         let input_handler = InputHandlerFFI::new(handler);
 
         // SAFETY: the FFI handler is safe to use as long as the context isn't moved.
@@ -33,33 +31,67 @@ impl Core {
         Ok(())
     }
 
+    /// Clears the input handler previously set by [`Core::set_input_handler`].
+    ///
+    /// # Errors
+    /// This function errors if the core fails to clear the input handler.
+    pub fn clear_input_handler(&mut self) -> Result<(), M64PError> {
+        // SAFETY: if the core is running, handler is in use.
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
+        }
+
+        core_fn(unsafe {
+            self.api
+                .tas
+                .set_input_handler(null())
+        })?;
+
+        self.input_handler = None;
+
+        Ok(())
+    }
+
     /// Sets a *frame handler* for the core, which executes a callback when
     /// a new frame is presented to the screen.
     ///
     /// # Errors
     /// This function errors if the core fails to set the frame handler.
-    ///
-    /// # Panics
-    /// The function errors if the frame handler is already set.
     pub fn set_frame_handler<F: FrameHandler>(&mut self, handler: F) -> Result<(), M64PError> {
-        static mut FRAME_HANDLER_BOX: Option<Box<dyn FrameHandler>> = None;
-
-        // SAFETY: There is only ever one instance of Core, and so, there can only
-        // ever be one caller at any given time.
-        unsafe {
-            if FRAME_HANDLER_BOX.is_some() {
-                panic!("frame handler already registered");
-            }
-
-            FRAME_HANDLER_BOX = Some(Box::new(handler));
+        // SAFETY: if the core is running, handler is in use.
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
         }
 
-        unsafe extern "C" fn frame_handler(count: c_uint) {
-            FRAME_HANDLER_BOX.as_mut().unwrap().new_frame(count);
+        let mut frame_handler = ffi::FRAME_HANDLER_BOX.lock().unwrap();
+        *frame_handler = Some(Box::new(handler));
+        drop(frame_handler);
+
+        unsafe extern "C" fn frame_handler_fn(count: c_uint) {
+            if let Some(handler) = ffi::FRAME_HANDLER_BOX.lock().unwrap().as_mut() {
+                handler.new_frame(count);
+            }
         }
 
         // SAFETY: the frame handler is valid as long as the core is.
-        unsafe { self.do_command_p(Command::SetFrameCallback, frame_handler as *mut _) }
+        unsafe { self.do_command_p(Command::SetFrameCallback, frame_handler_fn as *mut _) }
+    }
+
+    /// Clears the frame handler previously set with [`Core::set_frame_handler`].
+    ///
+    /// # Errors
+    /// This function errors if the core fails to clear the frame handler.
+    pub fn clear_frame_handler(&mut self) -> Result<(), M64PError>{
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
+        }
+
+        unsafe { self.do_command_p(Command::SetFrameCallback, null_mut())? };
+
+        let mut frame_handler = ffi::FRAME_HANDLER_BOX.lock().unwrap();
+        *frame_handler = None;
+
+        Ok(())
     }
 
     /// Sets an *audio handler* for the core, which can receive and process audio
@@ -97,8 +129,9 @@ impl Core {
     /// # Panics
     /// The function errors if the save handler is already set.
     pub fn set_save_handler<S: SaveHandler>(&mut self, handler: S) -> Result<(), M64PError> {
-        if self.save_handler.is_some() {
-            panic!("save handler already registered");
+        // SAFETY: if the core is running, handler is in use.
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
         }
 
         let save_handler = SaveHandlerFFI::new(handler);
@@ -110,6 +143,27 @@ impl Core {
                 .set_savestate_handler(&save_handler.create_ffi_handler())
         })?;
         self.save_handler = Some(Box::new(save_handler));
+
+        Ok(())
+    }
+
+    /// Clears the save handler previously set with [`Core::set_save_handler`].
+    ///
+    /// # Errors
+    /// This function errors if the core fails to clear the save handler.
+    pub fn clear_save_handler(&mut self) -> Result<(), M64PError> {
+        // SAFETY: if the core is running, handler is in use.
+        if self.emu_state() != EmuState::Stopped {
+            return Err(M64PError::InvalidState)
+        }
+
+        core_fn(unsafe {
+            self.api
+                .tas
+                .set_savestate_handler(null())
+        })?;
+
+        self.input_handler = None;
 
         Ok(())
     }
@@ -140,8 +194,10 @@ pub mod ffi {
     use super::*;
     use std::{
         ffi::{c_char, c_uchar},
-        mem,
+        mem, sync::Mutex,
     };
+
+    pub(super) static FRAME_HANDLER_BOX: Mutex<Option<Box<dyn FrameHandler>>> = Mutex::new(None);
 
     pub(crate) trait FFIHandler: Send {}
 
