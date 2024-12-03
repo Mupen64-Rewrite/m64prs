@@ -34,7 +34,7 @@ pub struct M64Header {
     /// Number of input frames in the movie.
     pub length_samples: u32,
     /// How the movie should be started.
-    pub start_flags: StartMethod,
+    pub start_flags: StartType,
     _reserved2: u16,
     /// Flags specifying which controllers and which attachments are connected.
     pub controller_flags: ControllerFlags,
@@ -97,7 +97,7 @@ impl Default for M64Header {
             num_controllers: 1,
             _reserved1: 0,
             length_samples: 0,
-            start_flags: StartMethod::FROM_SNAPSHOT,
+            start_flags: StartType::FROM_SNAPSHOT,
             _reserved2: 0,
             controller_flags: ControllerFlags::P1_PRESENT,
             _reserved3: [0; 160],
@@ -204,15 +204,15 @@ impl Debug for M64Header {
 
 /// Value indicating how the .m64 file is to be started.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StartMethod(pub u16);
+pub struct StartType(pub u16);
 
-impl StartMethod {
+impl StartType {
     /// Indicates that a savestate associated with the .m64 file should be loaded.
-    pub const FROM_SNAPSHOT: StartMethod = StartMethod(1 << 0);
+    pub const FROM_SNAPSHOT: StartType = StartType(1 << 0);
     /// Indicates that the game should be reset.
-    pub const FROM_RESET: StartMethod = StartMethod(1 << 1);
+    pub const FROM_RESET: StartType = StartType(1 << 1);
     /// Indicates that an EEPROM dump associated with the .m64 file
-    pub const FROM_EEPROM: StartMethod = StartMethod(1 << 2);
+    pub const FROM_EEPROM: StartType = StartType(1 << 2);
 }
 
 bitflags::bitflags! {

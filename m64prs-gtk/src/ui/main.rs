@@ -10,7 +10,7 @@ use crate::{
     controls,
     ui::dialogs::{
         alert::{AlertDialog, AlertDialogRequest, AlertDialogResponse, AlertDialogSettings},
-        file::{FileDialog, FileDialogResponse, FileDialogSettings},
+        file::{FileDialog, FileDialogResponse, FileDialogSettings}, movie::{MovieDialog, MovieDialogSettings},
     },
 };
 
@@ -20,21 +20,19 @@ use super::{
         vidext::{VidextRequest, VidextResponse},
         CoreRequest, CoreResponse, MupenCore,
     },
-    dialogs::file::FileDialogRequest,
+    dialogs::{file::FileDialogRequest, movie::{MovieDialogMode, MovieDialogRequest}},
 };
 
 #[derive(Debug)]
 pub enum Message {
     NoOp,
-    // MENU ITEMS
-    // ==================
 
-    // File
+    // DIALOGS
+    // ==================
     ShowOpenRomDialog,
-    // Emulator
-    MenuTogglePause,
     ShowSaveFileDialog,
     ShowLoadFileDialog,
+    ShowMovieDialog(MovieDialogMode),
 
     // OUTBOUND REQUESTS
     // =================
@@ -79,6 +77,7 @@ pub struct Model {
     core_error_dialog: Controller<AlertDialog>,
     state_load_dialog: Controller<FileDialog>,
     state_save_dialog: Controller<FileDialog>,
+    movie_dialog: Controller<MovieDialog>,
 }
 
 impl Model {}
@@ -284,6 +283,12 @@ impl Component for Model {
                 AlertDialogResponse::Choice(_) => Message::NoOp,
             });
 
+        let movie_dialog = MovieDialog::builder()
+            .launch(MovieDialogSettings::default()
+                .with_transient_to(&root)
+            )
+            .forward(sender.input_sender(), |msg| Message::NoOp);
+
         let model = Self {
             // state
             // main_view: MainViewState::RomBrowser,
@@ -308,6 +313,7 @@ impl Component for Model {
             core_error_dialog,
             state_load_dialog,
             state_save_dialog,
+            movie_dialog,
         };
         let widgets = view_output!();
 
@@ -334,15 +340,10 @@ impl Component for Model {
         match message {
             Message::NoOp => (),
 
-            // MENU ACTIONS
+            // DIALOGS
             // ===============
-            // File
             Message::ShowOpenRomDialog => {
                 self.rom_file_dialog.emit(FileDialogRequest::Open);
-            }
-            // Emulator
-            Message::MenuTogglePause => {
-                self.core.emit(CoreRequest::TogglePause);
             }
             Message::ShowSaveFileDialog => {
                 self.state_save_dialog.emit(FileDialogRequest::Save);
@@ -350,12 +351,16 @@ impl Component for Model {
             Message::ShowLoadFileDialog => {
                 self.state_load_dialog.emit(FileDialogRequest::Open);
             }
+            Message::ShowMovieDialog(mode) => {
+                self.movie_dialog.emit(MovieDialogRequest::Show { mode });
+            }
 
             // OUTBOUND REQUESTS
             // =================
             Message::ForwardToCore(message) => {
                 self.core.emit(message);
             }
+
             // CORE FEEDBACK
             // ===============
             Message::CoreReady { vidext_inbound } => {

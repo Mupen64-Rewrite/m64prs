@@ -6,7 +6,7 @@ use relm4::{
     new_action_group, new_stateful_action, new_stateless_action, Sender,
 };
 
-use crate::{ui::core::CoreRequest, utils::actions::RelmActionStateExt};
+use crate::{ui::{core::CoreRequest, dialogs::movie::MovieDialogMode}, utils::actions::RelmActionStateExt};
 
 use super::main;
 
@@ -109,7 +109,7 @@ impl AppActions {
 
             toggle_pause: a!(
                 group,
-                message!(main::Message::MenuTogglePause, state: false)
+                message!(main::Message::ForwardToCore(CoreRequest::TogglePause), state: false)
             ),
             frame_advance: a!(
                 group,
@@ -135,8 +135,8 @@ impl AppActions {
             save_file: a!(group, message!(main::Message::ShowSaveFileDialog)),
             load_file: a!(group, message!(main::Message::ShowLoadFileDialog)),
 
-            new_movie: a!(group, message!(main::Message::NoOp)),
-            load_movie: a!(group, message!(main::Message::NoOp)),
+            new_movie: a!(group, message!(main::Message::ShowMovieDialog(MovieDialogMode::New))),
+            load_movie: a!(group, message!(main::Message::ShowMovieDialog(MovieDialogMode::Load))),
 
             save_movie: a!(group, message!(main::Message::NoOp)),
             discard_movie: a!(group, message!(main::Message::NoOp)),

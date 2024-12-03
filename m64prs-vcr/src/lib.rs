@@ -8,7 +8,7 @@ use std::{
 use freeze::MovieFreeze;
 use m64prs_core::{error::M64PError, Core};
 use m64prs_sys::Buttons;
-use movie::{M64File, M64Header, StartMethod};
+use movie::{M64File, M64Header, StartType};
 use pollster::FutureExt;
 
 pub mod freeze;
@@ -70,8 +70,8 @@ impl VcrState {
         self.index = 0;
 
         match self.header.start_flags {
-            StartMethod::FROM_RESET => core.reset(true)?,
-            StartMethod::FROM_SNAPSHOT => {
+            StartType::FROM_RESET => core.reset(true)?,
+            StartType::FROM_SNAPSHOT => {
                 // search for a valid savestate (TODO: get rid of some of these unwraps)
                 let st_path = fs::read_dir(self.path.parent().unwrap())?
                     .filter_map(|entry| {
@@ -88,7 +88,7 @@ impl VcrState {
 
                 core.load_file(st_path).block_on()?;
             }
-            StartMethod::FROM_EEPROM => {
+            StartType::FROM_EEPROM => {
                 unimplemented!()
             }
             _ => panic!("invalid start flags"),
