@@ -17,7 +17,7 @@ glib = { version = "*", features = ["log"] }
 gio = { version = "*" }
 graphene-rs = { version = "*" }
 gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
-gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14"] }
+gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }
 relm4 = "0.9.1"
 
 env_logger = "0.11.5"

@@ -1,0 +1,85 @@
+using Gtk 4.0;
+
+menu root {
+  submenu {
+    label: "File";
+
+    item ("Open ROM", "app.file.open_rom")
+    item ("Close ROM", "app.file.close_rom")
+  }
+  submenu {
+    label: "Emulator";
+
+    section {
+      item ("Pause/Resume", "app.emu.toggle_pause")
+      item ("Frame Advance", "app.emu.frame_advance")
+      item ("Reset ROM", "app.emu.reset_rom")
+    }
+    section {
+      item ("Save State", "app.emu.save_state")
+      item ("Load State", "app.emu.load_state")
+      submenu {
+        label: "Current Slot";
+        // targets have to be strings at the moment
+        item {
+          label: "1";
+          action: "app.emu.set_save_slot";
+          target: "1";
+        }
+        item {
+          label: "2";
+          action: "app.emu.set_save_slot";
+          target: "2";
+        }
+        item {
+          label: "3";
+          action: "app.emu.set_save_slot";
+          target: "3";
+        }
+        item {
+          label: "4";
+          action: "app.emu.set_save_slot";
+          target: "4";
+        }
+        item {
+          label: "5";
+          action: "app.emu.set_save_slot";
+          target: "5";
+        }
+        item {
+          label: "6";
+          action: "app.emu.set_save_slot";
+          target: "6";
+        }
+        item {
+          label: "7";
+          action: "app.emu.set_save_slot";
+          target: "7";
+        }
+        item {
+          label: "8";
+          action: "app.emu.set_save_slot";
+          target: "8";
+        }
+        item {
+          label: "9";
+          action: "app.emu.set_save_slot";
+          target: "9";
+        }
+      }
+    }
+    section {
+      item ("Save State to...", "app.emu.save_file")
+      item ("Load State from...", "app.emu.load_file")
+    }
+  }
+  submenu {
+    label: "Movie";
+
+    item ("New Movie", "app.vcr.new_movie")
+    item ("Open Movie", "app.vcr.open_movie")
+    item ("Save Movie", "app.vcr.save_movie")
+    item ("Discard Movie", "app.vcr.discard_movie")
+    item ("Read-only Mode", "app.vcr.toggle_read_only")
+  }
+}

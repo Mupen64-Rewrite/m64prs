@@ -1,15 +1,18 @@
-use relm4::RelmApp;
+use gio::ApplicationFlags;
+use gtk::{prelude::*};
 
-mod actions;
-mod dialogs;
-mod core;
-mod main;
+mod main_window;
+mod menu;
 
-mod gl {
-    include!(concat!(env!("OUT_DIR"), "/gl.gen.rs"));
-}
+use main_window::MainWindow;
 
-pub(crate) fn run_ui() {
-    let app = RelmApp::new("io.github.jgcodes.m64prs");
-    app.run::<main::Model>(());
+const APP_ID: &str = "io.github.jgcodes.m64prs";
+
+pub fn run_ui() {
+    let app = gtk::Application::new(Some(APP_ID), ApplicationFlags::FLAGS_NONE);
+    app.connect_activate(|app| {
+        let main_window = gtk::ApplicationWindow::new(app);
+        main_window.present();
+    });
+    app.run();
 }

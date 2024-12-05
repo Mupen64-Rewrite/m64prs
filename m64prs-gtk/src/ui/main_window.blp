@@ -1,0 +1,27 @@
+using Gtk 4.0;
+
+template $M64PRS_MainWindow: Gtk.ApplicationWindow {
+  title: "m64prs";
+  default-width: 426;
+  default-height: 240;
+  show-menubar: true;
+
+  Stack {
+    visible-child-name: bind template.current-view-str;
+
+    StackPage {
+      name: "rom-browser";
+      child: Button rom_browser {
+        hexpand: true;
+        vexpand: true;
+      };
+    }
+    StackPage {
+      name: "game-view";
+      child: $M64PRS_CompositorView compositor {
+        hexpand: true;
+        vexpand: true;
+      };
+    }
+  }
+}

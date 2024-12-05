@@ -19,7 +19,7 @@ use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 use crate::{
     controls::compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
-    ui::gl::{
+    old_ui::gl::{
         self,
         types::{GLenum, GLint},
         Gl,

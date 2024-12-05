@@ -6,7 +6,7 @@ use relm4::{
     new_action_group, new_stateful_action, new_stateless_action, Sender,
 };
 
-use crate::{ui::{core::CoreRequest, dialogs::movie::MovieDialogMode}, utils::actions::RelmActionStateExt};
+use crate::{old_ui::{core::CoreRequest, dialogs::movie::MovieDialogMode}, utils::actions::RelmActionStateExt};
 
 use super::main;
 

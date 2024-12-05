@@ -49,7 +49,7 @@ mod inner {
 
     #[glib::object_subclass]
     impl ObjectSubclass for CompositorView {
-        const NAME: &'static str = "M64PRSCompositorView";
+        const NAME: &'static str = "M64PRS_CompositorView";
         type Type = super::CompositorView;
         type ParentType = gtk::Widget;
     }

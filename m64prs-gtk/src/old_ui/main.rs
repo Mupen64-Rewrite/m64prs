@@ -8,7 +8,7 @@ use relm4::{
 
 use crate::{
     controls,
-    ui::dialogs::{
+    old_ui::dialogs::{
         alert::{AlertDialog, AlertDialogRequest, AlertDialogResponse, AlertDialogSettings},
         file::{FileDialog, FileDialogResponse, FileDialogSettings}, movie::{MovieDialog, MovieDialogSettings},
     },

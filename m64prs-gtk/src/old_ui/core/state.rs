@@ -18,7 +18,7 @@ use m64prs_vcr::VcrState;
 use num_enum::TryFromPrimitive;
 use relm4::{ComponentSender, Sender};
 
-use crate::ui::core::{
+use crate::old_ui::core::{
     vidext::{VideoExtensionParameters, VideoExtensionState},
     CoreRequest,
 };

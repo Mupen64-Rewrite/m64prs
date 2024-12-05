@@ -72,7 +72,11 @@ impl Component for MovieDialog {
         #[root]
         #[name(main_window)]
         gtk::Window {
-            set_title: Some("Open Movie..."),
+            #[watch]
+            set_title: match model.current_mode {
+                MovieDialogMode::New => Some("Open Movie..."),
+                MovieDialogMode::Load => Some("Load Movie..."),
+            },
             set_visible: false,
 
             gtk::Box {

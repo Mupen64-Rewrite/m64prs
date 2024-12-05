@@ -5,7 +5,7 @@ use std::sync::{
 
 use relm4::Sender;
 
-use crate::ui::core::{self, CoreResponse};
+use crate::old_ui::core::{self, CoreResponse};
 
 use super::{VideoExtensionParameters, VidextRequest, VidextResponse};
 
