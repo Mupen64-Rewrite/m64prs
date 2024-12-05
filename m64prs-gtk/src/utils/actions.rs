@@ -5,8 +5,9 @@ use glib::SignalHandlerId;
 
 use gio::prelude::*;
 
-use super::mp_lib::{TNone, TOption, TSome};
+use super::t_option::{TNone, TOption, TSome};
 
+/// Type-safe wrapper around [`gio::SimpleAction`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypedAction<OS, OP>
 where
@@ -27,11 +28,23 @@ where
     OS: OptionVariantType,
     OP: OptionVariantType,
 {
-    unsafe fn with_inner(action: &gio::SimpleAction) -> Self {
+    pub unsafe fn with_inner(action: &gio::SimpleAction) -> Self {
         Self {
             inner: action.clone(),
             _marker: PhantomData,
         }
+    }
+
+    pub fn inner(&self) -> &gio::SimpleAction {
+        &self.inner
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.inner.is_enabled()
+    }
+
+    pub fn set_enabled(&self, enabled: bool) {
+        self.inner.set_enabled(enabled);
     }
 }
 
@@ -48,7 +61,7 @@ impl<S> TypedAction<TSome<S>, TNone>
 where
     S: FromVariant + ToVariant,
 {
-    pub fn with_state(name: &str, init_state: &S) -> Self {
+    pub fn new(name: &str, init_state: &S) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(name, None, &init_state.to_variant()),
             _marker: PhantomData,
@@ -60,7 +73,7 @@ impl<P> TypedAction<TNone, TSome<P>>
 where
     P: FromVariant + ToVariant,
 {
-    pub fn with_param(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             inner: gio::SimpleAction::new(name, Some(&P::static_variant_type())),
             _marker: PhantomData,
@@ -73,7 +86,7 @@ where
     S: FromVariant + ToVariant,
     P: FromVariant + ToVariant,
 {
-    pub fn with_state_and_param(name: &str, init_state: &S) -> Self {
+    pub fn new(name: &str, init_state: &S) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(
                 name,
@@ -96,6 +109,11 @@ where
         })
     }
 
+    pub fn handled_by<F: Fn(&Self) + 'static>(self, f: F) -> Self {
+        self.connect_activate(f);
+        self
+    }
+
     pub fn activate(&self) {
         self.inner.activate(None);
     }
@@ -113,6 +131,11 @@ where
                 .expect("failed to convert variant to P");
             f(&action, inner)
         })
+    }
+
+    pub fn handled_by<F: Fn(&Self, P) + 'static>(self, f: F) -> Self {
+        self.connect_activate(f);
+        self
     }
 
     pub fn activate(&self, param: &P) {
@@ -134,6 +157,21 @@ where
         self.inner.set_state(&S::to_variant(state));
     }
 }
+
+pub trait ActionGroupTypedExt: IsA<gio::ActionMap> {
+    /// Adds a typed action to an action map.
+    fn register_action<OS, OP>(&self, action: &TypedAction<OS, OP>)
+    where
+        OS: OptionVariantType,
+        OP: OptionVariantType,
+    {
+        self.add_action(action.inner());
+    }
+}
+impl<T> ActionGroupTypedExt for T
+where
+    T: IsA<gio::ActionMap> {}
+
 
 mod sealed {
     pub trait Sealed {}

@@ -3,6 +3,9 @@ use std::fmt::Display;
 use glib::{translate::IntoGlib, EnumClass};
 use gtk::prelude::*;
 
+mod menu;
+mod enums;
+
 mod inner {
     use std::cell::Cell;
 
@@ -15,23 +18,26 @@ mod inner {
 
     use crate::controls;
 
-    use super::MainViewState;
+    use super::enums::{CoreEmuState, MainViewState};
 
     #[derive(Debug, Default, glib::Properties, gtk::CompositeTemplate)]
-    #[template(file = "src/ui/main_window.blp")]
+    #[template(file = "src/ui/main_window/mod.blp")]
     #[properties(wrapper_type = super::MainWindow)]
     pub struct MainWindow {
         #[template_child]
         rom_browser: TemplateChild<gtk::Widget>,
         #[template_child]
         compositor: TemplateChild<controls::CompositorView>,
+
         #[property(get, set, builder(MainViewState::RomBrowser))]
         #[property(
             get = |this: &MainWindow| this.current_view.get().to_string(), 
             type = String, 
-            name = "current-view-str"
+            name = "current-page"
         )]
         current_view: Cell<MainViewState>,
+        #[property(get, builder(CoreEmuState::Uninit))]
+        emu_state: Cell<CoreEmuState>,
     }
 
     #[glib::object_subclass]
@@ -68,26 +74,6 @@ mod inner {
     impl ApplicationWindowImpl for MainWindow {}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, glib::Enum)]
-#[enum_type(name = "M64PRS_MainViewState")]
-pub enum MainViewState {
-    #[enum_value(name = "rom-browser")]
-    RomBrowser,
-    #[enum_value(name = "game-view")]
-    GameView,
-}
-impl Default for MainViewState {
-    fn default() -> Self {
-        Self::RomBrowser
-    }
-}
-impl Display for MainViewState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let clazz = EnumClass::with_type(MainViewState::static_type()).unwrap();
-        f.write_str(clazz.value(self.into_glib()).unwrap().name())
-    }
-}
-
 glib::wrapper! {
     pub struct MainWindow(ObjectSubclass<inner::MainWindow>)
         @extends
@@ -106,10 +92,17 @@ glib::wrapper! {
 }
 
 impl MainWindow {
-    pub fn new(app: &impl IsA<gtk::Application>) -> Self {
-        unsafe {
+    pub fn setup_and_show(app: &impl IsA<gtk::Application>) {
+        let window: Self = unsafe {
             glib::Object::with_mut_values(Self::static_type(), &mut [("application", app.into())])
                 .unsafe_cast()
-        }
+        };
+        window.set_default_size(400, 400);
+        window.set_show_menubar(true);
+
+        let menu = menu::load_menu();
+        app.set_menubar(Some(&menu));
+
+        window.present();
     }
 }

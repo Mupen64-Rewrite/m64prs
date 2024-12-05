@@ -2,12 +2,9 @@ using Gtk 4.0;
 
 template $M64PRS_MainWindow: Gtk.ApplicationWindow {
   title: "m64prs";
-  default-width: 426;
-  default-height: 240;
-  show-menubar: true;
 
   Stack {
-    visible-child-name: bind template.current-view-str;
+    visible-child-name: bind template.current-page;
 
     StackPage {
       name: "rom-browser";
