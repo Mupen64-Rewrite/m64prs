@@ -2,6 +2,7 @@ use gio::ApplicationFlags;
 use gtk::prelude::*;
 
 mod main_window;
+mod core;
 
 use main_window::MainWindow;
 

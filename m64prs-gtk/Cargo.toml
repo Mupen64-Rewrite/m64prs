@@ -8,6 +8,7 @@ m64prs-core = { path = "../m64prs-core" }
 m64prs-sys = { path = "../m64prs-sys" }
 m64prs-native = { path = "../m64prs-native" }
 m64prs-vcr = { path = "../m64prs-vcr" }
+m64prs-gtk-macros = { path = "../m64prs-gtk-macros" }
 
 send_wrapper = "0.6.0"
 
@@ -22,7 +23,9 @@ relm4 = "0.9.1"
 
 env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
+
 pollster = "0.4.0"
+futures = "0.3.31"
 
 glutin = "0.32.1"
 raw-window-handle = "0.6.2"

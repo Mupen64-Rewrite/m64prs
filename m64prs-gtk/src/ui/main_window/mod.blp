@@ -1,7 +1,10 @@
 using Gtk 4.0;
+using Gio 2.0;
 
 template $M64PRS_MainWindow: Gtk.ApplicationWindow {
   title: "m64prs";
+  default-height: 400;
+  default-width: 400;
 
   Stack {
     visible-child-name: bind template.current-page;
@@ -21,4 +24,20 @@ template $M64PRS_MainWindow: Gtk.ApplicationWindow {
       };
     }
   }
+}
+
+FileDialog open_rom_dialog {
+  title: "Open ROM...";
+  filters: Gio.ListStore {
+    FileFilter {
+      name: "N64 ROMs";
+      mime-types ["application/x-n64-rom"]
+      patterns ["*.n64", "*.v64", "*.z64"]
+    }
+  };
+}
+
+AlertDialog error_dialog {
+  modal: true;
+  buttons: ["OK"];
 }

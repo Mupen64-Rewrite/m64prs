@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{borrow::Borrow, marker::PhantomData};
 
 use gio::prelude::{ActionExt, FromVariant, ToVariant};
 use glib::SignalHandlerId;
@@ -61,9 +61,9 @@ impl<S> TypedAction<TSome<S>, TNone>
 where
     S: FromVariant + ToVariant,
 {
-    pub fn new(name: &str, init_state: &S) -> Self {
+    pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
         Self {
-            inner: gio::SimpleAction::new_stateful(name, None, &init_state.to_variant()),
+            inner: gio::SimpleAction::new_stateful(name, None, &init_state.borrow().to_variant()),
             _marker: PhantomData,
         }
     }
@@ -86,12 +86,12 @@ where
     S: FromVariant + ToVariant,
     P: FromVariant + ToVariant,
 {
-    pub fn new(name: &str, init_state: &S) -> Self {
+    pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(
                 name,
                 Some(&P::static_variant_type()),
-                &init_state.to_variant(),
+                &init_state.borrow().to_variant(),
             ),
             _marker: PhantomData,
         }
@@ -107,11 +107,6 @@ where
             let action = unsafe { Self::with_inner(action) };
             f(&action)
         })
-    }
-
-    pub fn handled_by<F: Fn(&Self) + 'static>(self, f: F) -> Self {
-        self.connect_activate(f);
-        self
     }
 
     pub fn activate(&self) {
@@ -131,11 +126,6 @@ where
                 .expect("failed to convert variant to P");
             f(&action, inner)
         })
-    }
-
-    pub fn handled_by<F: Fn(&Self, P) + 'static>(self, f: F) -> Self {
-        self.connect_activate(f);
-        self
     }
 
     pub fn activate(&self, param: &P) {

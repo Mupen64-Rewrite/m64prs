@@ -20,8 +20,10 @@ pub trait TOption: sealed::Sealed {
 }
 
 /// Marker type representing the absence of an inner type.
+#[derive(Debug, Clone, Copy)]
 pub struct TNone;
 /// Marker type representing the presence of an inner type.
+#[derive(Debug, Clone, Copy)]
 pub struct TSome<T>(pub PhantomData<T>);
 
 impl sealed::Sealed for TNone {}

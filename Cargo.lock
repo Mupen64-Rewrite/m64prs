@@ -1340,6 +1340,7 @@ dependencies = [
  "dpi",
  "embed-manifest",
  "env_logger",
+ "futures",
  "gdk4",
  "gdk4-wayland",
  "gdk4-win32",
@@ -1353,6 +1354,7 @@ dependencies = [
  "gtk4",
  "log",
  "m64prs-core",
+ "m64prs-gtk-macros",
  "m64prs-native",
  "m64prs-sys",
  "m64prs-vcr",
@@ -1369,6 +1371,15 @@ dependencies = [
  "wayland-protocols",
  "windows 0.58.0",
  "x11rb",
+]
+
+[[package]]
+name = "m64prs-gtk-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1703,9 +1714,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.89"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f139b0662de085916d1fb67d2b4169d1addddda1919e696f3252b740b629986e"
+checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
 dependencies = [
  "unicode-ident",
 ]
@@ -2027,9 +2038,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.87"
+version = "2.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d"
+checksum = "919d3b74a5dd0ccd15aeb8f93e7006bd9e14c295087c9896a110f490752bcf31"
 dependencies = [
  "proc-macro2",
  "quote",

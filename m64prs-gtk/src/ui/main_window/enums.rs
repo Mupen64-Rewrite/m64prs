@@ -30,18 +30,18 @@ glib_enum_display!(MainViewState);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, glib::Enum)]
 #[enum_type(name = "M64PRS_CoreEmuState")]
 #[repr(u8)]
-pub enum CoreEmuState {
+pub enum MainEmuState {
     Uninit = 0,
     Stopped = 1,
     Running = 2,
     Paused = 3
 }
-impl Default for CoreEmuState {
+impl Default for MainEmuState {
     fn default() -> Self {
-        CoreEmuState::Uninit
+        MainEmuState::Uninit
     }
 }
-impl From<m64prs_sys::EmuState> for CoreEmuState {
+impl From<m64prs_sys::EmuState> for MainEmuState {
     fn from(value: m64prs_sys::EmuState) -> Self {
         match value {
             m64prs_sys::EmuState::Stopped => Self::Stopped,
@@ -50,4 +50,4 @@ impl From<m64prs_sys::EmuState> for CoreEmuState {
         }
     }
 }
-glib_enum_display!(CoreEmuState);
+glib_enum_display!(MainEmuState);
