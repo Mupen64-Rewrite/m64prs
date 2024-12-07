@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{cell::RefMut, error::Error};
 
 use glib::subclass::types::ObjectSubclassIsExt;
 use gtk::prelude::*;
@@ -6,10 +6,10 @@ use gtk::prelude::*;
 use super::core::CoreState;
 
 mod menu;
-mod enums;
+pub mod enums;
 
 mod inner {
-    use std::{cell::{Cell, RefCell}, error::Error};
+    use std::{cell::{Cell, RefCell, RefMut}, error::Error};
 
     use glib::{subclass::{
         object::ObjectImpl,
@@ -19,7 +19,7 @@ mod inner {
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
     use m64prs_sys::EmuState;
 
-    use crate::{controls, ui::core::{CoreReadyState, CoreState}};
+    use crate::{controls::{self, compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey}}, ui::core::{CoreReadyState, CoreState}};
 
     use super::{enums::{MainEmuState, MainViewState}, menu::AppActions};
 
@@ -38,7 +38,7 @@ mod inner {
         error_dialog: TemplateChild<gtk::AlertDialog>,
 
         // properties
-        #[property(get, set, builder(MainViewState::RomBrowser))]
+        #[property(get, builder(MainViewState::RomBrowser))]
         #[property(
             get = |this: &MainWindow| this.current_view.get().to_string(), 
             type = String, 
@@ -60,6 +60,27 @@ mod inner {
             self.obj().notify_emu_state();
         }
 
+        pub(super) fn set_current_view(&self, main_view: MainViewState) {
+            self.current_view.set(main_view);
+            {
+                let obj = self.obj();
+                obj.notify_current_view();
+                obj.notify_current_page();
+            }
+        }
+        
+        pub(super) fn borrow_core<'a>(&'a self) -> RefMut<'a, CoreState> {
+            self.core.borrow_mut()
+        }
+
+        pub(super) fn comp_new_view(&self, attrs: NativeViewAttributes) -> Box<dyn NativeView> {
+            self.compositor.new_view(attrs)
+        }
+
+        pub(super) fn comp_del_view(&self, view: NativeViewKey) {
+            self.compositor.del_view(view);
+        }
+
         pub(super) fn exec_with_core<R, F: FnOnce(&mut CoreState) -> R>(&self, f: F) -> R {
             let mut core = self.core.borrow_mut();
             f(&mut *core)
@@ -74,6 +95,9 @@ mod inner {
             self.error_dialog.set_detail(&error.to_string());
             let _ = self.error_dialog.choose_future(Some(&self.obj().clone())).await;
         }
+    }
+
+    impl MainWindow {
     }
 
     #[glib::object_subclass]
@@ -104,7 +128,6 @@ mod inner {
                     let ready_state = gio::spawn_blocking(move || {
                         CoreReadyState::new(self_weak_ref)
                     }).await.expect("failed to init core");
-                    this.set_emu_state(EmuState::Stopped);
                     this.imp().core.replace(ready_state.into());
                 });
             }
@@ -126,14 +149,16 @@ mod inner {
                 "emu-state" => {
                     let value = self.obj().emu_state();
                     if value == MainEmuState::Stopped {
-                        let mut core = self.core.borrow_mut();
-
-                        match core.take() {
-                            CoreState::Running(core_running_state) => {
-                                *core = CoreState::Ready(core_running_state.stop_rom().0);
-                            },
-                            other_state => *core = other_state, 
-                        }
+                        let self_ref = self.obj().clone();
+                        glib::spawn_future_local(async move {
+                            let mut core = self_ref.imp().core.borrow_mut();
+                            match core.take() {
+                                CoreState::Running(core_running_state) => {
+                                    *core = CoreState::Ready(core_running_state.stop_rom().await.0);
+                                },
+                                other_state => *core = other_state, 
+                            }
+                        });
                     }
                 }
                 _ => (),
@@ -178,23 +203,4 @@ impl MainWindow {
 
         window.present();
     }
-
-    // pub(in crate::ui) fn set_emu_state(&self, emu_state: m64prs_sys::EmuState) {
-    //     println!("emu state: {:?}", emu_state);
-    //     self.imp().set_emu_state(emu_state)
-    // }
-
-    // pub(in crate::ui) fn exec_with_core<R, F: FnOnce(&mut CoreState) -> R>(&self, f: F) -> R {
-    //     // self.imp().exec_with_core(f)
-    //     glib::subclass::types::ObjectSubclassIsExt::imp(self)
-    //         .exec_with_core(f)
-    // }
-
-    // pub(in crate::ui) async fn show_open_rom_dialog(&self) -> Result<gio::File, glib::Error> {
-    //     self.imp().show_open_rom_dialog().await
-    // }
-
-    // pub(in crate::ui) async fn show_error_dialog(&self, header: &str, error: &dyn Error) {
-    //     self.imp().show_error_dialog(header, error).await
-    // }
 }

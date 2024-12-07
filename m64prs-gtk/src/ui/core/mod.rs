@@ -19,8 +19,11 @@ use m64prs_vcr::VcrState;
 use num_enum::TryFromPrimitive;
 use pollster::FutureExt;
 use relm4::{ComponentSender, Sender};
+use vidext::{VideoExtensionParameters, VideoExtensionState};
 
 use super::main_window::MainWindow;
+
+mod vidext;
 
 #[derive(Debug)]
 pub(super) enum CoreState {
@@ -114,11 +117,9 @@ impl CoreReadyState {
         let mut core = m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
             .expect("core startup should succeed");
 
-        // let (vidext, vidext_inbound) =
-        //     VideoExtensionParameters::new(sender.output_sender().clone());
-
-        // core.override_vidext::<VideoExtensionState, _>(Some(vidext))
-        //     .expect("vidext override should succeed");
+        let vidext_params = VideoExtensionParameters::new(main_window_ref.clone());
+        core.override_vidext::<VideoExtensionState, _>(vidext_params)
+            .expect("vidext override should succeed");
 
         {
             let main_window_ref = main_window_ref.clone();
@@ -139,6 +140,15 @@ impl CoreReadyState {
 
                 }
                 _ => (),
+            });
+        }
+
+        {
+            let main_window_ref = main_window_ref.clone();
+            glib::spawn_future(async move {
+                main_window_ref.upgrade().inspect(|main_window| {
+                    main_window.set_emu_state(EmuState::Stopped);
+                });
             });
         }
 
@@ -195,12 +205,12 @@ impl CoreReadyState {
 }
 
 impl CoreRunningState {
-    pub(super) fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
+    pub(super) async fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
         // stop the core
         let _ = self.core.request_stop();
-        println!("stop request");
-        let error = self.join_handle.join().unwrap().err();
-        println!("join complete");
+        let error = gio::spawn_blocking(|| {
+            self.join_handle.join().unwrap().err()
+        }).await.unwrap();
 
         // this should now be the only remaining reference; so extract the core
         let mut core = Arc::into_inner(self.core).expect("this should be the only ref to core");
@@ -222,7 +232,7 @@ impl CoreRunningState {
         }
     }
 
-    pub(super) fn advance_frame(&mut self) -> Result<(), M64PError> {
+    pub(super) fn frame_advance(&mut self) -> Result<(), M64PError> {
         self.core.request_advance_frame()
     }
 

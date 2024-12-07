@@ -64,7 +64,13 @@ impl Default for AppActions {
 
 impl AppActions {
     pub(super) fn init(&self, main_window: &MainWindow) {
-        macro_rules! bind_handler {
+        self.connect_actions(main_window);
+        self.bind_states(main_window);
+    }
+
+    fn connect_actions(&self, main_window: &MainWindow) {
+        /// Binds a handler to one of the implementation functions.
+        macro_rules! c {
             ($act:ident, async $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
                     let main_window = main_window.clone();
@@ -81,7 +87,7 @@ impl AppActions {
                 })
             };
             ($act:ident, async $handler:path) => {
-                bind_handler!($act, async $handler, "Operation failed!");
+                c!($act, async $handler, "Operation failed!");
             };
             ($act:ident, $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
@@ -99,35 +105,51 @@ impl AppActions {
                 })
             };
             ($act:ident, $handler:path) => {
-                bind_handler!($act, $handler, "Operation failed!");
+                c!($act, $handler, "Operation failed!");
             };
         }
 
-        bind_handler!(open_rom, async open_rom_impl);
-        bind_handler!(close_rom, close_rom_impl);
-
-        // main_window
-        //     .bind_property("emu-state", self.open_rom.inner(), "enabled")
-        //     .transform_to(|_, s: MainEmuState| Some(matches!(s, MainEmuState::Stopped)))
-        //     .build();
-
-        {
-            let e1 = gtk::ObjectExpression::new(main_window);
-            let e2 = gtk::PropertyExpression::new(
-                MainWindow::static_type(),
-                Some(e1),
-                "emu-state",
-            );
-            let e3 = gtk::ClosureExpression::new::<bool>([e2], glib::RustClosure::new_local(|values| {
-                assert!(values.len() == 2);
-                let emu_state = values[1].get::<MainEmuState>().unwrap();
-                let rt_val = matches!(emu_state, MainEmuState::Stopped);
-                Some(rt_val.to_value())
-            }));
-
-            e3.bind(self.open_rom.inner(), "enabled", None::<&glib::Object>);
-        }
+        c!(open_rom, async open_rom_impl);
+        c!(close_rom, async close_rom_impl);
+        c!(toggle_pause, toggle_pause_impl);
+        c!(frame_advance, frame_advance_impl);
+        c!(reset_rom, reset_rom_impl);
     }
+
+    fn bind_states(&self, main_window: &MainWindow) {
+        let (emu_stopped, emu_running) = {
+            let this = gtk::ObjectExpression::new(main_window);
+            let emu_state =
+                gtk::PropertyExpression::new(MainWindow::static_type(), Some(this), "emu-state");
+
+            let emu_stopped = gtk::ClosureExpression::new::<bool>(
+                [emu_state.clone()],
+                glib::closure!(|_: Option<glib::Object>, emu_state: MainEmuState| -> bool {
+                    matches!(emu_state, MainEmuState::Stopped)
+                }),
+            );
+
+            let emu_running = gtk::ClosureExpression::new::<bool>(
+                [emu_state.clone()],
+                glib::closure!(|_: Option<glib::Object>, emu_state: MainEmuState| -> bool {
+                    matches!(emu_state, MainEmuState::Running | MainEmuState::Paused)
+                }),
+            );
+
+            (emu_stopped, emu_running)
+        };
+
+        /// Bind an action's property to an expression.
+        macro_rules! b {
+            ($name:ident.$prop:literal = $expr:ident) => {
+                $expr.bind(self.$name.inner(), $prop, None::<&glib::Object>);
+            };
+        }
+
+        b!(open_rom."enabled" = emu_stopped);
+        b!(close_rom."enabled" = emu_running);
+    }
+
     pub(super) fn register_to(&self, map: &impl IsA<gio::ActionMap>) {
         macro_rules! register_all_actions {
             ($($names:ident),* $(,)?) => {
@@ -226,19 +248,51 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn close_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    main_window.exec_with_core(|core| -> Result<(), Box<dyn Error>> {
-        let running = match core.take() {
-            CoreState::Running(running_state) => running_state,
-            _ => panic!("Expected Running state"),
-        };
+async fn close_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let mut core = main_window.borrow_core();
 
-        let (ready, error) = running.stop_rom();
-        *core = CoreState::Ready(ready);
+    let running = match core.take() {
+        CoreState::Running(running_state) => running_state,
+        _ => panic!("Expected Running state"),
+    };
 
-        if let Some(error) = error {
-            return Err(error.into());
-        }
-        Ok(())
-    })
+    let (ready, error) = running.stop_rom().await;
+
+    *core = CoreState::Ready(ready);
+
+    if let Some(error) = error {
+        return Err(error.into());
+    }
+    Ok(())
+}
+
+fn toggle_pause_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .toggle_pause()
+        .expect("Command should succeed");
+    Ok(())
+}
+
+fn frame_advance_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .frame_advance()
+        .expect("Command should succeed");
+    Ok(())
+}
+
+fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .reset(false)
+        .expect("Command should succeed");
+    Ok(())
 }

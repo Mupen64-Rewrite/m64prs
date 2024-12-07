@@ -4,6 +4,23 @@ use syn::parse_macro_input;
 mod forward_wrapper;
 
 /// Forwards methods from the inner class of a subtype.
+/// 
+/// # Usage
+/// Basic usage (visibility defaults to private):
+/// ```rust,ignore
+/// #[forward_wrapper(super::MyObject)]
+/// impl MyObject {
+///     // ...
+/// }
+/// ```
+/// 
+/// Specify visibility:
+/// ```rust,ignore
+/// #[forward_wrapper(super::MyObject, vis = pub(crate))]
+/// impl MyObject {
+///     // ...
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn forward_wrapper(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut item2 = item.clone();

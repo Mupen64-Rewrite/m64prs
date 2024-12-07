@@ -90,15 +90,10 @@ pub(crate) fn generate(args: Args, impl_block: syn::ItemImpl) -> syn::Result<Tok
                     "Forwarded functions should take &self",
                 ));
             }
-
-            let name = &sig.ident;
-
             let mut visit_state = ParamVisitState::default();
 
             for param in &sig.inputs {
-                if let syn::FnArg::Typed(param) = param {
-                    gen_param_list(&param, &mut visit_state)?;
-                }
+                gen_param_list(&param, &mut visit_state)?;
             }
             let new_sig = transform_sig(sig, &visit_state)?;
             let call = forward_call(sig, &visit_state)?;
@@ -145,19 +140,29 @@ impl ParamVisitState {
     }
 }
 
-fn gen_param_list(param: &syn::PatType, visit_state: &mut ParamVisitState) -> syn::Result<()> {
-    let ty = &*param.ty;
-    let ident = match &*param.pat {
-        syn::Pat::Ident(pat_ident) => pat_ident.ident.clone(),
-        _ => visit_state.gen_id(),
-    };
+fn gen_param_list(param: &syn::FnArg, visit_state: &mut ParamVisitState) -> syn::Result<()> {
+    match param {
+        syn::FnArg::Receiver(receiver) => {
+            let lifetime = receiver.lifetime();
+            visit_state.fwd_args.push(quote! {
+                &#lifetime self
+            });
+        },
+        syn::FnArg::Typed(param) => {
+            let ty = &*param.ty;
+            let ident = match &*param.pat {
+                syn::Pat::Ident(pat_ident) => pat_ident.ident.clone(),
+                _ => visit_state.gen_id(),
+            };
 
-    visit_state.fwd_args.push(quote! {
-        #ident: #ty
-    });
-    visit_state.fwd_inputs.push(quote! {
-        #ident
-    });
+            visit_state.fwd_args.push(quote! {
+                #ident: #ty
+            });
+            visit_state.fwd_inputs.push(quote! {
+                #ident
+            });
+        },
+    }
 
     Ok(())
 }
@@ -178,7 +183,6 @@ fn transform_sig(sig: &syn::Signature, visit_state: &ParamVisitState) -> syn::Re
 
     Ok(quote! {
         #constness #asyncness #unsafety #abi fn #ident #generics (
-            &self,
             #(#args),*
         ) #output
     })
