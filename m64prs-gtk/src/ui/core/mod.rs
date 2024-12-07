@@ -121,6 +121,7 @@ impl CoreReadyState {
         core.override_vidext::<VideoExtensionState, _>(vidext_params)
             .expect("vidext override should succeed");
 
+
         {
             let main_window_ref = main_window_ref.clone();
             core.listen_state(move |param, value| match param {
@@ -137,7 +138,12 @@ impl CoreReadyState {
                     });
                 }
                 CoreParam::SavestateSlot => {
-
+                    let main_window_ref = main_window_ref.clone();
+                    let _ = glib::spawn_future(async move {
+                        main_window_ref.upgrade().inspect(|main_window| {
+                            main_window.set_save_slot(value.try_into().unwrap());
+                        });
+                    });
                 }
                 _ => (),
             });
@@ -172,17 +178,17 @@ impl CoreReadyState {
         let main_window_ref = self.main_window_ref;
         let vcr_state = Arc::new(Mutex::new(None));
 
-        let input_handler = CoreInputHandler {
-            vcr_state: Arc::clone(&vcr_state),
-        };
-        core.set_input_handler(input_handler)
-            .expect("should be able to set input handler");
+        // let input_handler = CoreInputHandler {
+        //     vcr_state: Arc::clone(&vcr_state),
+        // };
+        // core.set_input_handler(input_handler)
+        //     .expect("should be able to set input handler");
 
-        let save_handler = CoreSaveHandler {
-            vcr_state: Arc::clone(&vcr_state),
-        };
-        core.set_save_handler(save_handler)
-            .expect("should be able to set save handler");
+        // let save_handler = CoreSaveHandler {
+        //     vcr_state: Arc::clone(&vcr_state),
+        // };
+        // core.set_save_handler(save_handler)
+        //     .expect("should be able to set save handler");
 
         let core = Arc::new(core);
         let join_handle = {
@@ -216,10 +222,10 @@ impl CoreRunningState {
         let mut core = Arc::into_inner(self.core).expect("this should be the only ref to core");
         let main_window_ref = self.main_window_ref;
 
-        core.clear_input_handler()
-            .expect("should be able to clear input handler");
-        core.clear_save_handler()
-            .expect("should be able to clear save handler");
+        // core.clear_input_handler()
+        //     .expect("should be able to clear input handler");
+        // core.clear_save_handler()
+        //     .expect("should be able to clear save handler");
 
         (CoreReadyState { core, main_window_ref }, error)
     }
@@ -270,8 +276,15 @@ impl CoreRunningState {
 
     pub(super) fn toggle_read_only(&mut self) {
         self.vcr_read_only ^= true;
-        // notify core
-        // sender.emit(CoreResponse::VcrReadOnlyChanged(self.vcr_read_only));
+        {
+            let main_window_ref = self.main_window_ref.clone();
+            let vcr_read_only = self.vcr_read_only;
+            let _ = glib::spawn_future(async move {
+                main_window_ref.upgrade().inspect(|main_window| {
+                    // main_window.set_vcr_read_only(vcr_read_only);
+                });
+            });
+        }
     }
 }
 

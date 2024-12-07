@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, ToTokens};
+use quote::{format_ident, quote};
 use syn::{parse::Parse, punctuated::Punctuated, spanned::Spanned};
 
 pub(crate) mod kw {

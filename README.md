@@ -10,12 +10,14 @@ A WIP TASing emulator based on Mupen64Plus and written in Rust. The
 - FreeType
 - zlib
 - GTK (at least v4.14)
+- `blueprint-compiler`
 
 Use **`./build.py run`** to compile and setup all files.
 
 ### Windows
 ***Dependencies:***
 - GTK (at least v4.14, from `gvsbuild`)
+- `blueprint-compiler` from `pip`
 
 Use **`./build.py run`** to compile and setup all files. Note that while the codebase
 does theoretically support Windows, there are some outstanding bugs in GTK that make it

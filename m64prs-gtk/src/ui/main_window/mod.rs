@@ -36,17 +36,25 @@ mod inner {
         open_rom_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
         error_dialog: TemplateChild<gtk::AlertDialog>,
+        #[template_child]
+        save_state_dialog: TemplateChild<gtk::FileDialog>,
+        #[template_child]
+        load_state_dialog: TemplateChild<gtk::FileDialog>,
 
         // properties
-        #[property(get, builder(MainViewState::RomBrowser))]
+        #[property(get, construct_only, builder(MainViewState::RomBrowser))]
         #[property(
             get = |this: &MainWindow| this.current_view.get().to_string(), 
             type = String, 
             name = "current-page"
         )]
         current_view: Cell<MainViewState>,
-        #[property(get, builder(MainEmuState::Uninit))]
+        #[property(get, construct_only, builder(MainEmuState::Uninit))]
         emu_state: Cell<MainEmuState>,
+        #[property(get, construct_only, default = false)]
+        saving_state: Cell<bool>,
+        #[property(get, construct_only, default = 1)]
+        save_slot: Cell<u8>,
 
         // private variables
         actions: AppActions,
@@ -58,6 +66,17 @@ mod inner {
         pub(super) fn set_emu_state(&self, emu_state: EmuState) {
             self.emu_state.set(emu_state.into());
             self.obj().notify_emu_state();
+        }
+
+        pub(super) fn set_saving_state(&self, saving_state: bool) {
+            self.saving_state.set(saving_state);
+            self.obj().notify_saving_state();
+        }
+
+        pub(super) fn set_save_slot(&self, save_slot: u8) {
+            println!("save slot before: {}", self.save_slot.get());
+            self.save_slot.set(save_slot);
+            self.obj().notify_save_slot();
         }
 
         pub(super) fn set_current_view(&self, main_view: MainViewState) {
@@ -81,11 +100,6 @@ mod inner {
             self.compositor.del_view(view);
         }
 
-        pub(super) fn exec_with_core<R, F: FnOnce(&mut CoreState) -> R>(&self, f: F) -> R {
-            let mut core = self.core.borrow_mut();
-            f(&mut *core)
-        }
-
         pub(super) async fn show_open_rom_dialog(&self) -> Result<gio::File, glib::Error> {
             self.open_rom_dialog.open_future(Some(&self.obj().clone())).await
         }
@@ -95,9 +109,14 @@ mod inner {
             self.error_dialog.set_detail(&error.to_string());
             let _ = self.error_dialog.choose_future(Some(&self.obj().clone())).await;
         }
-    }
 
-    impl MainWindow {
+        pub(super) async fn show_save_state_dialog(&self) -> Result<gio::File, glib::Error> {
+            self.save_state_dialog.save_future(Some(&self.obj().clone())).await
+        }
+
+        pub(super) async fn show_load_state_dialog(&self) -> Result<gio::File, glib::Error> {
+            self.load_state_dialog.open_future(Some(&self.obj().clone())).await
+        }
     }
 
     #[glib::object_subclass]

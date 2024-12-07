@@ -28,6 +28,10 @@ where
     OS: OptionVariantType,
     OP: OptionVariantType,
 {
+    /// Wraps an existing [`gio::SimpleAction`].
+    /// # Safety
+    /// The caller is responsible for ensuring the parameter type and state
+    /// match up with the type parameters.
     pub unsafe fn with_inner(action: &gio::SimpleAction) -> Self {
         Self {
             inner: action.clone(),
@@ -35,20 +39,31 @@ where
         }
     }
 
+    /// Retrieves the wrapped [`gio::SimpleAction`]. This allows you
+    /// to use functionality not directly exposed by this API.
     pub fn inner(&self) -> &gio::SimpleAction {
         &self.inner
     }
 
+    /// Checks whether the action is enabled. Actions may only
+    /// be activated when they are enabled.
+    /// 
+    /// **See also:** [`gio::SimpleAction::is_enabled`]
     pub fn is_enabled(&self) -> bool {
         self.inner.is_enabled()
     }
 
+    /// Sets whether the action is enabled. Actions may only
+    /// be activated when they are enabled.
+    /// 
+    /// **See also:** [`gio::SimpleAction::set_enabled`]
     pub fn set_enabled(&self, enabled: bool) {
         self.inner.set_enabled(enabled);
     }
 }
 
 impl TypedAction<TNone, TNone> {
+    /// Constructs a new action with no state or parameter.
     pub fn new(name: &str) -> Self {
         Self {
             inner: gio::SimpleAction::new(name, None),
@@ -61,6 +76,7 @@ impl<S> TypedAction<TSome<S>, TNone>
 where
     S: FromVariant + ToVariant,
 {
+    /// Constructs a new action with state, but no parameter.
     pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(name, None, &init_state.borrow().to_variant()),
@@ -73,6 +89,7 @@ impl<P> TypedAction<TNone, TSome<P>>
 where
     P: FromVariant + ToVariant,
 {
+    /// Constructs a new action with parameter, but no state.
     pub fn new(name: &str) -> Self {
         Self {
             inner: gio::SimpleAction::new(name, Some(&P::static_variant_type())),
@@ -86,6 +103,7 @@ where
     S: FromVariant + ToVariant,
     P: FromVariant + ToVariant,
 {
+    /// Constructs a new action with both state and parameter.
     pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(
@@ -102,6 +120,10 @@ impl<OS> TypedAction<OS, TNone>
 where
     OS: OptionVariantType,
 {
+    /// Binds a handler to this action. The closure should satisfy the following signature:
+    /// ```rust,ignore
+    /// fn activate_handler(action: &TypedAction<OS, TNone>);
+    /// ```
     pub fn connect_activate<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
         self.inner.connect_activate(move |action, _| {
             let action = unsafe { Self::with_inner(action) };
@@ -109,6 +131,7 @@ where
         })
     }
 
+    /// Triggers this action.
     pub fn activate(&self) {
         self.inner.activate(None);
     }
@@ -119,6 +142,10 @@ where
     OS: OptionVariantType,
     P: ToVariant + FromVariant,
 {
+    /// Binds a handler to this action. The closure should satisfy the following signature:
+    /// ```rust,ignore
+    /// fn activate_handler(action: &TypedAction<OS, TSome<P>>, param: P);
+    /// ```
     pub fn connect_activate<F: Fn(&Self, P) + 'static>(&self, f: F) -> SignalHandlerId {
         self.inner.connect_activate(move |action, param| {
             let action = unsafe { Self::with_inner(action) };
@@ -128,6 +155,7 @@ where
         })
     }
 
+    /// Triggers this action with the provided parameter.
     pub fn activate(&self, param: &P) {
         self.inner.activate(Some(&param.to_variant()));
     }
@@ -138,11 +166,13 @@ where
     S: ToVariant + FromVariant,
     OP: OptionVariantType,
 {
+    /// Gets the action's current state.
     pub fn state(&self) -> S {
         S::from_variant(&self.inner.state().expect("action state should exist"))
             .expect("action state should match type S")
     }
 
+    /// Sets the action's current state.
     pub fn set_state(&self, state: &S) {
         self.inner.set_state(&S::to_variant(state));
     }

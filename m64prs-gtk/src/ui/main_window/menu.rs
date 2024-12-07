@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, io};
 
 use glib::Slice;
 use gtk::prelude::*;
@@ -12,7 +12,7 @@ use crate::{
 use super::{CoreState, MainWindow};
 
 pub fn load_menu() -> gio::MenuModel {
-    const UI_XML: &str = gtk::gtk4_macros::include_blueprint!("src/ui/main_window/menu.blp");
+    const UI_XML: &str = include_str!("menu.ui");
     gtk::Builder::from_string(UI_XML)
         .object::<gio::MenuModel>("root")
         .expect("menu.blp should contain object `root`")
@@ -29,6 +29,7 @@ pub(super) struct AppActions {
 
     save_slot: BaseAction,
     load_slot: BaseAction,
+    // TODO: replace String with u8 when Blueprint supports it
     set_save_slot: StateParamAction<u8, u8>,
     save_file: BaseAction,
     load_file: BaseAction,
@@ -47,17 +48,17 @@ impl Default for AppActions {
             close_rom: BaseAction::new("file.close_rom"),
             toggle_pause: StateAction::new("emu.toggle_pause", false),
             frame_advance: BaseAction::new("emu.frame_advance"),
-            reset_rom: BaseAction::new("emu.frame_advance"),
-            save_slot: BaseAction::new("emu.frame_advance"),
-            load_slot: BaseAction::new("emu.frame_advance"),
+            reset_rom: BaseAction::new("emu.reset_rom"),
+            save_slot: BaseAction::new("emu.save_slot"),
+            load_slot: BaseAction::new("emu.load_slot"),
             set_save_slot: StateParamAction::new("emu.set_save_slot", 1),
-            save_file: BaseAction::new("emu.frame_advance"),
-            load_file: BaseAction::new("emu.frame_advance"),
-            new_movie: BaseAction::new("emu.frame_advance"),
-            load_movie: BaseAction::new("emu.frame_advance"),
-            save_movie: BaseAction::new("emu.frame_advance"),
-            discard_movie: BaseAction::new("emu.frame_advance"),
-            toggle_read_only: StateAction::new("emu.toggle_read_only", false),
+            save_file: BaseAction::new("emu.save_file"),
+            load_file: BaseAction::new("emu.load_file"),
+            new_movie: BaseAction::new("vcr.new_movie"),
+            load_movie: BaseAction::new("vcr.load_movie"),
+            save_movie: BaseAction::new("vcr.save_movie"),
+            discard_movie: BaseAction::new("vcr.discard_movie"),
+            toggle_read_only: StateAction::new("vcr.toggle_read_only", false),
         }
     }
 }
@@ -71,6 +72,24 @@ impl AppActions {
     fn connect_actions(&self, main_window: &MainWindow) {
         /// Binds a handler to one of the implementation functions.
         macro_rules! c {
+            ($act:ident, async @$handler:path, $msg:expr) => {
+                self.$act.connect_activate({
+                    let main_window = main_window.clone();
+                    move |_, param| {
+                        let main_window = main_window.clone();
+                        ::glib::spawn_future_local(async move {
+                            if let Err(err) = $handler(&main_window, param).await {
+                                main_window
+                                    .show_error_dialog($msg, &*err)
+                                    .await;
+                            }
+                        });
+                    }
+                })
+            };
+            ($act:ident, async @$handler:path) => {
+                c!($act, async $handler, "Operation failed!");
+            };
             ($act:ident, async $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
                     let main_window = main_window.clone();
@@ -88,6 +107,24 @@ impl AppActions {
             };
             ($act:ident, async $handler:path) => {
                 c!($act, async $handler, "Operation failed!");
+            };
+            ($act:ident, @$handler:path, $msg:expr) => {
+                self.$act.connect_activate({
+                    let main_window = main_window.clone();
+                    move |_, param| {
+                        let main_window = main_window.clone();
+                        ::glib::spawn_future_local(async move {
+                            if let Err(err) = $handler(&main_window, param) {
+                                main_window
+                                    .show_error_dialog($msg, &*err)
+                                    .await;
+                            }
+                        });
+                    }
+                })
+            };
+            ($act:ident, @$handler:path) => {
+                c!($act, @$handler, "Operation failed!")
             };
             ($act:ident, $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
@@ -111,43 +148,83 @@ impl AppActions {
 
         c!(open_rom, async open_rom_impl);
         c!(close_rom, async close_rom_impl);
+
         c!(toggle_pause, toggle_pause_impl);
         c!(frame_advance, frame_advance_impl);
         c!(reset_rom, reset_rom_impl);
+
+        c!(save_slot, async save_slot_impl);
+        c!(load_slot, async load_slot_impl);
+        c!(set_save_slot, @set_save_slot_impl);
+        c!(save_file, async save_file_impl);
+        c!(load_file, async load_file_impl);
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
-        let (emu_stopped, emu_running) = {
-            let this = gtk::ObjectExpression::new(main_window);
-            let emu_state =
-                gtk::PropertyExpression::new(MainWindow::static_type(), Some(this), "emu-state");
+        let emu_state = main_window.property_expression("emu-state");
+        let saving_state = main_window.property_expression("saving-state");
+        let save_slot = main_window.property_expression("save-slot");
 
-            let emu_stopped = gtk::ClosureExpression::new::<bool>(
-                [emu_state.clone()],
-                glib::closure!(|_: Option<glib::Object>, emu_state: MainEmuState| -> bool {
-                    matches!(emu_state, MainEmuState::Stopped)
-                }),
-            );
+        let emu_stopped =
+            emu_state.chain_closure::<bool>(glib::closure!(|_: Option<glib::Object>,
+                                                            emu_state: MainEmuState|
+             -> bool {
+                matches!(emu_state, MainEmuState::Stopped)
+            }));
 
-            let emu_running = gtk::ClosureExpression::new::<bool>(
-                [emu_state.clone()],
-                glib::closure!(|_: Option<glib::Object>, emu_state: MainEmuState| -> bool {
-                    matches!(emu_state, MainEmuState::Running | MainEmuState::Paused)
-                }),
-            );
+        let emu_active =
+            emu_state.chain_closure::<bool>(glib::closure!(|_: Option<glib::Object>,
+                                                            emu_state: MainEmuState|
+             -> bool {
+                matches!(emu_state, MainEmuState::Running | MainEmuState::Paused)
+            }));
 
-            (emu_stopped, emu_running)
-        };
+        let emu_paused_gvar = emu_state.chain_closure::<glib::Variant>(glib::closure!(
+            |_: Option<glib::Object>, emu_state: MainEmuState| -> glib::Variant {
+                matches!(emu_state, MainEmuState::Paused).into()
+            }
+        ));
+
+        let save_start_valid = gtk::ClosureExpression::new::<bool>(
+            [&*emu_state, &*saving_state],
+            glib::closure!(|_: Option<glib::Object>,
+                            emu_state: MainEmuState,
+                            saving_state: bool|
+             -> bool {
+                matches!(
+                    (emu_state, saving_state),
+                    (MainEmuState::Running | MainEmuState::Paused, false)
+                )
+            }),
+        );
+
+        let save_slot_gvar = save_slot.chain_closure::<glib::Variant>(glib::closure!(
+            |_: Option<glib::Object>, save_slot: u8| -> glib::Variant {
+                save_slot.into()
+            }
+        ));
 
         /// Bind an action's property to an expression.
         macro_rules! b {
-            ($name:ident.$prop:literal = $expr:ident) => {
+            ($name:ident.$prop:literal => $expr:ident) => {{
                 $expr.bind(self.$name.inner(), $prop, None::<&glib::Object>);
-            };
+            }};
         }
 
-        b!(open_rom."enabled" = emu_stopped);
-        b!(close_rom."enabled" = emu_running);
+        b!(open_rom."enabled" => emu_stopped);
+        b!(close_rom."enabled" => emu_active);
+
+        b!(toggle_pause."enabled" => emu_active);
+        b!(toggle_pause."state" => emu_paused_gvar);
+        b!(frame_advance."enabled" => emu_active);
+        b!(reset_rom."enabled" => emu_active);
+
+        b!(save_slot."enabled" => save_start_valid);
+        b!(load_slot."enabled" => save_start_valid);
+        b!(set_save_slot."enabled" => emu_active);
+        b!(set_save_slot."state" => save_slot_gvar);
+        b!(save_file."enabled" => save_start_valid);
+        b!(load_file."enabled" => save_start_valid);
     }
 
     pub(super) fn register_to(&self, map: &impl IsA<gio::ActionMap>) {
@@ -179,13 +256,36 @@ impl AppActions {
 }
 
 // HELPERS
-// ================
+// =====================
+
+/// Helper function to lock savestate actions while
+/// one is already happening.
+struct SaveOpGuard<'a> {
+    main_window: &'a MainWindow,
+}
+impl<'a> SaveOpGuard<'a> {
+    fn new(main_window: &'a MainWindow) -> Self {
+        main_window.set_saving_state(true);
+        Self { main_window }
+    }
+}
+impl<'a> Drop for SaveOpGuard<'a> {
+    fn drop(&mut self) {
+        self.main_window.set_saving_state(false);
+    }
+}
 
 // IMPLEMENTATIONS
 // =====================
 
 async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let rom_file = main_window.show_open_rom_dialog().await?;
+    let rom_file = match main_window.show_open_rom_dialog().await {
+        Ok(file) => file,
+        Err(err) => match err.kind::<gtk::DialogError>() {
+            Some(gtk::DialogError::Dismissed) => return Ok(()),
+            _ => return Err(err.into()),
+        },
+    };
 
     // setup futures for loading ROM data and plugins
     let rom_data_fut =
@@ -227,7 +327,9 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let (rom_data, plugins) = (rom_data?, plugins?);
 
     // start the core
-    main_window.exec_with_core(move |core| {
+    {
+        let mut core = main_window.borrow_core();
+
         let ready = match core.take() {
             CoreState::Ready(ready_state) => ready_state,
             _ => panic!("Expected Ready state"),
@@ -242,8 +344,8 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
                 *core = CoreState::Ready(ready);
                 Err(error)
             }
-        }
-    })?;
+        }?;
+    }
 
     Ok(())
 }
@@ -271,8 +373,7 @@ fn toggle_pause_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
         .borrow_core()
         .borrow_running()
         .expect("Core should be running")
-        .toggle_pause()
-        .expect("Command should succeed");
+        .toggle_pause()?;
     Ok(())
 }
 
@@ -281,18 +382,98 @@ fn frame_advance_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
         .borrow_core()
         .borrow_running()
         .expect("Core should be running")
-        .frame_advance()
-        .expect("Command should succeed");
+        .frame_advance()?;
     Ok(())
 }
 
 fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    
     main_window
         .borrow_core()
         .borrow_running()
         .expect("Core should be running")
-        .reset(false)
-        .expect("Command should succeed");
+        .reset(false)?;
+    Ok(())
+}
+
+async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _guard = SaveOpGuard::new(main_window);
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .save_slot()
+        .await?;
+    Ok(())
+}
+
+async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _guard = SaveOpGuard::new(main_window);
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .load_slot()
+        .await?;
+    Ok(())
+}
+
+// TODO: switch out String param for u8 once blueprint supports it.
+fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn Error>> {
+    main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .set_save_slot(slot)?;
+    Ok(())
+}
+
+async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let save_file = match main_window.show_save_state_dialog().await {
+        Ok(file) => file,
+        Err(err) => match err.kind::<gtk::DialogError>() {
+            Some(gtk::DialogError::Dismissed) => return Ok(()),
+            _ => return Err(err.into()),
+        },
+    };
+
+    let path = save_file
+        .path()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Couldn't get path to savestate"))?;
+
+    {
+        let _guard = SaveOpGuard::new(main_window);
+        main_window
+            .borrow_core()
+            .borrow_running()
+            .expect("Core should be running")
+            .save_file(path)
+            .await?;
+    }
+
+    Ok(())
+}
+async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let save_file = match main_window.show_load_state_dialog().await {
+        Ok(file) => file,
+        Err(err) => match err.kind::<gtk::DialogError>() {
+            Some(gtk::DialogError::Dismissed) => return Ok(()),
+            _ => return Err(err.into()),
+        },
+    };
+
+    let path = save_file
+        .path()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Couldn't get path to savestate"))?;
+
+    {
+        let _guard = SaveOpGuard::new(main_window);
+        main_window
+            .borrow_core()
+            .borrow_running()
+            .expect("Core should be running")
+            .load_file(path)
+            .await?;
+    }
+
     Ok(())
 }

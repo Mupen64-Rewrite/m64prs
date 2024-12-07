@@ -30,7 +30,7 @@ FileDialog open_rom_dialog {
   title: "Open ROM...";
   filters: Gio.ListStore {
     FileFilter {
-      name: "N64 ROMs";
+      name: "N64 ROM (*.n64, *.v64, *.z64)";
       mime-types ["application/x-n64-rom"]
       patterns ["*.n64", "*.v64", "*.z64"]
     }
@@ -40,4 +40,24 @@ FileDialog open_rom_dialog {
 AlertDialog error_dialog {
   modal: true;
   buttons: ["OK"];
+}
+
+FileDialog save_state_dialog {
+  title: "Save State To...";
+  filters: Gio.ListStore {
+    FileFilter {
+      name: "Mupen64Plus savestate (*.st, *.savestate)";
+      patterns ["*.st", "*.savestate"]
+    }
+  };
+}
+
+FileDialog load_state_dialog {
+  title: "Load State From...";
+  filters: Gio.ListStore {
+    FileFilter {
+      name: "Mupen64Plus savestate (*.st, *.savestate)";
+      patterns ["*.st", "*.savestate"]
+    }
+  };
 }
