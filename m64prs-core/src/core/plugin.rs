@@ -38,18 +38,22 @@ impl Core {
             .graphics
             .startup(core_ptr as *mut c_void)
             .map_err(PluginLoadError::M64P)?;
+        log::debug!("Started up graphics plugin");
         plugins
             .audio
             .startup(core_ptr as *mut c_void)
             .map_err(PluginLoadError::M64P)?;
+        log::debug!("Started up audio plugin");
         plugins
             .input
             .startup(core_ptr as *mut c_void)
             .map_err(PluginLoadError::M64P)?;
+        log::debug!("Started up input plugin");
         plugins
             .rsp
             .startup(core_ptr as *mut c_void)
             .map_err(PluginLoadError::M64P)?;
+        log::debug!("Started up RSP plugin");
 
         // This keeps track of the last plugin we attached.
         // 0 - Graphics

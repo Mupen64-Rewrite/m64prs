@@ -105,7 +105,7 @@ pub enum PluginLoadError {
     #[error("dynamic library raised error")]
     Library(#[source] ::dlopen2::Error),
     /// An error occurred within Mupen64Plus or one of its plugins
-    #[error("plugin function raised error")]
+    #[error("plugin function raised error: {0}")]
     M64P(#[source] M64PError),
     /// The plugin specified for a particular type isn't a valid plugin of that type.
     #[error("{0:?} is an invalid plugin type for this type")]

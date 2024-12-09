@@ -335,7 +335,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
             _ => panic!("Expected Ready state"),
         };
 
-        match ready.start_rom(&rom_data, plugins) {
+        match ready.start_rom(rom_data, plugins).await {
             Ok(running) => {
                 *core = CoreState::Running(running);
                 Ok(())

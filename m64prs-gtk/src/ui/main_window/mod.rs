@@ -141,6 +141,15 @@ mod inner {
             self.actions.init(&self.obj());
 
             {
+                let kc = gtk::EventControllerKey::new();
+                kc.connect_key_pressed(|_, key, code, mods| {
+                    eprintln!("KEY: {:?}, {:?}, {:?}", key, code, mods);
+                    glib::Propagation::Stop
+                });
+                self.compositor.add_controller(kc);
+            }
+
+            {
                 let this = self.obj().clone();
                 glib::spawn_future_local(async move {
                     let self_weak_ref: SendWeakRef<_> = this.downgrade().into();
@@ -163,6 +172,17 @@ mod inner {
                 "application" => {
                     if let Some(app) = self.obj().application() {
                         self.actions.register_to(&app);
+                    }
+                },
+                "current-view" => {
+                    let obj = self.obj();
+                    match obj.current_view() {
+                        MainViewState::RomBrowser => {
+                            self.grab_focus();
+                        },
+                        MainViewState::GameView => {
+                            self.compositor.grab_focus();
+                        },
                     }
                 }
                 "emu-state" => {

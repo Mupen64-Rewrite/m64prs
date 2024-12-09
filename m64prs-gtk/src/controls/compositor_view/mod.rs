@@ -8,7 +8,7 @@ mod inner {
     use std::cell::{OnceCell, RefCell};
 
     use glib::subclass::{
-        object::ObjectImpl,
+        object::{ObjectImpl, ObjectImplExt},
         types::{ObjectSubclass, ObjectSubclassExt},
     };
     use gtk::subclass::widget::WidgetImpl;
@@ -18,18 +18,9 @@ mod inner {
 
     use super::native::NativeCompositor;
 
+    #[derive(Default)]
     pub struct CompositorView {
         compositor: RefCell<Option<Box<dyn NativeCompositor>>>,
-        click_ct: OnceCell<gtk::GestureClick>,
-    }
-
-    impl Default for CompositorView {
-        fn default() -> Self {
-            Self {
-                compositor: RefCell::new(None),
-                click_ct: OnceCell::new(),
-            }
-        }
     }
 
     impl CompositorView {
@@ -56,12 +47,8 @@ mod inner {
 
     impl ObjectImpl for CompositorView {
         fn constructed(&self) {
-            let ct = gtk::GestureClick::new();
-            ct.connect_pressed(|_, n_press, x, y| {
-                eprintln!("clicc! ({}, {}, {})", n_press, x, y);
-            });
-            self.obj().add_controller(ct.clone());
-            self.click_ct.get_or_init(move || ct);
+            self.parent_constructed();
+            self.obj().set_focusable(true);
         }
     }
 
@@ -150,6 +137,14 @@ mod inner {
             .ceil() as i32;
 
             (dimension, dimension, -1, -1)
+        }
+
+        fn focus(&self, _direction_type: gtk::DirectionType) -> bool {
+            false
+        }
+
+        fn state_flags_changed(&self, state_flags: &gtk::StateFlags) {
+            eprintln!("has focus: {}", state_flags.contains(gtk::StateFlags::FOCUSED));
         }
     }
 }

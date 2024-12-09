@@ -347,7 +347,11 @@ pub mod ffi {
 
         unsafe extern "C" fn ffi_load_xd(context: *mut c_void, data: *const c_uchar, size: u32) -> bool {
             let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
-            let src_slice = std::slice::from_raw_parts(data as *const u8, size as usize);
+            let src_slice = if size == 0 {
+                &[]
+            } else {
+                std::slice::from_raw_parts(data as *const u8, size as usize)
+            };
 
             match context.handler.load_xd(src_slice) {
                 Ok(_) => true,

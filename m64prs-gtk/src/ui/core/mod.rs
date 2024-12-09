@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     env,
     error::Error,
     path::Path,
@@ -17,8 +18,6 @@ use m64prs_core::{
 use m64prs_sys::{CoreParam, EmuState};
 use m64prs_vcr::VcrState;
 use num_enum::TryFromPrimitive;
-use pollster::FutureExt;
-use relm4::{ComponentSender, Sender};
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
 use super::main_window::MainWindow;
@@ -121,7 +120,6 @@ impl CoreReadyState {
         core.override_vidext::<VideoExtensionState, _>(vidext_params)
             .expect("vidext override should succeed");
 
-
         {
             let main_window_ref = main_window_ref.clone();
             core.listen_state(move |param, value| match param {
@@ -158,37 +156,63 @@ impl CoreReadyState {
             });
         }
 
-        Self { core, main_window_ref }
+        Self {
+            core,
+            main_window_ref,
+        }
     }
 
-    pub(super) fn start_rom(
+    pub(super) async fn start_rom<B>(
         mut self,
-        rom_data: &[u8],
+        rom_data: B,
         plugins: PluginSet,
-    ) -> Result<CoreRunningState, (PluginLoadError, Self)> {
-        if let Err(err) = self.core.open_rom(rom_data) {
-            return Err((PluginLoadError::M64P(err), self));
-        }
-        if let Err(err) = self.core.attach_plugins(plugins) {
-            self.core.close_rom().unwrap();
-            return Err((err, self));
-        }
+    ) -> Result<CoreRunningState, (PluginLoadError, Self)>
+    where
+        B: Borrow<[u8]> + Send + 'static,
+    {
+        // Open ROM and attach plugins. This takes a bit.
+        let mut core = {
+            // transfer ownership of core to GIO task until it completes
+            let mut core = self.core;
+            let result = gio::spawn_blocking(move || {
+                if let Err(err) = core.open_rom(rom_data.borrow()) {
+                    return Err((PluginLoadError::M64P(err), core));
+                }
+                if let Err(err) = core.attach_plugins(plugins) {
+                    core.close_rom().unwrap();
+                    return Err((err, core));
+                }
+                Ok(core)
+            })
+            .await
+            .unwrap();
 
-        let mut core = self.core;
+            // If something bad happend while loading ROM or attaching plugins,
+            // then return the error
+            match result {
+                Ok(core) => core,
+                Err((err, core)) => {
+                    self.core = core;
+                    return Err((err, self));
+                }
+            }
+        };
+
+        // Load the ma
         let main_window_ref = self.main_window_ref;
         let vcr_state = Arc::new(Mutex::new(None));
 
-        // let input_handler = CoreInputHandler {
-        //     vcr_state: Arc::clone(&vcr_state),
-        // };
-        // core.set_input_handler(input_handler)
-        //     .expect("should be able to set input handler");
+        let input_handler = CoreInputHandler {
+            vcr_state: Arc::clone(&vcr_state),
+        };
+        core.set_input_handler(input_handler)
+            .expect("should be able to set input handler");
 
-        // let save_handler = CoreSaveHandler {
-        //     vcr_state: Arc::clone(&vcr_state),
-        // };
-        // core.set_save_handler(save_handler)
-        //     .expect("should be able to set save handler");
+        let save_handler = CoreSaveHandler {
+            vcr_state: Arc::clone(&vcr_state),
+        };
+        core.set_save_handler(save_handler)
+            .expect("should be able to set save handler");
 
         let core = Arc::new(core);
         let join_handle = {
@@ -214,20 +238,29 @@ impl CoreRunningState {
     pub(super) async fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
         // stop the core
         let _ = self.core.request_stop();
-        let error = gio::spawn_blocking(|| {
-            self.join_handle.join().unwrap().err()
-        }).await.unwrap();
+        let error = gio::spawn_blocking(|| self.join_handle.join().unwrap().err())
+            .await
+            .unwrap();
 
         // this should now be the only remaining reference; so extract the core
         let mut core = Arc::into_inner(self.core).expect("this should be the only ref to core");
         let main_window_ref = self.main_window_ref;
 
-        // core.clear_input_handler()
-        //     .expect("should be able to clear input handler");
-        // core.clear_save_handler()
-        //     .expect("should be able to clear save handler");
+        let _ = core.close_rom();
+        let _ = core.detach_plugins();
 
-        (CoreReadyState { core, main_window_ref }, error)
+        core.clear_input_handler()
+            .expect("should be able to clear input handler");
+        core.clear_save_handler()
+            .expect("should be able to clear save handler");
+
+        (
+            CoreReadyState {
+                core,
+                main_window_ref,
+            },
+            error,
+        )
     }
 
     pub(super) fn toggle_pause(&mut self) -> Result<(), M64PError> {
