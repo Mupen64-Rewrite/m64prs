@@ -49,6 +49,7 @@ mod inner {
         fn constructed(&self) {
             self.parent_constructed();
             self.obj().set_focusable(true);
+            self.obj().set_focus_on_click(true);
         }
     }
 
@@ -141,10 +142,6 @@ mod inner {
 
         fn focus(&self, _direction_type: gtk::DirectionType) -> bool {
             false
-        }
-
-        fn state_flags_changed(&self, state_flags: &gtk::StateFlags) {
-            eprintln!("has focus: {}", state_flags.contains(gtk::StateFlags::FOCUSED));
         }
     }
 }

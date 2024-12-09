@@ -72,6 +72,14 @@ impl Core {
             handle,
         })
     }
+
+    pub fn cfg_save_all(&mut self) -> Result<(), M64PError> {
+        core_fn(unsafe {
+            self.api
+                .config
+                .save_file()
+        })
+    }
 }
 /// Represents a handle to a configuration section.
 ///

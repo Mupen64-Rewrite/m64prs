@@ -23,6 +23,7 @@ use self::save::{SavestateWaitManager, SavestateWaiter};
 
 pub mod config;
 pub mod emu_state;
+pub mod key_forward;
 pub mod plugin;
 pub mod save;
 pub mod tas_callbacks;
@@ -185,6 +186,8 @@ impl Core {
 }
 impl Drop for Core {
     fn drop(&mut self) {
+        println!("core drop");
+        let _ = self.cfg_save_all();
         // SAFETY: the core can be shut down at any time.
         unsafe { self.api.base.shutdown() };
     }

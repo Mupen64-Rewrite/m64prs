@@ -1,10 +1,5 @@
 use std::{
-    borrow::Borrow,
-    env,
-    error::Error,
-    path::Path,
-    sync::{mpsc, Arc, Mutex},
-    thread::{self, JoinHandle},
+    borrow::Borrow, env, error::Error, fs, path::Path, sync::{mpsc, Arc, Mutex}, thread::{self, JoinHandle}
 };
 
 use glib::SendWeakRef;
@@ -23,6 +18,7 @@ use vidext::{VideoExtensionParameters, VideoExtensionState};
 use super::main_window::MainWindow;
 
 mod vidext;
+mod keyboard;
 
 #[derive(Debug)]
 pub(super) enum CoreState {
@@ -110,10 +106,13 @@ impl CoreReadyState {
         let mupen_dll_path = self_dir.join(MUPEN_FILENAME);
         let data_dir = self_dir.join("data\\");
 
+        let config_dir = dirs::config_dir().unwrap().join("m64prs");
+        let _ = fs::create_dir_all(&config_dir);
+
         log::info!("Loading M64+ from {}", mupen_dll_path.display());
         log::info!("Data path is {}", data_dir.display());
 
-        let mut core = m64prs_core::Core::init(mupen_dll_path, None, Some(&data_dir))
+        let mut core = m64prs_core::Core::init(mupen_dll_path, Some(&config_dir), Some(&data_dir))
             .expect("core startup should succeed");
 
         let vidext_params = VideoExtensionParameters::new(main_window_ref.clone());
@@ -305,6 +304,19 @@ impl CoreRunningState {
         path: P,
     ) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await
+    }
+
+    pub(super) fn forward_key_down(&mut self, key: gdk::Key, r#mod: gdk::ModifierType) {
+        let sdl_key = keyboard::into_sdl_keycode(key);
+        let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
+        eprintln!("{:?} -> {:?}", key, sdl_key);
+        let _ = self.core.forward_key_down(sdl_key, sdl_mod);
+    }
+
+    pub(super) fn forward_key_up(&mut self, key: gdk::Key, r#mod: gdk::ModifierType) {
+        let sdl_key = keyboard::into_sdl_keycode(key);
+        let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
+        let _ = self.core.forward_key_up(sdl_key, sdl_mod);
     }
 
     pub(super) fn toggle_read_only(&mut self) {

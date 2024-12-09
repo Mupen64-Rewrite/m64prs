@@ -101,21 +101,21 @@ mod inner {
         }
 
         pub(super) async fn show_open_rom_dialog(&self) -> Result<gio::File, glib::Error> {
-            self.open_rom_dialog.open_future(Some(&self.obj().clone())).await
+            self.open_rom_dialog.open_future(Some(&*self.obj())).await
         }
 
         pub(super) async fn show_error_dialog(&self, header: &str, error: &dyn Error) {
             self.error_dialog.set_message(header);
             self.error_dialog.set_detail(&error.to_string());
-            let _ = self.error_dialog.choose_future(Some(&self.obj().clone())).await;
+            let _ = self.error_dialog.choose_future(Some(&*self.obj())).await;
         }
 
         pub(super) async fn show_save_state_dialog(&self) -> Result<gio::File, glib::Error> {
-            self.save_state_dialog.save_future(Some(&self.obj().clone())).await
+            self.save_state_dialog.save_future(Some(&*self.obj())).await
         }
 
         pub(super) async fn show_load_state_dialog(&self) -> Result<gio::File, glib::Error> {
-            self.load_state_dialog.open_future(Some(&self.obj().clone())).await
+            self.load_state_dialog.open_future(Some(&*self.obj())).await
         }
     }
 
@@ -142,9 +142,34 @@ mod inner {
 
             {
                 let kc = gtk::EventControllerKey::new();
-                kc.connect_key_pressed(|_, key, code, mods| {
-                    eprintln!("KEY: {:?}, {:?}, {:?}", key, code, mods);
-                    glib::Propagation::Stop
+                kc.connect_key_pressed({
+                    let this = self.obj().downgrade();
+                    move |_, key, _, r#mod| {
+                        let this = match this.upgrade() {
+                            Some(this) => this,
+                            None => return glib::Propagation::Proceed,
+                        };
+
+                        if let Some(running) = this.borrow_core().borrow_running() {
+                            running.forward_key_down(key, r#mod);
+                        }
+                        glib::Propagation::Stop
+                    }
+                });
+                kc.connect_key_released({
+                    let this = self.obj().downgrade();
+                    move |_, key, _, r#mod| {
+                        let this = match this.upgrade() {
+                            Some(this) => this,
+                            None => return,
+                        };
+
+                        if let Some(running) = this.borrow_core().borrow_running() {
+                            running.forward_key_up(key, r#mod);
+                        }
+                        // this exists to please the borrow checker. Don't ask me why.
+                        ()
+                    }
                 });
                 self.compositor.add_controller(kc);
             }

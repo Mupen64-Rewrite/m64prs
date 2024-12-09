@@ -74,9 +74,11 @@ impl AppActions {
         macro_rules! c {
             ($act:ident, async @$handler:path, $msg:expr) => {
                 self.$act.connect_activate({
-                    let main_window = main_window.clone();
+                    let main_window = main_window.downgrade();
                     move |_, param| {
-                        let main_window = main_window.clone();
+                        let main_window = main_window
+                            .upgrade()
+                            .expect("Failed to get main window ref");
                         ::glib::spawn_future_local(async move {
                             if let Err(err) = $handler(&main_window, param).await {
                                 main_window
@@ -92,9 +94,11 @@ impl AppActions {
             };
             ($act:ident, async $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
-                    let main_window = main_window.clone();
+                    let main_window = main_window.downgrade();
                     move |_| {
-                        let main_window = main_window.clone();
+                        let main_window = main_window
+                            .upgrade()
+                            .expect("Failed to get main window ref");
                         ::glib::spawn_future_local(async move {
                             if let Err(err) = $handler(&main_window).await {
                                 main_window
@@ -110,9 +114,11 @@ impl AppActions {
             };
             ($act:ident, @$handler:path, $msg:expr) => {
                 self.$act.connect_activate({
-                    let main_window = main_window.clone();
+                    let main_window = main_window.downgrade();
                     move |_, param| {
-                        let main_window = main_window.clone();
+                        let main_window = main_window
+                            .upgrade()
+                            .expect("Failed to get main window ref");
                         ::glib::spawn_future_local(async move {
                             if let Err(err) = $handler(&main_window, param) {
                                 main_window
@@ -128,9 +134,11 @@ impl AppActions {
             };
             ($act:ident, $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
-                    let main_window = main_window.clone();
+                    let main_window = main_window.downgrade();
                     move |_| {
-                        let main_window = main_window.clone();
+                        let main_window = main_window
+                            .upgrade()
+                            .expect("Failed to get main window ref");
                         ::glib::spawn_future_local(async move {
                             if let Err(err) = $handler(&main_window) {
                                 main_window
@@ -161,9 +169,9 @@ impl AppActions {
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
-        let emu_state = main_window.property_expression("emu-state");
-        let saving_state = main_window.property_expression("saving-state");
-        let save_slot = main_window.property_expression("save-slot");
+        let emu_state = main_window.property_expression_weak("emu-state");
+        let saving_state = main_window.property_expression_weak("saving-state");
+        let save_slot = main_window.property_expression_weak("save-slot");
 
         let emu_stopped =
             emu_state.chain_closure::<bool>(glib::closure!(|_: Option<glib::Object>,
