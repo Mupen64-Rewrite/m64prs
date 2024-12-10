@@ -1,4 +1,4 @@
-use sdl2::keyboard::{Keycode, Mod};
+use m64prs_core::key_forward::{Keycode, Mod};
 
 pub fn into_sdl_keycode(key: gdk::Key) -> Option<Keycode> {
     match key {

@@ -10,15 +10,19 @@ m64prs-sys = { path = "../m64prs-sys" }
 
 dlopen2 = "0.7.0"
 ash = "0.38.0"
-sdl2 = "0.37.0"
+sdl2 = { version = "0.37.0", optional = true }
 
 num_enum = "0.7.2"
 thiserror = "2.0.3"
+bitflags = "2.6.0"
 log = "0.4"
 
 async-std = "1.12.0"
 futures = "0.3.30"
 slotmap = "1.0.7"
+
+[features]
+sdl2 = ["dep:sdl2"]
 
 [build-dependencies]
 
