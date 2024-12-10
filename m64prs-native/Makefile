@@ -58,6 +58,11 @@ ifeq ($(os_id), MINGW)
 	pluginname = $(1).dll
 endif
 
+ifeq ($(PRE_BUILD),)
+$(info running pre-build step:)
+dummy:=$(shell make PRE_BUILD=1 pre-build)
+endif
+
 # define targets
 mupen64plus-core/projects/unix/$(core_soname):
 	@cd mupen64plus-core/projects/unix && make -j4 TAS=1 all
@@ -85,13 +90,7 @@ $(TARGET_DIR)/$(call pluginname,mupen64plus-rsp-hle): mupen64plus-rsp-hle/projec
 	@cp -fv mupen64plus-rsp-hle/projects/unix/$(call pluginname,mupen64plus-rsp-hle) $(TARGET_DIR)/
 
 .DEFAULT_GOAL := all
-.PHONY: \
-	all \
-	mupen64plus-core/projects/unix/$(core_soname) \
-	mupen64plus-video-rice/projects/unix/$(call pluginname,mupen64plus-video-rice) \
-	mupen64plus-audio-sdl/projects/unix/$(call pluginname,mupen64plus-audio-sdl) \
-	mupen64plus-input-sdl/projects/unix/$(call pluginname,mupen64plus-input-sdl) \
-	mupen64plus-rsp-hle/projects/unix/$(call pluginname,mupen64plus-rsp-hle) \
+.PHONY: all pre-build
 
 target_list = \
 	$(TARGET_DIR)/$(call libname,mupen64plus) \
@@ -102,3 +101,6 @@ target_list = \
 
 $(shell mkdir -p "$(TARGET_DIR)")
 all: $(target_list)
+
+pre-build:
+	echo "pre-build step!"

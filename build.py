@@ -193,7 +193,12 @@ def clean(args: argparse.Namespace, extra: list[str]):
     shutil.rmtree(root_dir.joinpath("install"))
 
     native_dir = root_dir.joinpath("m64prs-native")
-    shutil.rmtree(native_dir.joinpath("target"))
+    if platform.system() == "Windows":
+        shutil.rmtree(native_dir.joinpath("target"))
+    else:
+        subp.run([
+            "python3", native_dir.joinpath("m64prs-build-all.py"), "clean"
+        ]).check_returncode()
     
 
     pass
@@ -265,3 +270,5 @@ try:
 except subp.CalledProcessError as e:
     print("Subprocess failed!")
     print(e)
+except KeyboardInterrupt:
+    print("Ctrl+C pressed! Stopping...")

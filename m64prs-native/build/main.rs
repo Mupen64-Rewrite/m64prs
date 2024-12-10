@@ -4,8 +4,6 @@ use std::{
 };
 
 mod dirs;
-#[cfg(unix)]
-mod make;
 #[cfg(windows)]
 mod msvc;
 
@@ -68,8 +66,17 @@ fn compile_m64p_deps(out_dir: &Path) {
 
 #[cfg(unix)]
 fn compile_m64p_deps(_out_dir: &Path) {
+    use std::process::Command;
+
     let root_dir = PathBuf::from(dirs::ROOT_DIR);
-    make::make::<_, &str>(&root_dir, []);
+
+    let cmd = Command::new("python3")
+        .arg(root_dir.join("m64prs-build-all.py"))
+        .arg("build")
+        .status()
+        .expect("script invoke failed");
+
+    assert!(cmd.success());
 }
 
 fn main() {
