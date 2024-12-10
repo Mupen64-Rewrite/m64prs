@@ -12,7 +12,7 @@ use m64prs_core::{
     error::{M64PError, PluginLoadError, SavestateError},
     plugin::PluginSet,
     save::SavestateFormat,
-    tas_callbacks::{InputHandler, SaveHandler},
+    tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
     Core,
 };
 use m64prs_sys::{CoreParam, EmuState};
@@ -48,6 +48,10 @@ pub(super) struct CoreRunningState {
 }
 
 struct CoreInputHandler {
+    vcr_state: Arc<Mutex<Option<VcrState>>>,
+}
+
+struct CoreFrameHandler {
     vcr_state: Arc<Mutex<Option<VcrState>>>,
 }
 
@@ -349,6 +353,15 @@ impl InputHandler for CoreInputHandler {
             vcr_state.poll_present(port)
         } else {
             false
+        }
+    }
+}
+
+impl FrameHandler for CoreFrameHandler {
+    fn new_frame(&mut self, count: std::ffi::c_uint) {
+        let mut vcr_state = self.vcr_state.lock().unwrap();
+        if let Some(vcr_state) = vcr_state.as_mut() {
+            vcr_state.tick_vi();
         }
     }
 }

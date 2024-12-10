@@ -5,23 +5,38 @@ use gtk::prelude::*;
 
 use super::core::CoreState;
 
-mod menu;
 pub mod enums;
+mod menu;
 
 mod inner {
-    use std::{cell::{Cell, RefCell, RefMut}, error::Error};
+    use std::{
+        cell::{Cell, RefCell, RefMut},
+        error::Error,
+    };
 
-    use glib::{subclass::{
-        object::ObjectImpl,
-        types::{ObjectSubclass, ObjectSubclassExt},
-        InitializingObject,
-    }, SendWeakRef};
+    use glib::{
+        subclass::{
+            object::ObjectImpl,
+            types::{ObjectSubclass, ObjectSubclassExt},
+            InitializingObject,
+        },
+        SendWeakRef,
+    };
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
     use m64prs_sys::EmuState;
 
-    use crate::{controls::{self, compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey}}, ui::core::{CoreReadyState, CoreState}};
+    use crate::{
+        controls::{
+            self,
+            compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
+        },
+        ui::core::{CoreReadyState, CoreState},
+    };
 
-    use super::{enums::{MainEmuState, MainViewState}, menu::AppActions};
+    use super::{
+        enums::{MainEmuState, MainViewState},
+        menu::AppActions,
+    };
 
     #[derive(Debug, Default, glib::Properties, gtk::CompositeTemplate)]
     #[template(file = "src/ui/main_window/mod.blp")]
@@ -44,8 +59,8 @@ mod inner {
         // properties
         #[property(get, construct_only, builder(MainViewState::RomBrowser))]
         #[property(
-            get = |this: &MainWindow| this.current_view.get().to_string(), 
-            type = String, 
+            get = |this: &MainWindow| this.current_view.get().to_string(),
+            type = String,
             name = "current-page"
         )]
         current_view: Cell<MainViewState>,
@@ -87,7 +102,7 @@ mod inner {
                 obj.notify_current_page();
             }
         }
-        
+
         pub(super) fn borrow_core<'a>(&'a self) -> RefMut<'a, CoreState> {
             self.core.borrow_mut()
         }
@@ -178,9 +193,10 @@ mod inner {
                 let this = self.obj().clone();
                 glib::spawn_future_local(async move {
                     let self_weak_ref: SendWeakRef<_> = this.downgrade().into();
-                    let ready_state = gio::spawn_blocking(move || {
-                        CoreReadyState::new(self_weak_ref)
-                    }).await.expect("failed to init core");
+                    let ready_state =
+                        gio::spawn_blocking(move || CoreReadyState::new(self_weak_ref))
+                            .await
+                            .expect("failed to init core");
                     this.imp().core.replace(ready_state.into());
                 });
             }
@@ -198,16 +214,16 @@ mod inner {
                     if let Some(app) = self.obj().application() {
                         self.actions.register_to(&app);
                     }
-                },
+                }
                 "current-view" => {
                     let obj = self.obj();
                     match obj.current_view() {
                         MainViewState::RomBrowser => {
                             self.grab_focus();
-                        },
+                        }
                         MainViewState::GameView => {
                             self.compositor.grab_focus();
-                        },
+                        }
                     }
                 }
                 "emu-state" => {
@@ -219,23 +235,27 @@ mod inner {
                             match core.take() {
                                 CoreState::Running(core_running_state) => {
                                     *core = CoreState::Ready(core_running_state.stop_rom().await.0);
-                                },
-                                other_state => *core = other_state, 
+                                }
+                                other_state => *core = other_state,
                             }
                         });
                     }
-                },
+                }
+                "focus-widget" => {
+                    // This may seem incredibly cursed but it works
+                    // (if the focus is not the compositor, then change it to the compositor)
+                    if self.current_view.get() == MainViewState::GameView
+                        && !gtk::prelude::GtkWindowExt::focus(&*self.obj())
+                            .is_some_and(|w| &w == &*self.compositor)
+                    {
+                        self.compositor.grab_focus();
+                    }
+                }
                 _ => (),
             }
-            
         }
     }
-    impl WidgetImpl for MainWindow {
-        fn grab_focus(&self) -> bool {
-            println!("grab focus");
-            self.parent_grab_focus()
-        }
-    }
+    impl WidgetImpl for MainWindow {}
     impl WindowImpl for MainWindow {}
     impl ApplicationWindowImpl for MainWindow {}
 }
@@ -257,9 +277,7 @@ glib::wrapper! {
             gtk::ShortcutManager;
 }
 
-
 impl MainWindow {
-
     pub fn setup_and_show(app: &impl IsA<gtk::Application>) {
         let menu = menu::load_menu();
         app.set_menubar(Some(&menu));

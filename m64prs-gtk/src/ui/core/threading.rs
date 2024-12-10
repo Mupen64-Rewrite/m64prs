@@ -1,7 +1,8 @@
 use m64prs_core::{error::M64PError, Core};
+use std::sync::Weak;
 use std::{
     ops::Deref,
-    sync::{Arc, Weak},
+    sync::Arc,
     thread::{self, JoinHandle},
 };
 

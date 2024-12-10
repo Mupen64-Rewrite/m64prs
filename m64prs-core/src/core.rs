@@ -32,8 +32,6 @@ pub mod vidext;
 pub use config::ConfigSection;
 pub use plugin::Plugin;
 
-
-
 slotmap::new_key_type! {
     pub struct StateHandlerKey;
 }
@@ -41,10 +39,7 @@ slotmap::new_key_type! {
 /// Trait alias for closures that can handle state changes from Mupen.
 pub trait StateHandler: FnMut(CoreParam, c_int) + Send + Sync {}
 
-impl<F> StateHandler for F
-where
-    F: FnMut(CoreParam, c_int) + Send + Sync {}
-
+impl<F> StateHandler for F where F: FnMut(CoreParam, c_int) + Send + Sync {}
 
 pub struct Core {
     pin_state: Box<Mutex<PinnedCoreState>>,
@@ -74,7 +69,7 @@ impl Debug for Core {
 struct PinnedCoreState {
     st_wait_mgr: SavestateWaitManager,
     es_wait_mgr: EmuStateWaitManager,
-    core_handlers: HopSlotMap<StateHandlerKey, Box<dyn StateHandler>>
+    core_handlers: HopSlotMap<StateHandlerKey, Box<dyn StateHandler>>,
 }
 
 unsafe impl Sync for Core {}
@@ -186,7 +181,7 @@ impl Core {
 }
 impl Drop for Core {
     fn drop(&mut self) {
-        println!("core drop");
+        log::debug!("Core is dropped");
         let _ = self.cfg_save_all();
         // SAFETY: the core can be shut down at any time.
         unsafe { self.api.base.shutdown() };
@@ -203,7 +198,10 @@ impl Core {
             // goes out of scope.
             self.do_command_ip(
                 Command::RomOpen,
-                rom_data.len().try_into().expect("size of ROM should fit into c_int"),
+                rom_data
+                    .len()
+                    .try_into()
+                    .expect("size of ROM should fit into c_int"),
                 rom_data.as_ptr() as *mut c_void,
             )
         }
@@ -217,7 +215,7 @@ impl Core {
     /// Installs a *state handler*, which can pick up on any changes to various core
     /// state parameters; see [`m64prs_sys::CoreParam`] for a list of parameters that
     /// you can listen to.
-    /// 
+    ///
     /// Returns a key that may be used to unregister the handler at a later time. See
     /// [`Core::unlisten_state`] for details.
     pub fn listen_state<F: StateHandler + 'static>(&mut self, f: F) -> StateHandlerKey {
