@@ -159,28 +159,30 @@ mod inner {
                 let kc = gtk::EventControllerKey::new();
                 kc.connect_key_pressed({
                     let this = self.obj().downgrade();
-                    move |_, key, _, r#mod| {
+                    move |_, _key, code, r#mod| {
                         let this = match this.upgrade() {
                             Some(this) => this,
                             None => return glib::Propagation::Proceed,
                         };
 
+                        eprintln!("key: {}, {}", _key.name().unwrap().as_str(), code);
+
                         if let Some(running) = this.borrow_core().borrow_running() {
-                            running.forward_key_down(key, r#mod);
+                            running.forward_key_down(code, r#mod);
                         }
                         glib::Propagation::Stop
                     }
                 });
                 kc.connect_key_released({
                     let this = self.obj().downgrade();
-                    move |_, key, _, r#mod| {
+                    move |_, _key, code, r#mod| {
                         let this = match this.upgrade() {
                             Some(this) => this,
                             None => return,
                         };
 
                         if let Some(running) = this.borrow_core().borrow_running() {
-                            running.forward_key_up(key, r#mod);
+                            running.forward_key_up(code, r#mod);
                         }
                         // this exists to please the borrow checker. Don't ask me why.
                         ()

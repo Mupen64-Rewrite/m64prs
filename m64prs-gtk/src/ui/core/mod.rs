@@ -7,7 +7,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use gdk::prelude::SurfaceExt;
 use glib::SendWeakRef;
+use gtk::prelude::NativeExt;
 use m64prs_core::{
     error::{M64PError, PluginLoadError, SavestateError},
     plugin::PluginSet,
@@ -21,9 +23,10 @@ use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
+use crate::utils::keyboard;
+
 use super::main_window::MainWindow;
 
-mod keyboard;
 mod threading;
 mod vidext;
 
@@ -305,17 +308,28 @@ impl CoreRunningState {
         self.core.load_file(path.as_ref()).await
     }
 
-    pub(super) fn forward_key_down(&mut self, key: gdk::Key, r#mod: gdk::ModifierType) {
-        let sdl_key = keyboard::into_sdl_keycode(key);
-        let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
-        eprintln!("{:?} -> {:?}", key, sdl_key);
-        let _ = self.core.forward_key_down(sdl_key, sdl_mod);
+    pub(super) fn forward_key_down(&mut self, key_code: u32, r#mod: gdk::ModifierType) {
+        if let Some(window) = self.main_window_ref.upgrade() {
+            let display = window.surface().unwrap().display();
+
+            let sdl_key = keyboard::into_sdl_scancode(&display, key_code);
+            let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
+            eprintln!("{:?} -> {:?}", key_code, sdl_key);
+            let _ = self.core.forward_key_down(sdl_key, sdl_mod);
+
+        }
     }
 
-    pub(super) fn forward_key_up(&mut self, key: gdk::Key, r#mod: gdk::ModifierType) {
-        let sdl_key = keyboard::into_sdl_keycode(key);
-        let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
-        let _ = self.core.forward_key_up(sdl_key, sdl_mod);
+    pub(super) fn forward_key_up(&mut self, key_code: u32, r#mod: gdk::ModifierType) {
+        if let Some(window) = self.main_window_ref.upgrade() {
+            let display = window.surface().unwrap().display();
+
+            let sdl_key = keyboard::into_sdl_scancode(&display, key_code);
+            let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
+            // eprintln!("{:?} -> {:?}", key.name().unwrap().as_str(), sdl_key);
+            let _ = self.core.forward_key_up(sdl_key, sdl_mod);
+
+        }
     }
 
     // pub(super) fn toggle_read_only(&mut self) {

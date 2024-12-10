@@ -143,6 +143,7 @@ mod inner {
 }
 
 glib::wrapper! {
+    /// Widget hosting a composite of one or more native child windows.
     pub struct CompositorView(ObjectSubclass<inner::CompositorView>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
