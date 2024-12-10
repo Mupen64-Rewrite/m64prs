@@ -1,5 +1,10 @@
 use std::{
-    borrow::Borrow, env, error::Error, fs, path::Path, sync::{mpsc, Arc, Mutex}, thread::{self, JoinHandle}
+    borrow::Borrow,
+    env,
+    error::Error,
+    fs,
+    path::Path,
+    sync::{Arc, Mutex},
 };
 
 use glib::SendWeakRef;
@@ -13,12 +18,14 @@ use m64prs_core::{
 use m64prs_sys::{CoreParam, EmuState};
 use m64prs_vcr::VcrState;
 use num_enum::TryFromPrimitive;
+use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
 use super::main_window::MainWindow;
 
-mod vidext;
 mod keyboard;
+mod threading;
+mod vidext;
 
 #[derive(Debug)]
 pub(super) enum CoreState {
@@ -34,9 +41,8 @@ pub(super) struct CoreReadyState {
 }
 #[derive(Debug)]
 pub(super) struct CoreRunningState {
-    core: Arc<Core>,
+    core: RunningCore,
     main_window_ref: SendWeakRef<MainWindow>,
-    join_handle: JoinHandle<Result<(), M64PError>>,
     vcr_read_only: bool,
     vcr_state: Arc<Mutex<Option<VcrState>>>,
 }
@@ -213,11 +219,7 @@ impl CoreReadyState {
         core.set_save_handler(save_handler)
             .expect("should be able to set save handler");
 
-        let core = Arc::new(core);
-        let join_handle = {
-            let core = Arc::clone(&core);
-            thread::spawn(move || core.execute())
-        };
+        let core = RunningCore::execute(core);
 
         let vcr_read_only = true;
 
@@ -226,7 +228,6 @@ impl CoreReadyState {
         Ok(CoreRunningState {
             core,
             main_window_ref,
-            join_handle,
             vcr_read_only,
             vcr_state,
         })
@@ -235,14 +236,8 @@ impl CoreReadyState {
 
 impl CoreRunningState {
     pub(super) async fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
-        // stop the core
-        let _ = self.core.request_stop();
-        let error = gio::spawn_blocking(|| self.join_handle.join().unwrap().err())
-            .await
-            .unwrap();
+        let (mut core, error) = gio::spawn_blocking(|| self.core.stop()).await.unwrap();
 
-        // this should now be the only remaining reference; so extract the core
-        let mut core = Arc::into_inner(self.core).expect("this should be the only ref to core");
         let main_window_ref = self.main_window_ref;
 
         let _ = core.close_rom();
@@ -258,7 +253,7 @@ impl CoreRunningState {
                 core,
                 main_window_ref,
             },
-            error,
+            error.err(),
         )
     }
 
@@ -319,18 +314,18 @@ impl CoreRunningState {
         let _ = self.core.forward_key_up(sdl_key, sdl_mod);
     }
 
-    pub(super) fn toggle_read_only(&mut self) {
-        self.vcr_read_only ^= true;
-        {
-            let main_window_ref = self.main_window_ref.clone();
-            let vcr_read_only = self.vcr_read_only;
-            let _ = glib::spawn_future(async move {
-                main_window_ref.upgrade().inspect(|main_window| {
-                    // main_window.set_vcr_read_only(vcr_read_only);
-                });
-            });
-        }
-    }
+    // pub(super) fn toggle_read_only(&mut self) {
+    //     self.vcr_read_only ^= true;
+    //     {
+    //         let main_window_ref = self.main_window_ref.clone();
+    //         let vcr_read_only = self.vcr_read_only;
+    //         let _ = glib::spawn_future(async move {
+    //             main_window_ref.upgrade().inspect(|main_window| {
+    //                 // main_window.set_vcr_read_only(vcr_read_only);
+    //             });
+    //         });
+    //     }
+    // }
 }
 
 impl InputHandler for CoreInputHandler {

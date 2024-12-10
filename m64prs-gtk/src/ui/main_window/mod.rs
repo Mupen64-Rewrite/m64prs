@@ -224,13 +224,18 @@ mod inner {
                             }
                         });
                     }
-                }
+                },
                 _ => (),
             }
             
         }
     }
-    impl WidgetImpl for MainWindow {}
+    impl WidgetImpl for MainWindow {
+        fn grab_focus(&self) -> bool {
+            println!("grab focus");
+            self.parent_grab_focus()
+        }
+    }
     impl WindowImpl for MainWindow {}
     impl ApplicationWindowImpl for MainWindow {}
 }

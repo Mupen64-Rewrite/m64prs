@@ -139,10 +139,6 @@ mod inner {
 
             (dimension, dimension, -1, -1)
         }
-
-        fn focus(&self, _direction_type: gtk::DirectionType) -> bool {
-            false
-        }
     }
 }
 

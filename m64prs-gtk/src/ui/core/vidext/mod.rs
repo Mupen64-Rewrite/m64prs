@@ -98,18 +98,18 @@ impl VideoExtension for VideoExtensionState {
 
         {
             let main_window_ref = self.main_window_ref.clone();
-            glib::spawn_future(async move {
-                let main_window = main_window_ref
-                    .upgrade()
-                    .expect("Main window should be active");
+            let _ = glib::spawn_future(async move {
+                let main_window = match main_window_ref.upgrade() {
+                    Some(main_window) => main_window,
+                    None => return,
+                };
 
                 if let Some(view_key) = view_key {
                     main_window.comp_del_view(view_key);
                 }
 
                 main_window.set_current_view(MainViewState::RomBrowser);
-            })
-            .block_on();
+            });
         }
 
         Ok(())

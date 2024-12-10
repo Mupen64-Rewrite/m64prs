@@ -1,6 +1,5 @@
 use std::{error::Error, io};
 
-use glib::Slice;
 use gtk::prelude::*;
 use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
 
@@ -207,9 +206,7 @@ impl AppActions {
         );
 
         let save_slot_gvar = save_slot.chain_closure::<glib::Variant>(glib::closure!(
-            |_: Option<glib::Object>, save_slot: u8| -> glib::Variant {
-                save_slot.into()
-            }
+            |_: Option<glib::Object>, save_slot: u8| -> glib::Variant { save_slot.into() }
         ));
 
         /// Bind an action's property to an expression.
