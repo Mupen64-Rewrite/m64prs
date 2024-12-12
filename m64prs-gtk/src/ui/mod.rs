@@ -1,8 +1,9 @@
 use gio::ApplicationFlags;
 use gtk::prelude::*;
 
-mod main_window;
 mod core;
+mod main_window;
+mod movie_dialog;
 
 use main_window::MainWindow;
 

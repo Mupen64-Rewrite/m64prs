@@ -30,7 +30,7 @@ mod inner {
             self,
             compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
         },
-        ui::core::{CoreReadyState, CoreState},
+        ui::{core::{CoreReadyState, CoreState}, movie_dialog::MovieDialog},
     };
 
     use super::{
@@ -55,6 +55,8 @@ mod inner {
         save_state_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
         load_state_dialog: TemplateChild<gtk::FileDialog>,
+        #[template_child]
+        movie_dialog: TemplateChild<MovieDialog>,
 
         // properties
         #[property(get, construct_only, builder(MainViewState::RomBrowser))]
@@ -70,6 +72,10 @@ mod inner {
         saving_state: Cell<bool>,
         #[property(get, construct_only, default = 1)]
         save_slot: Cell<u8>,
+        #[property(get, construct_only, default = false)]
+        vcr_active: Cell<bool>,
+        #[property(get, construct_only, default = false)]
+        vcr_read_only: Cell<bool>,
 
         // private variables
         actions: AppActions,
@@ -89,9 +95,13 @@ mod inner {
         }
 
         pub(super) fn set_save_slot(&self, save_slot: u8) {
-            println!("save slot before: {}", self.save_slot.get());
             self.save_slot.set(save_slot);
             self.obj().notify_save_slot();
+        }
+
+        pub(super) fn set_vcr_read_only(&self, vcr_read_only: bool) {
+            self.vcr_read_only.set(vcr_read_only);
+            self.obj().notify_vcr_read_only();
         }
 
         pub(super) fn set_current_view(&self, main_view: MainViewState) {
@@ -131,6 +141,10 @@ mod inner {
 
         pub(super) async fn show_load_state_dialog(&self) -> Result<gio::File, glib::Error> {
             self.load_state_dialog.open_future(Some(&*self.obj())).await
+        }
+
+        pub(super) async fn show_movie_dialog(&self) {
+            self.movie_dialog.prompt(Some(&*self.obj())).await;
         }
     }
 

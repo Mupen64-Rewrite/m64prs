@@ -332,18 +332,18 @@ impl CoreRunningState {
         }
     }
 
-    // pub(super) fn toggle_read_only(&mut self) {
-    //     self.vcr_read_only ^= true;
-    //     {
-    //         let main_window_ref = self.main_window_ref.clone();
-    //         let vcr_read_only = self.vcr_read_only;
-    //         let _ = glib::spawn_future(async move {
-    //             main_window_ref.upgrade().inspect(|main_window| {
-    //                 // main_window.set_vcr_read_only(vcr_read_only);
-    //             });
-    //         });
-    //     }
-    // }
+    pub(super) fn toggle_read_only(&mut self) {
+        self.vcr_read_only ^= true;
+        {
+            let main_window_ref = self.main_window_ref.clone();
+            let vcr_read_only = self.vcr_read_only;
+            let _ = glib::spawn_future(async move {
+                main_window_ref.upgrade().inspect(|main_window| {
+                    main_window.set_vcr_read_only(vcr_read_only);
+                });
+            });
+        }
+    }
 }
 
 impl InputHandler for CoreInputHandler {
@@ -354,8 +354,12 @@ impl InputHandler for CoreInputHandler {
     ) -> m64prs_sys::Buttons {
         {
             let mut vcr_state = self.vcr_state.lock().unwrap();
+            let mut should_drop = false;
             if let Some(vcr_state) = vcr_state.as_mut() {
-                input = vcr_state.filter_inputs(port, input);
+                (input, should_drop) = vcr_state.filter_inputs(port, input);
+            }
+            if should_drop {
+                *vcr_state = None;
             }
         }
         input
@@ -363,11 +367,7 @@ impl InputHandler for CoreInputHandler {
 
     fn poll_present(&mut self, port: std::ffi::c_int) -> bool {
         let mut vcr_state = self.vcr_state.lock().unwrap();
-        if let Some(vcr_state) = vcr_state.as_mut() {
-            vcr_state.poll_present(port)
-        } else {
-            false
-        }
+        vcr_state.as_mut().map_or(false, |state| state.poll_present(port))
     }
 }
 

@@ -1,8 +1,5 @@
 use std::{
-    error::Error,
-    ffi::c_int,
-    fs, io,
-    path::{Path, PathBuf},
+    error::Error, ffi::c_int, fs, io, ops::ControlFlow, path::{Path, PathBuf}
 };
 
 use freeze::MovieFreeze;
@@ -28,7 +25,7 @@ pub struct VcrState {
 
 impl VcrState {
     /// Initialize VCR for a new recording.
-    pub fn new<P: Into<PathBuf>>(path: P, header: M64Header) -> Self {
+    pub fn new<P: Into<PathBuf>>(path: P, header: M64Header, read_only: bool) -> Self {
         let path = path.into();
         Self {
             path,
@@ -36,32 +33,34 @@ impl VcrState {
             inputs: Vec::new(),
             index: 0,
             vi_count: 0,
-            read_only: false,
+            read_only,
         }
     }
 
-    /// Loads an existing `.m64` file to record.
-    pub fn load_m64<P: Into<PathBuf>>(path: P, read_only: bool) -> Result<Self, io::Error> {
+    /// Initialize VCR with an existing .m64 file.
+    pub fn with_m64<P: Into<PathBuf>>(path: P, file: M64File, read_only: bool) -> Self {
         let path = path.into();
-        let (header, inputs) = {
-            let file = fs::File::open(&path)?;
-            let M64File { header, inputs } = M64File::read_from(file)?;
-            (header, inputs)
-        };
-
-        Ok(Self {
+        let M64File { header, inputs } = file;
+        Self {
             path,
             header,
             inputs,
             index: 0,
             vi_count: 0,
             read_only,
-        })
+        }
     }
 
-    /// Saves the current VCR state to a `.m64` file.
-    pub fn save_m64<P: AsRef<Path>>(&self, path: P) {
-        todo!()
+    /// Export the current VCR state to an .m64 file. 
+    pub fn export(&self) -> M64File {
+        let mut header = self.header.clone();
+
+        header.length_samples = self.inputs.len().try_into().unwrap();
+        header.length_vis = self.vi_count;
+
+        let inputs = self.inputs.clone();
+
+        M64File { header, inputs }
     }
 
     /// Resets all counters to frame 0 and sets up the core to restart playback.
@@ -99,10 +98,14 @@ impl VcrState {
 
     /// Implementation of [`InputHandler::filter_inputs`][m64prs_core::tas_callbacks::InputHandler::filter_inputs].  
     /// This method will either play back inputs (read/write mode), or overwrite inputs, depending on the read-only mode.
-    pub fn filter_inputs(&mut self, port: c_int, input: Buttons) -> Buttons {
+    /// # Return value
+    /// Two things:
+    /// - `Buttons`: the filtered input value
+    /// - `bool`: if true, the VCR state has run out of frames.
+    pub fn filter_inputs(&mut self, port: c_int, input: Buttons) -> (Buttons, bool) {
         // don't overwrite inputs we don't care about
         if !self.header.controller_flags.port_present(port) {
-            return input;
+            return (input, false);
         }
 
         let index_usize: usize = self.index.try_into().unwrap();
@@ -110,17 +113,18 @@ impl VcrState {
             if index_usize < self.inputs.len() {
                 let result = self.inputs[index_usize];
                 self.index += 1;
-                result
+                (result, false)
             } else {
-                input
+                (input, true)
             }
         } else {
             if index_usize < self.inputs.len() {
                 self.inputs.truncate(index_usize);
             }
+            // TODO: account for the (2**32 - 1)th frame being the last
             self.inputs.push(input);
             self.index += 1;
-            input
+            (input, false)
         }
     }
 
@@ -141,11 +145,6 @@ impl VcrState {
             self.vi_count = self.vi_count.saturating_add(1);
             self.header.length_vis = self.header.length_vis.max(self.vi_count);
         }
-    }
-
-    /// Determines whether the VCR has exhausted all inputs.
-    pub fn reached_end(&self) -> bool {
-        self.read_only && usize::try_from(self.index).unwrap() == self.inputs.len()
     }
 
     /// Emits a [`freeze::MovieFreeze`] suitable for serializing into a savestate.

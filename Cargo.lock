@@ -1384,6 +1384,7 @@ name = "m64prs-vcr"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
+ "futures",
  "m64prs-core",
  "m64prs-sys",
  "pollster",

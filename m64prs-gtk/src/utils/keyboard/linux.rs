@@ -252,8 +252,11 @@ const XF86_KEYSYMS: [Option<Scancode>; 248] = [
 ];
 
 pub(super) fn map_native_keycode(key: u32) -> Option<Scancode> {
-    // this seems hella sus but SDL does it. I have no clue how or why it works,
-    // but it works on Xwayland and KDE/Wayland. I would appreciate testing on GNOME.
+    // This may be OS-specific but it should work for all up-to-date X11/Wayland systems.
+    // Linux keycodes map well to X11 keycodes, and X11 stipulates a minimum of 8 keys.
+    //
+    // Current implementations leave those first 8 keys blank and start their from index
+    // 8 upwards, so generally, (WM key) = (Linux key) + 8.
     match key {
         0..8 => None,
         // Reported keycode = XF86 code + 8

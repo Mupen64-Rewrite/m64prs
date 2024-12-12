@@ -1,5 +1,4 @@
 use m64prs_core::{error::M64PError, Core};
-use std::sync::Weak;
 use std::{
     ops::Deref,
     sync::Arc,
@@ -7,10 +6,10 @@ use std::{
 };
 
 #[derive(Debug)]
-pub(super) struct RunningCore(Option<Inner>);
+pub(super) struct RunningCore(Option<RunningCoreInner>);
 
 #[derive(Debug)]
-struct Inner {
+struct RunningCoreInner {
     core: Arc<Core>,
     join_handle: JoinHandle<Result<(), M64PError>>,
 }
@@ -25,7 +24,7 @@ impl RunningCore {
                 result
             })
         };
-        Self(Some(Inner { core, join_handle }))
+        Self(Some(RunningCoreInner { core, join_handle }))
     }
 
     pub(super) fn stop(mut self) -> (Core, Result<(), M64PError>) {
@@ -49,7 +48,7 @@ impl Deref for RunningCore {
     }
 }
 
-impl Inner {
+impl RunningCoreInner {
     fn stop(self) -> (Core, Result<(), M64PError>) {
         let _ = self.core.request_stop();
         let result = self.join_handle.join().unwrap();

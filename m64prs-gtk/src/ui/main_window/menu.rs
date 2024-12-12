@@ -2,6 +2,7 @@ use std::{error::Error, io};
 
 use gtk::prelude::*;
 use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
+use m64prs_vcr::movie::M64File;
 
 use crate::{
     ui::main_window::enums::MainEmuState,
@@ -165,6 +166,8 @@ impl AppActions {
         c!(set_save_slot, @set_save_slot_impl);
         c!(save_file, async save_file_impl);
         c!(load_file, async load_file_impl);
+
+        c!(load_movie, async load_movie_impl);
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
@@ -457,6 +460,7 @@ async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 
     Ok(())
 }
+
 async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let save_file = match main_window.show_load_state_dialog().await {
         Ok(file) => file,
@@ -479,6 +483,24 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
             .load_file(path)
             .await?;
     }
+
+    Ok(())
+}
+
+async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    main_window.show_movie_dialog().await;
+    // let movie_file = match main_window.show_load_movie_dialog().await {
+    //     Ok(file) => file,
+    //     Err(err) => match err.kind::<gtk::DialogError>() {
+    //         Some(gtk::DialogError::Dismissed) => return Ok(()),
+    //         _ => return Err(err.into()),
+    //     },
+    // }
+    // .read_future(glib::Priority::DEFAULT)
+    // .await?
+    // .into_async_buf_read(4096);
+
+    // let movie = M64File::read_from_async(movie_file).await?;
 
     Ok(())
 }

@@ -86,7 +86,7 @@ pub(crate) fn generate(args: Args, impl_block: syn::ItemImpl) -> syn::Result<Tok
 
             if !check_self_ref(sig) {
                 return Err(syn::Error::new(
-                    sig.span(),
+                    sig.inputs.span(),
                     "Forwarded functions should take &self",
                 ));
             }

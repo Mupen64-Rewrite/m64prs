@@ -1,7 +1,7 @@
 use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
-    ffi::c_int, fmt::Debug, io::{self, Read, Write}, mem::{self}
+    ffi::c_int, fmt::Debug, io::{self, Read, Write}, mem::{self}, pin::{pin, Pin}
 };
 
 pub mod error;
@@ -325,6 +325,62 @@ impl M64File {
         Ok(Self { header, inputs })
     }
 
+    pub async fn read_from_async<R: futures::AsyncRead>(mut reader: R) -> io::Result<Self> {
+        use futures::AsyncReadExt;
+
+        let mut reader = pin!(reader);
+
+        let header = {
+            // Try to read the header (exactly 1024 bytes)
+            let mut buffer = [0u8; mem::size_of::<M64Header>()];
+            reader.read_exact(&mut buffer).await?;
+            // Check signature
+            if buffer[0..4] != M64_MAGIC {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(".m64: signature doesn't match ({:x?})", &buffer[0..4]),
+                ));
+            }
+            // Parse the header
+            M64Header::from_bytes(buffer)
+        };
+        let inputs = {
+            // Compute buffer sizes
+            let buffer_size: usize = header.length_samples.try_into().unwrap();
+            let buffer_byte_size: usize =
+                buffer_size.checked_mul(mem::size_of::<Buttons>()).unwrap();
+
+            // Read remaining bytes, it should all be input data
+            let input_bytes = {
+                let mut buffer = Vec::<u8>::new();
+                reader.read_to_end(&mut buffer).await?;
+                buffer.into_boxed_slice()
+            };
+
+            // Ensure we have as many samples as the header says we do
+            if input_bytes.len() < buffer_byte_size {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    ".m64: not enough input frames",
+                ));
+            }
+            // Setup the input vector. Ideally it should not need to be zeroed.
+            let mut buffer = vec![Buttons::BLANK; buffer_size];
+
+            // Copy the input bytes directly into the buttons and fix any endianness issues.
+            unsafe {
+                // SAFETY: Buttons has no invalid values.
+                let bytes = buffer.align_to_mut::<u8>().1;
+                bytes.copy_from_slice(&input_bytes[0..buffer_byte_size]);
+            }
+            fix_buttons_order(&mut buffer);
+
+            buffer
+        };
+
+        Ok(Self { header, inputs })
+    }
+
     pub fn write_into<W: Write>(self, writer: &mut W) -> io::Result<()> {
         let Self { header, mut inputs } = self;
         writer.write_all(&header.into_bytes())?;
@@ -334,6 +390,23 @@ impl M64File {
             // SAFETY: Buttons is a POD type and can be directly written.
             let bytes = inputs.align_to_mut::<u8>().1;
             writer.write_all(bytes)?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn write_into_async<W: futures::AsyncWrite>(self, mut writer: Pin<&mut W>) -> io::Result<()> {
+        use futures::AsyncWriteExt;
+
+        let Self { header, mut inputs } = self;
+
+        writer.write_all(&header.into_bytes()).await?;
+
+        fix_buttons_order(&mut inputs);
+        unsafe {
+            // SAFETY: Buttons is a POD type and can be directly written.
+            let bytes = inputs.align_to_mut::<u8>().1;
+            writer.write_all(bytes).await?;
         }
 
         Ok(())
