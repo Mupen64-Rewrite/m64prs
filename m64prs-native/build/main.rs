@@ -1,6 +1,5 @@
 use std::{
-    env, fs,
-    path::{Path, PathBuf},
+    env, ffi::OsStr, fs, path::{Path, PathBuf}
 };
 
 mod dirs;
@@ -19,7 +18,11 @@ pub fn setup_cargo_reruns() {
     {
         let core_dir = Path::new(dirs::M64P_CORE_DIR);
         for entry in walkdir::WalkDir::new(&core_dir.join("src")) {
-            emit(entry.unwrap().path());
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if !path.components().any(|comp| comp.as_os_str() == OsStr::new("asm_defines")) {
+                emit(path);
+            }
         }
         #[cfg(windows)]
         {

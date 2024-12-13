@@ -1,3 +1,4 @@
+use futures::{AsyncRead, AsyncReadExt};
 use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
@@ -171,6 +172,19 @@ impl M64Header {
         // SAFETY: M64Header is a POD type and can validly be converted
         // to and from its byte representation.
         unsafe { mem::transmute(self) }
+    }
+
+    
+    pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
+        let mut chunk = [0u8; 1024];
+        reader.read_exact(&mut chunk)?;
+        Ok(Self::from_bytes(chunk))
+    }
+
+    pub async fn read_async<R: AsyncRead>(mut reader: Pin<&mut R>) -> io::Result<Self> {
+        let mut chunk = [0u8; 1024];
+        reader.read_exact(&mut chunk).await?;
+        Ok(Self::from_bytes(chunk))
     }
 }
 

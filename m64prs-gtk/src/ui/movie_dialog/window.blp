@@ -1,7 +1,8 @@
 using Gtk 4.0;
+using Gio 2.0;
 
 template $M64PRS_MovieDialogWindow: Gtk.Window {
-  title: "Load Movie...";
+  title: bind $cond_string(template.load, "Load Movie...", "New Movie...") as <string>;
 
   Box {
     orientation: vertical;
@@ -41,10 +42,14 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         Entry {
           halign: fill;
           hexpand: true;
+
+          editable: false;
+          text: bind $gio_file_path(template.cur_file) as <string>;
         }
 
         Button {
           label: "Browse...";
+          clicked => $prompt_file() swapped;
         }
       }
 
@@ -56,7 +61,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
         halign: end;
 
-        label: "Author: ";
+        label: "Author: \n(max 222 bytes)";
       }
 
       ScrolledWindow {
@@ -73,6 +78,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         height-request: 100;
 
         TextView author_field {
+          editable: bind $not(template.load) as <bool>;
           wrap-mode: word_char;
           buffer: $M64PRS_SizedTextBuffer {
             max-len: 222;
@@ -88,7 +94,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
         halign: end;
 
-        label: "Description: ";
+        label: "Description: \n(max 256 bytes)";
       }
 
       ScrolledWindow {
@@ -105,6 +111,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         height-request: 100;
 
         TextView description_field {
+          editable: bind $not(template.load) as <bool>;
           wrap-mode: word_char;
           buffer: $M64PRS_SizedTextBuffer {
             max-len: 256;
@@ -142,22 +149,29 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         ToggleButton reset_btn {
           halign: fill;
           hexpand: true;
+
+          sensitive: bind $not(template.load) as <bool>;
+
           label: "Reset";
         }
         ToggleButton savestate_btn {
           halign: fill;
           hexpand: true;
-          label: "Savestate";
-          group: reset_btn;
 
           active: true;
+          sensitive: bind $not(template.load) as <bool>;
+          group: reset_btn;
+
+          label: "Savestate";
         }
         ToggleButton eeprom_btn {
           halign: fill;
           hexpand: true;
+
           sensitive: false;
-          label: "EEPROM";
           group: reset_btn;
+
+          label: "EEPROM";
         }
       }
     }
@@ -170,11 +184,28 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
       Button {
         width-request: 100;
         label: "OK";
+        clicked => $ok_clicked() swapped;
       }
       Button {
         width-request: 100;
         label: "Cancel";
+        clicked => $cancel_clicked() swapped;
       }
     }
   }
+}
+
+FileDialog file_dialog {
+  title: bind $cond_string(template.load, "Load Movie...", "New Movie...") as <string>;
+  modal: true;
+  filters: Gio.ListStore {
+    FileFilter {
+      name: "Mupen64 movie (*.m64)";
+      patterns ["*.m64"]
+    }
+  };
+}
+AlertDialog error_dialog {
+  modal: true;
+  buttons: ["OK"];
 }

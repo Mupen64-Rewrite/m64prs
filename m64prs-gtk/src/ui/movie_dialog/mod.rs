@@ -1,3 +1,4 @@
+mod actions;
 mod window;
 
 mod inner {
@@ -18,7 +19,7 @@ mod inner {
     #[m64prs_gtk_macros::forward_wrapper(super::MovieDialog, vis = pub)]
     impl MovieDialog {
         pub(super) async fn select_movie(&self, transient_for: Option<&impl IsA<gtk::Window>>) {
-            let window = MovieDialogWindow::with_props(&*self.obj());
+            let window = MovieDialogWindow::with_settings(&*self.obj());
             window.prompt(transient_for).await;
         }
     }

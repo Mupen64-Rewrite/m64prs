@@ -178,7 +178,7 @@ where
     }
 }
 
-pub trait ActionGroupTypedExt: IsA<gio::ActionMap> {
+pub trait ActionMapTypedExt: IsA<gio::ActionMap> {
     /// Adds a typed action to an action map.
     fn register_action<OS, OP>(&self, action: &TypedAction<OS, OP>)
     where
@@ -188,7 +188,7 @@ pub trait ActionGroupTypedExt: IsA<gio::ActionMap> {
         self.add_action(action.inner());
     }
 }
-impl<T> ActionGroupTypedExt for T
+impl<T> ActionMapTypedExt for T
 where
     T: IsA<gio::ActionMap> {}
 

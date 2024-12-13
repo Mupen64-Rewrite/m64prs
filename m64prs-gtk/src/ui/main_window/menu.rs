@@ -6,7 +6,7 @@ use m64prs_vcr::movie::M64File;
 
 use crate::{
     ui::main_window::enums::MainEmuState,
-    utils::actions::{ActionGroupTypedExt, BaseAction, StateAction, StateParamAction},
+    utils::actions::{ActionMapTypedExt, BaseAction, StateAction, StateParamAction, TypedAction},
 };
 
 use super::{CoreState, MainWindow};
