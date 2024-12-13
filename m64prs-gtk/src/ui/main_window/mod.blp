@@ -62,24 +62,6 @@ FileDialog load_state_dialog {
   };
 }
 
-FileDialog save_movie_dialog {
-  title: "Save Movie...";
-  filters: Gio.ListStore {
-    FileFilter {
-      name: "Mupen64 movie (*.m64)";
-      patterns ["*.m64"]
-    }
-  };
+$M64PRS_MovieDialog load_movie_dialog {
+  load: true;
 }
-
-FileDialog load_movie_dialog {
-  title: "Load Movie...";
-  filters: Gio.ListStore {
-    FileFilter {
-      name: "Mupen64 movie (*.m64)";
-      patterns ["*.m64"]
-    }
-  };
-}
-
-$M64PRS_MovieDialog movie_dialog {}

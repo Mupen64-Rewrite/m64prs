@@ -1,0 +1,180 @@
+using Gtk 4.0;
+
+template $M64PRS_MovieDialogWindow: Gtk.Window {
+  title: "Load Movie...";
+
+  Box {
+    orientation: vertical;
+
+    Grid {
+      halign: fill;
+      valign: fill;
+      hexpand: true;
+      vexpand: true;
+      margin-top: 10;
+      margin-bottom: 10;
+      margin-start: 10;
+      margin-end: 10;
+      row-spacing: 10;
+      column-spacing: 10;
+
+      Label {
+        layout {
+          column: 0;
+          row: 0;
+        }
+
+        halign: end;
+
+        label: "Path: ";
+      }
+
+      Box {
+        layout {
+          column: 1;
+          row: 0;
+        }
+
+        orientation: horizontal;
+        spacing: 10;
+
+        Entry {
+          halign: fill;
+          hexpand: true;
+        }
+
+        Button {
+          label: "Browse...";
+        }
+      }
+
+      Label {
+        layout {
+          column: 0;
+          row: 1;
+        }
+
+        halign: end;
+
+        label: "Author: ";
+      }
+
+      ScrolledWindow {
+        layout {
+          column: 1;
+          row: 1;
+        }
+
+        halign: fill;
+        valign: fill;
+        hexpand: true;
+        vexpand: true;
+        min-content-height: 100;
+        height-request: 100;
+
+        TextView author_field {
+          wrap-mode: word_char;
+          buffer: $M64PRS_SizedTextBuffer {
+            max-len: 222;
+          };
+        }
+      }
+
+      Label {
+        layout {
+          column: 0;
+          row: 2;
+        }
+
+        halign: end;
+
+        label: "Description: ";
+      }
+
+      ScrolledWindow {
+        layout {
+          column: 1;
+          row: 2;
+        }
+
+        halign: fill;
+        valign: fill;
+        hexpand: true;
+        vexpand: true;
+        min-content-height: 100;
+        height-request: 100;
+
+        TextView description_field {
+          wrap-mode: word_char;
+          buffer: $M64PRS_SizedTextBuffer {
+            max-len: 256;
+          };
+        }
+      }
+
+      Label {
+        layout {
+          column: 0;
+          row: 3;
+        }
+
+        halign: end;
+
+        label: "Start Type: ";
+      }
+
+      Box {
+        layout {
+          column: 1;
+          row: 3;
+        }
+
+        orientation: horizontal;
+        homogeneous: true;
+
+        halign: fill;
+        hexpand: true;
+
+        css-classes: [
+          "linked"
+        ];
+
+        ToggleButton reset_btn {
+          halign: fill;
+          hexpand: true;
+          label: "Reset";
+        }
+        ToggleButton savestate_btn {
+          halign: fill;
+          hexpand: true;
+          label: "Savestate";
+          group: reset_btn;
+
+          active: true;
+        }
+        ToggleButton eeprom_btn {
+          halign: fill;
+          hexpand: true;
+          sensitive: false;
+          label: "EEPROM";
+          group: reset_btn;
+        }
+      }
+    }
+
+    Box {
+      orientation: horizontal;
+      spacing: 10;
+      halign: end;
+
+      Button {
+        width-request: 100;
+        label: "OK";
+      }
+      Button {
+        width-request: 100;
+        label: "Cancel";
+      }
+    }
+  }
+}

@@ -488,7 +488,7 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    main_window.show_movie_dialog().await;
+    main_window.show_load_movie_dialog().await;
     // let movie_file = match main_window.show_load_movie_dialog().await {
     //     Ok(file) => file,
     //     Err(err) => match err.kind::<gtk::DialogError>() {

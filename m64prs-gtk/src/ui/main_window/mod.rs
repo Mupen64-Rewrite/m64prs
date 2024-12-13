@@ -56,7 +56,7 @@ mod inner {
         #[template_child]
         load_state_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
-        movie_dialog: TemplateChild<MovieDialog>,
+        load_movie_dialog: TemplateChild<MovieDialog>,
 
         // properties
         #[property(get, construct_only, builder(MainViewState::RomBrowser))]
@@ -143,8 +143,8 @@ mod inner {
             self.load_state_dialog.open_future(Some(&*self.obj())).await
         }
 
-        pub(super) async fn show_movie_dialog(&self) {
-            self.movie_dialog.prompt(Some(&*self.obj())).await;
+        pub(super) async fn show_load_movie_dialog(&self) {
+            self.load_movie_dialog.select_movie(Some(&*self.obj())).await
         }
     }
 
