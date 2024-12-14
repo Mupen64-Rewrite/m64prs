@@ -34,7 +34,7 @@ mod inner {
         cur_file: RefCell<Option<gio::File>>,
     }
 
-    #[m64prs_gtk_macros::forward_wrapper(super::MovieDialogWindow, vis = pub(in super::super))]
+    #[m64prs_gtk_utils::forward_wrapper(super::MovieDialogWindow, vis = pub(in super::super))]
     impl MovieDialogWindow {
         pub(super) async fn prompt(&self, transient_for: Option<&impl IsA<gtk::Window>>) {
             let (tx, rx) = oneshot::channel();

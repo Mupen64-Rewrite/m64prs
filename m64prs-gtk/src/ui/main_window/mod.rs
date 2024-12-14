@@ -23,6 +23,7 @@ mod inner {
         SendWeakRef,
     };
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
+    use m64prs_gtk_utils::actions::TypedActionGroup as _;
     use m64prs_sys::EmuState;
 
     use crate::{
@@ -82,7 +83,7 @@ mod inner {
         core: RefCell<CoreState>,
     }
 
-    #[m64prs_gtk_macros::forward_wrapper(super::MainWindow, vis = pub(in crate::ui))]
+    #[m64prs_gtk_utils::forward_wrapper(super::MainWindow, vis = pub(in crate::ui))]
     impl MainWindow {
         pub(super) fn set_emu_state(&self, emu_state: EmuState) {
             self.emu_state.set(emu_state.into());
@@ -144,7 +145,7 @@ mod inner {
         }
 
         pub(super) async fn show_load_movie_dialog(&self) {
-            self.load_movie_dialog.select_movie(Some(&*self.obj())).await
+            // self.load_movie_dialog.select_movie(Some(&*self.obj())).await
         }
     }
 

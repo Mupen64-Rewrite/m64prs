@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
 mod forward_wrapper;
+mod derive_typed_action_group;
 
 /// Forwards methods from the inner class of a subtype.
 /// 
@@ -34,4 +35,15 @@ pub fn forward_wrapper(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     item2.extend(gen);
     item2
+}
+
+#[proc_macro_derive(TypedActionGroup, attributes(action))]
+pub fn derive_typed_action_group(item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as syn::DeriveInput);
+
+    let gen: TokenStream = match derive_typed_action_group::generate(item) {
+        Ok(gen) => gen.into(),
+        Err(err) => return err.into_compile_error().into(),
+    };
+    gen
 }

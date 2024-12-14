@@ -1,4 +1,7 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::{
+    borrow::{Borrow, Cow},
+    marker::PhantomData,
+};
 
 use gio::prelude::{ActionExt, FromVariant, ToVariant};
 use glib::SignalHandlerId;
@@ -47,7 +50,7 @@ where
 
     /// Checks whether the action is enabled. Actions may only
     /// be activated when they are enabled.
-    /// 
+    ///
     /// **See also:** [`gio::SimpleAction::is_enabled`]
     pub fn is_enabled(&self) -> bool {
         self.inner.is_enabled()
@@ -55,64 +58,52 @@ where
 
     /// Sets whether the action is enabled. Actions may only
     /// be activated when they are enabled.
-    /// 
+    ///
     /// **See also:** [`gio::SimpleAction::set_enabled`]
     pub fn set_enabled(&self, enabled: bool) {
         self.inner.set_enabled(enabled);
     }
 }
 
-impl TypedAction<TNone, TNone> {
+impl<OP> TypedAction<TNone, OP>
+where
+    OP: OptionVariantType,
+{
     /// Constructs a new action with no state or parameter.
     pub fn new(name: &str) -> Self {
         Self {
-            inner: gio::SimpleAction::new(name, None),
+            inner: gio::SimpleAction::new(name, OP::static_variant_type().as_deref()),
             _marker: PhantomData,
         }
     }
 }
 
-impl<S> TypedAction<TSome<S>, TNone>
+impl<S, OP> TypedAction<TSome<S>, OP>
 where
     S: FromVariant + ToVariant,
+    OP: OptionVariantType,
 {
     /// Constructs a new action with state, but no parameter.
-    pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
-        Self {
-            inner: gio::SimpleAction::new_stateful(name, None, &init_state.borrow().to_variant()),
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<P> TypedAction<TNone, TSome<P>>
-where
-    P: FromVariant + ToVariant,
-{
-    /// Constructs a new action with parameter, but no state.
-    pub fn new(name: &str) -> Self {
-        Self {
-            inner: gio::SimpleAction::new(name, Some(&P::static_variant_type())),
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<S, P> TypedAction<TSome<S>, TSome<P>>
-where
-    S: FromVariant + ToVariant,
-    P: FromVariant + ToVariant,
-{
-    /// Constructs a new action with both state and parameter.
-    pub fn new<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
+    pub fn with_state<RS: Borrow<S>>(name: &str, init_state: RS) -> Self {
         Self {
             inner: gio::SimpleAction::new_stateful(
                 name,
-                Some(&P::static_variant_type()),
+                OP::static_variant_type().as_deref(),
                 &init_state.borrow().to_variant(),
             ),
             _marker: PhantomData,
         }
+    }
+
+    /// Gets the action's current state.
+    pub fn state(&self) -> S {
+        S::from_variant(&self.inner.state().expect("action state should exist"))
+            .expect("action state should match type S")
+    }
+
+    /// Sets the action's current state.
+    pub fn set_state(&self, state: &S) {
+        self.inner.set_state(&S::to_variant(state));
     }
 }
 
@@ -161,22 +152,25 @@ where
     }
 }
 
-impl<S, OP> TypedAction<TSome<S>, OP>
-where
-    S: ToVariant + FromVariant,
-    OP: OptionVariantType,
-{
-    /// Gets the action's current state.
-    pub fn state(&self) -> S {
-        S::from_variant(&self.inner.state().expect("action state should exist"))
-            .expect("action state should match type S")
-    }
+// Traits and other doodads
 
-    /// Sets the action's current state.
-    pub fn set_state(&self, state: &S) {
-        self.inner.set_state(&S::to_variant(state));
+/// Trait for a `struct` of related actions. This should be created via the
+/// provided derive macro.
+pub trait TypedActionGroup {
+    /// Initializes all actions to their default values.
+    fn new_default() -> Self;
+    /// Registers all actions to a [`gio::ActionMap`].
+    fn register_to(&self, map: &impl IsA<gio::ActionMap>);
+
+    /// Creates a [`gio::SimpleActionGroup`] containing all actions
+    fn to_action_group(&self) -> gio::SimpleActionGroup {
+        let action_group = gio::SimpleActionGroup::new();
+        self.register_to(&action_group);
+        action_group
     }
 }
+
+pub use m64prs_gtk_macros::TypedActionGroup;
 
 pub trait ActionMapTypedExt: IsA<gio::ActionMap> {
     /// Adds a typed action to an action map.
@@ -188,16 +182,27 @@ pub trait ActionMapTypedExt: IsA<gio::ActionMap> {
         self.add_action(action.inner());
     }
 }
-impl<T> ActionMapTypedExt for T
-where
-    T: IsA<gio::ActionMap> {}
-
+impl<T> ActionMapTypedExt for T where T: IsA<gio::ActionMap> {}
 
 mod sealed {
     pub trait Sealed {}
 }
 impl<T: TOption> sealed::Sealed for T {}
 
-pub trait OptionVariantType: sealed::Sealed {}
-impl OptionVariantType for TNone {}
-impl<T: ToVariant + FromVariant> OptionVariantType for TSome<T> {}
+pub trait OptionVariantType: sealed::Sealed {
+    fn static_variant_type() -> Option<Cow<'static, glib::VariantTy>>;
+}
+impl OptionVariantType for TNone {
+    fn static_variant_type() -> Option<Cow<'static, glib::VariantTy>> {
+        None
+    }
+}
+impl<T: ToVariant + FromVariant> OptionVariantType for TSome<T> {
+    fn static_variant_type() -> Option<Cow<'static, glib::VariantTy>> {
+        Some(T::static_variant_type())
+    }
+}
+
+/*
+::m64prs_gtk_utils::actions::
+*/

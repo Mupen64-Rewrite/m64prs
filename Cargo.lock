@@ -1328,7 +1328,7 @@ dependencies = [
  "gtk4",
  "log",
  "m64prs-core",
- "m64prs-gtk-macros",
+ "m64prs-gtk-utils",
  "m64prs-native",
  "m64prs-sys",
  "m64prs-vcr",
@@ -1353,6 +1353,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "m64prs-gtk-utils"
+version = "0.1.0"
+dependencies = [
+ "gio",
+ "glib",
+ "gtk4",
+ "m64prs-gtk-macros",
 ]
 
 [[package]]

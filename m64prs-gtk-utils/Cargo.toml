@@ -1,0 +1,12 @@
+[package]
+name = "m64prs-gtk-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+m64prs-gtk-macros = { path = "../m64prs-gtk-macros" }
+
+glib = { version = "*", features = ["log"] }
+gio = { version = "*" }
+gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }

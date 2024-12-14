@@ -2,12 +2,10 @@ use std::{error::Error, io};
 
 use gtk::prelude::*;
 use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
+use m64prs_gtk_utils::actions::{ActionMapTypedExt, BaseAction, StateAction, StateParamAction, TypedActionGroup};
 use m64prs_vcr::movie::M64File;
 
-use crate::{
-    ui::main_window::enums::MainEmuState,
-    utils::actions::{ActionMapTypedExt, BaseAction, StateAction, StateParamAction, TypedAction},
-};
+use crate::ui::main_window::enums::MainEmuState;
 
 use super::{CoreState, MainWindow};
 
@@ -18,48 +16,46 @@ pub fn load_menu() -> gio::MenuModel {
         .expect("menu.blp should contain object `root`")
 }
 
-#[derive(Debug)]
+#[derive(Debug, TypedActionGroup)]
 pub(super) struct AppActions {
+    #[action(name = "file.open_rom")]
     open_rom: BaseAction,
+    #[action(name = "file.close_rom")]
     close_rom: BaseAction,
 
+    #[action(name = "emu.toggle_pause", default = false)]
     toggle_pause: StateAction<bool>,
+    #[action(name = "emu.frame_advance")]
     frame_advance: BaseAction,
+    #[action(name = "emu.reset_rom")]
     reset_rom: BaseAction,
 
+    #[action(name = "emu.save_slot")]
     save_slot: BaseAction,
+    #[action(name = "emu.load_slot")]
     load_slot: BaseAction,
-    // TODO: replace String with u8 when Blueprint supports it
+    #[action(name = "emu.set_save_slot", default = 1u8)]
     set_save_slot: StateParamAction<u8, u8>,
+    #[action(name = "emu.save_file")]
     save_file: BaseAction,
+    #[action(name = "emu.load_file")]
     load_file: BaseAction,
 
+    #[action(name = "vcr.new_movie")]
     new_movie: BaseAction,
+    #[action(name = "vcr.load_movie")]
     load_movie: BaseAction,
+    #[action(name = "vcr.save_movie")]
     save_movie: BaseAction,
+    #[action(name = "vcr.discard_movie")]
     discard_movie: BaseAction,
+    #[action(name = "vcr.toggle_read_only", default = false)]
     toggle_read_only: StateAction<bool>,
 }
 
 impl Default for AppActions {
     fn default() -> Self {
-        Self {
-            open_rom: BaseAction::new("file.open_rom"),
-            close_rom: BaseAction::new("file.close_rom"),
-            toggle_pause: StateAction::new("emu.toggle_pause", false),
-            frame_advance: BaseAction::new("emu.frame_advance"),
-            reset_rom: BaseAction::new("emu.reset_rom"),
-            save_slot: BaseAction::new("emu.save_slot"),
-            load_slot: BaseAction::new("emu.load_slot"),
-            set_save_slot: StateParamAction::new("emu.set_save_slot", 1),
-            save_file: BaseAction::new("emu.save_file"),
-            load_file: BaseAction::new("emu.load_file"),
-            new_movie: BaseAction::new("vcr.new_movie"),
-            load_movie: BaseAction::new("vcr.load_movie"),
-            save_movie: BaseAction::new("vcr.save_movie"),
-            discard_movie: BaseAction::new("vcr.discard_movie"),
-            toggle_read_only: StateAction::new("vcr.toggle_read_only", false),
-        }
+        Self::new_default()
     }
 }
 
@@ -233,33 +229,6 @@ impl AppActions {
         b!(set_save_slot."state" => save_slot_gvar);
         b!(save_file."enabled" => save_start_valid);
         b!(load_file."enabled" => save_start_valid);
-    }
-
-    pub(super) fn register_to(&self, map: &impl IsA<gio::ActionMap>) {
-        macro_rules! register_all_actions {
-            ($($names:ident),* $(,)?) => {
-                {
-                    $(map.register_action(&self.$names);)*
-                }
-            };
-        }
-        register_all_actions!(
-            open_rom,
-            close_rom,
-            toggle_pause,
-            frame_advance,
-            reset_rom,
-            save_slot,
-            load_slot,
-            set_save_slot,
-            save_file,
-            load_file,
-            new_movie,
-            load_movie,
-            save_movie,
-            discard_movie,
-            toggle_read_only
-        );
     }
 }
 
