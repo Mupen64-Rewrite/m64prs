@@ -150,6 +150,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           halign: fill;
           hexpand: true;
 
+          // See MovieStartType::Reset
+          active: bind $start_type_eq(template.start-type, 2) as <bool>;
           sensitive: bind $not(template.load) as <bool>;
 
           label: "Reset";
@@ -158,7 +160,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           halign: fill;
           hexpand: true;
 
-          active: true;
+          // See MovieStartType::Snapshot
+          active: bind $start_type_eq(template.start-type, 1) as <bool>;
           sensitive: bind $not(template.load) as <bool>;
           group: reset_btn;
 
@@ -168,6 +171,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           halign: fill;
           hexpand: true;
 
+          // See MovieStartType::Eeprom
+          active: bind $start_type_eq(template.start-type, 4) as <bool>;
           sensitive: false;
           group: reset_btn;
 

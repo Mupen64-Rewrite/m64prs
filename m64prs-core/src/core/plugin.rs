@@ -147,6 +147,16 @@ impl Core {
         // drop the plugins. this shuts them down.
         self.plugins = None;
     }
+
+    /// Gets the plugin info associated with the specified plugin type, if plugins are attached.
+    pub fn plugin_info(&self, ptype: PluginType) -> Option<Result<PluginInfo, M64PError>> {
+        self.plugins.as_ref().map(|plugin_set| match ptype {
+            PluginType::Graphics => plugin_set.graphics.version_info(),
+            PluginType::Audio => plugin_set.audio.version_info(),
+            PluginType::Input => plugin_set.input.version_info(),
+            PluginType::Rsp => plugin_set.rsp.version_info(),
+        })
+    }
 }
 
 /// Safely represents the type of a plugin. [`m64prs_sys::PluginType`] offers

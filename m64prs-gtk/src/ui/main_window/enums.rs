@@ -1,15 +1,5 @@
 use glib::prelude::*;
-
-macro_rules! glib_enum_display {
-    ($type:ty) => {
-        impl ::std::fmt::Display for $type {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let clazz = ::glib::EnumClass::with_type(<$type>::static_type()).unwrap();
-                f.write_str(clazz.value(::glib::translate::IntoGlib::into_glib(*self)).unwrap().name())
-            }
-        }
-    };
-}
+use m64prs_gtk_utils::glib_enum_display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, glib::Enum)]
 #[enum_type(name = "M64PRS_MainViewState")]

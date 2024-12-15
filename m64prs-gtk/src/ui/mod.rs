@@ -10,6 +10,10 @@ use movie_dialog::MovieDialog;
 
 const APP_ID: &str = "io.github.jgcodes.m64prs";
 
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{0}")]
+struct AppDialogError(String);
+
 pub fn run_ui() {
     // this catches some template errors early
     MainWindow::ensure_type();

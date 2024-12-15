@@ -1,6 +1,5 @@
 use gtk::prelude::*;
 
-use super::MovieDialog;
 
 mod inner {
     use std::{
@@ -9,11 +8,11 @@ mod inner {
     };
 
     use futures::channel::oneshot;
-    use glib::subclass::InitializingObject;
+    use glib::{subclass::InitializingObject, translate::IntoGlib};
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
-    use m64prs_vcr::movie::{M64File, M64Header};
+    use m64prs_vcr::movie::{M64File, M64Header, StartType};
 
-    use crate::controls::SizedTextBuffer;
+    use crate::{controls::SizedTextBuffer, ui::{movie_dialog::enums::MovieStartType, AppDialogError}};
 
     #[derive(Default, gtk::CompositeTemplate, glib::Properties)]
     #[template(file = "src/ui/movie_dialog/window.blp")]
@@ -24,7 +23,15 @@ mod inner {
         #[template_child]
         description_field: TemplateChild<gtk::TextView>,
         #[template_child]
+        reset_btn: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        savestate_btn: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        eeprom_btn: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
         file_dialog: TemplateChild<gtk::FileDialog>,
+        #[template_child]
+        error_dialog: TemplateChild<gtk::AlertDialog>,
 
         #[property(get, construct_only, default_value = false)]
         load: Cell<bool>,
@@ -32,25 +39,43 @@ mod inner {
         /// response values
         #[property(get, set, nullable)]
         cur_file: RefCell<Option<gio::File>>,
+        #[property(get, set, builder(MovieStartType::Reset))]
+        start_type: Cell<MovieStartType>,
+
+        close_ok: Cell<bool>,
     }
 
     #[m64prs_gtk_utils::forward_wrapper(super::MovieDialogWindow, vis = pub(in super::super))]
     impl MovieDialogWindow {
-        pub(super) async fn prompt(&self, transient_for: Option<&impl IsA<gtk::Window>>) {
+        pub(super) async fn prompt(&self, transient_for: Option<&impl IsA<gtk::Window>>) -> bool {
             let (tx, rx) = oneshot::channel();
 
             self.obj().set_transient_for(transient_for);
             let handler_id = self.obj().connect_hide({
                 let tx = RefCell::new(Some(tx));
+                let this = self.obj().downgrade();
                 move |_| {
+                    let this = this.upgrade().unwrap();
                     if let Some(tx) = tx.take() {
-                        let _ = tx.send(());
+                        let _ = tx.send(this.imp().close_ok.get());
                     }
                 }
             });
             self.obj().present();
-            let _ = rx.await;
+            let result = rx.await.unwrap();
             self.obj().disconnect(handler_id);
+
+            result
+        }
+
+        pub(super) fn author(&self) -> String {
+            let buffer = self.author_field.buffer();
+            buffer.text(&buffer.start_iter(), &buffer.end_iter(), true).to_string()
+        }
+
+        pub(super) fn description(&self) -> String {
+            let buffer = self.description_field.buffer();
+            buffer.text(&buffer.start_iter(), &buffer.end_iter(), true).to_string()
         }
     }
 
@@ -90,9 +115,16 @@ mod inner {
         }
 
         #[template_callback]
+        fn start_type_eq(&self, start_type: MovieStartType, value: i32) -> bool{
+            start_type.into_glib() == value
+        }
+
+        #[template_callback]
         async fn prompt_file(&self, _: &gtk::Button) {
             if let Err(err) = self.prompt_file_impl().await {
-                println!("haha");
+                self.error_dialog.set_message("Invalid file!");
+                self.error_dialog.set_detail(&err.to_string());
+                let _ = self.error_dialog.choose_future(Some(&*self.obj())).await;
             }
         }
 
@@ -110,6 +142,9 @@ mod inner {
                     }
                 }
             };
+            if file.path().is_none() {
+                return Err(AppDialogError("File has no path. Is your app sandboxed?".to_string()).into());
+            }
             if self.load.get() {
                 let header = {
                     let mut file_reader = file
@@ -121,18 +156,47 @@ mod inner {
                 };
                 self.author_field.buffer().set_text(header.author.read());
                 self.description_field.buffer().set_text(header.description.read());
+                if let Some(start_type) = MovieStartType::try_from(header.start_flags).ok() {
+                    self.obj().set_start_type(start_type);
+                }
             }
             self.obj().set_cur_file(Some(file));
             Ok(())
         }
 
         #[template_callback]
-        fn ok_clicked(&self, _: &gtk::Button) {
-            // self.obj().set_visible(false);
+        fn ui_set_start_type(&self, button: &gtk::Button) {
+            let start_type = if button == &*self.reset_btn {
+                MovieStartType::Reset
+            }
+            else if button == &*self.savestate_btn {
+                MovieStartType::Snapshot
+            }
+            else if button == &*self.eeprom_btn {
+                MovieStartType::Eeprom
+            }
+            else {
+                unreachable!()
+            };
+            self.obj().set_start_type(start_type);
+        }
+
+        #[template_callback]
+        async fn ok_clicked(&self, _: &gtk::Button) {
+            if self.obj().cur_file().is_none() {
+                self.error_dialog.set_message("Missing info!");
+                self.error_dialog.set_detail("Please select a file.");
+                self.error_dialog.choose_future(Some(&*self.obj())).await;
+                return;
+            }
+
+            self.obj().set_visible(false);
+            self.close_ok.set(true);
         }
         #[template_callback]
         fn cancel_clicked(&self, _: &gtk::Button) {
-            // self.obj().set_visible(false);
+            self.obj().set_visible(false);
+            self.close_ok.set(false);
         }
     }
 
@@ -166,7 +230,12 @@ mod inner {
         }
     }
     impl WidgetImpl for MovieDialogWindow {}
-    impl WindowImpl for MovieDialogWindow {}
+    impl WindowImpl for MovieDialogWindow {
+        fn close_request(&self) -> glib::Propagation {
+            self.close_ok.set(false);
+            glib::Propagation::Proceed
+        }
+    }
 }
 
 glib::wrapper! {
@@ -184,8 +253,8 @@ glib::wrapper! {
 }
 
 impl MovieDialogWindow {
-    pub(super) fn with_settings(settings: &MovieDialog) -> Self {
-        let mut props: [(&str, glib::Value); 1] = [("load", settings.load().to_value())];
+    pub(super) fn with_load(load: bool) -> Self {
+        let mut props: [(&str, glib::Value); 1] = [("load", load.to_value())];
         unsafe { glib::Object::with_mut_values(Self::static_type(), &mut props).unsafe_cast() }
     }
 }

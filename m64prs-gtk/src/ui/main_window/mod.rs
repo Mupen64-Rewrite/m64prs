@@ -11,7 +11,7 @@ mod menu;
 mod inner {
     use std::{
         cell::{Cell, RefCell, RefMut},
-        error::Error,
+        error::Error, path::PathBuf,
     };
 
     use glib::{
@@ -25,6 +25,7 @@ mod inner {
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
     use m64prs_gtk_utils::actions::TypedActionGroup as _;
     use m64prs_sys::EmuState;
+    use m64prs_vcr::movie::M64Header;
 
     use crate::{
         controls::{
@@ -56,6 +57,8 @@ mod inner {
         save_state_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
         load_state_dialog: TemplateChild<gtk::FileDialog>,
+        #[template_child]
+        new_movie_dialog: TemplateChild<MovieDialog>,
         #[template_child]
         load_movie_dialog: TemplateChild<MovieDialog>,
 
@@ -144,8 +147,12 @@ mod inner {
             self.load_state_dialog.open_future(Some(&*self.obj())).await
         }
 
-        pub(super) async fn show_load_movie_dialog(&self) {
-            // self.load_movie_dialog.select_movie(Some(&*self.obj())).await
+        pub(super) async fn show_new_movie_dialog(&self) -> Option<(PathBuf, M64Header)> {
+            self.new_movie_dialog.new_movie(Some(&*self.obj())).await
+        }
+
+        pub(super) async fn show_load_movie_dialog(&self) -> Option<gio::File> {
+            self.load_movie_dialog.load_movie(Some(&*self.obj())).await
         }
     }
 

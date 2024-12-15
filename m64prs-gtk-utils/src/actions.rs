@@ -102,8 +102,8 @@ where
     }
 
     /// Sets the action's current state.
-    pub fn set_state(&self, state: &S) {
-        self.inner.set_state(&S::to_variant(state));
+    pub fn set_state<RS: Borrow<S>>(&self, state: RS) {
+        self.inner.set_state(&S::to_variant(state.borrow()));
     }
 }
 

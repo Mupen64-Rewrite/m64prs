@@ -2,8 +2,7 @@ use std::{error::Error, io};
 
 use gtk::prelude::*;
 use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
-use m64prs_gtk_utils::actions::{ActionMapTypedExt, BaseAction, StateAction, StateParamAction, TypedActionGroup};
-use m64prs_vcr::movie::M64File;
+use m64prs_gtk_utils::actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup};
 
 use crate::ui::main_window::enums::MainEmuState;
 
@@ -66,7 +65,6 @@ impl AppActions {
     }
 
     fn connect_actions(&self, main_window: &MainWindow) {
-        /// Binds a handler to one of the implementation functions.
         macro_rules! c {
             ($act:ident, async @$handler:path, $msg:expr) => {
                 self.$act.connect_activate({
@@ -163,6 +161,7 @@ impl AppActions {
         c!(save_file, async save_file_impl);
         c!(load_file, async load_file_impl);
 
+        c!(new_movie, async new_movie_impl);
         c!(load_movie, async load_movie_impl);
     }
 
@@ -453,6 +452,11 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
             .await?;
     }
 
+    Ok(())
+}
+
+async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    main_window.show_new_movie_dialog().await;
     Ok(())
 }
 
