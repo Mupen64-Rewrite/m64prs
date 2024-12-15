@@ -3,10 +3,13 @@ resolver = "2"
 
 members = [
     "m64prs-core",
-    "m64prs-gtk", "m64prs-gtk-macros", "m64prs-gtk-utils",
+    "m64prs-gtk", 
+    "m64prs-gtk-macros", 
+    "m64prs-gtk-utils",
     "m64prs-native", 
     "m64prs-sys",
     "m64prs-vcr", 
+    "tasinput-rs", 
 ]
 
 default-members = ["m64prs-gtk"]

@@ -171,6 +171,7 @@ impl AppActions {
         let emu_state = main_window.property_expression_weak("emu-state");
         let saving_state = main_window.property_expression_weak("saving-state");
         let save_slot = main_window.property_expression_weak("save-slot");
+        let vcr_active = main_window.property_expression_weak("vcr-active");
 
         let emu_stopped =
             emu_state.chain_closure::<bool>(glib::closure!(|_: Option<glib::Object>,
@@ -192,7 +193,7 @@ impl AppActions {
             }
         ));
 
-        let save_start_valid = gtk::ClosureExpression::new::<bool>(
+        let can_save = gtk::ClosureExpression::new::<bool>(
             [&*emu_state, &*saving_state],
             glib::closure!(|_: Option<glib::Object>,
                             emu_state: MainEmuState,
@@ -203,6 +204,18 @@ impl AppActions {
                     (MainEmuState::Running | MainEmuState::Paused, false)
                 )
             }),
+        );
+        let has_vcr = gtk::ClosureExpression::new::<bool>(
+            [&*emu_state, &*vcr_active],
+            glib::closure!(|_: Option<glib::Object>,
+                            emu_state: MainEmuState,
+                            vcr_active: bool|
+             -> bool {
+                matches!(
+                    (emu_state, vcr_active),
+                    (MainEmuState::Running | MainEmuState::Paused, true)
+                )
+             }),
         );
 
         let save_slot_gvar = save_slot.chain_closure::<glib::Variant>(glib::closure!(
@@ -224,12 +237,17 @@ impl AppActions {
         b!(frame_advance."enabled" => emu_active);
         b!(reset_rom."enabled" => emu_active);
 
-        b!(save_slot."enabled" => save_start_valid);
-        b!(load_slot."enabled" => save_start_valid);
+        b!(save_slot."enabled" => can_save);
+        b!(load_slot."enabled" => can_save);
         b!(set_save_slot."enabled" => emu_active);
         b!(set_save_slot."state" => save_slot_gvar);
-        b!(save_file."enabled" => save_start_valid);
-        b!(load_file."enabled" => save_start_valid);
+        b!(save_file."enabled" => can_save);
+        b!(load_file."enabled" => can_save);
+        
+        b!(new_movie."enabled" => emu_active);
+        b!(load_movie."enabled" => emu_active);
+        b!(save_movie."enabled" => vcr_active);
+        b!(discard_movie."enabled" => vcr_active);
     }
 }
 

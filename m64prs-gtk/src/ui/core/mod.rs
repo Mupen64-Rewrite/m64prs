@@ -287,7 +287,11 @@ impl CoreRunningState {
     }
 
     pub(super) async fn load_slot(&mut self) -> Result<(), SavestateError> {
-        self.core.load_slot().await
+        self.core.load_slot().await?;
+        if let Some(vcr_state) = &mut *self.vcr_state.lock().unwrap() {
+            vcr_state.set_read_only(self.vcr_read_only);
+        }
+        Ok(())
     }
 
     pub(super) fn set_save_slot(&mut self, slot: u8) -> Result<(), M64PError> {
@@ -307,7 +311,11 @@ impl CoreRunningState {
         &mut self,
         path: P,
     ) -> Result<(), SavestateError> {
-        self.core.load_file(path.as_ref()).await
+        self.core.load_file(path.as_ref()).await?;
+        if let Some(vcr_state) = &mut *self.vcr_state.lock().unwrap() {
+            vcr_state.set_read_only(self.vcr_read_only);
+        }
+        Ok(())
     }
 
     pub(super) fn forward_key_down(&mut self, key_code: u32, r#mod: gdk::ModifierType) {
@@ -316,7 +324,7 @@ impl CoreRunningState {
 
             let sdl_key = keyboard::into_sdl_scancode(&display, key_code);
             let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
-            eprintln!("0x{:02X} -> {:?}", key_code, sdl_key);
+            // eprintln!("0x{:02X} -> {:?}", key_code, sdl_key);
             let _ = self.core.forward_key_down(sdl_key, sdl_mod);
         }
     }

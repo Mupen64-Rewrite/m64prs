@@ -6,7 +6,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const CORE_RR_HEADERS: [&str; 3] = ["m64p_types.h", "m64p_tas.h", "m64p_plugin.h"];
+const CORE_RR_HEADERS: [&str; 4] = [
+    "m64p_common.h",
+    "m64p_types.h",
+    "m64p_tas.h",
+    "m64p_plugin.h",
+];
 const CORE_RR_BITFLAGS: [&str; 2] = ["m64p_core_caps", "m64p_video_flags"];
 const CORE_RR_BITFLAGS_RUST: [&str; 2] = ["CoreCaps", "VideoFlags"];
 
@@ -20,7 +25,14 @@ impl ParseCallbacks for M64PParseCallbacks {
             "m64p_2d_size" => Some("Size2D".to_owned()),
             "m64p_GLattr" => Some("GLAttribute".to_owned()),
             "m64p_GLContextType" => Some("GLContextType".to_owned()),
+            // snake case names (from plugins)
             "BUTTONS" => Some("Buttons".to_owned()),
+            "CONTROL_INFO" => Some("ControlInfo".to_owned()),
+            "CONTROL" => Some("Control".to_owned()),
+            "AUDIO_INFO" => Some("AudioInfo".to_owned()),
+            "RSP_INFO" => Some("RspInfo".to_owned()),
+            "GFX_INFO" => Some("GfxInfo".to_owned()),
+
             // confusing names
             "m64p_type" => Some("ConfigType".to_owned()),
             // other items
@@ -146,7 +158,6 @@ fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     builder = builder
         .blocklist_type(r"m64p_dbg_.*")
         .blocklist_type(r"m64p_breakpoint")
-        .blocklist_type(r"ptr_.*")
         .blocklist_function(".*");
 
     // blocklist BUTTONS specifically
