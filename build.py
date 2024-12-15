@@ -106,7 +106,7 @@ def build(args: argparse.Namespace, extra: list[str]):
         target_dir = root_dir.joinpath("target/debug")
     bin_dir.mkdir(parents=True, exist_ok=True)
 
-    native_root_dir = root_dir.joinpath("m64prs-native")
+    native_root_dir = root_dir.joinpath("m64prs/native")
     native_target_dir = native_root_dir.joinpath("target")
 
     data_dir = bin_dir.joinpath("data")
@@ -149,7 +149,7 @@ def build(args: argparse.Namespace, extra: list[str]):
         else:
             assert False
 
-        deps_dir = root_dir.joinpath("m64prs-native/mupen64plus-win32-deps")
+        deps_dir = root_dir.joinpath("m64prs/native/mupen64plus-win32-deps")
 
         NATIVE_DEP_NAMES = [
             ("freetype-2.13.0", "freetype"),
@@ -192,7 +192,7 @@ def clean(args: argparse.Namespace, extra: list[str]):
     shutil.rmtree(root_dir.joinpath("target"))
     shutil.rmtree(root_dir.joinpath("install"))
 
-    native_dir = root_dir.joinpath("m64prs-native")
+    native_dir = root_dir.joinpath("m64prs/native")
     if platform.system() == "Windows":
         shutil.rmtree(native_dir.joinpath("target"))
     else:

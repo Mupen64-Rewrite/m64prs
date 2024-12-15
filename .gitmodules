@@ -1,19 +1,19 @@
 [submodule "mupen64plus-core-tas"]
-	path = m64prs-native/mupen64plus-core
+	path = m64prs/native/mupen64plus-core
 	url = https://github.com/jgcodes2020/mupen64plus-core
 	branch = rerecording
 [submodule "mupen64plus-win32-deps"]
-	path = m64prs-native/mupen64plus-win32-deps
+	path = m64prs/native/mupen64plus-win32-deps
 	url = https://github.com/mupen64plus/mupen64plus-win32-deps.git
 [submodule "m64prs-native/mupen64plus-rsp-hle"]
-	path = m64prs-native/mupen64plus-rsp-hle
+	path = m64prs/native/mupen64plus-rsp-hle
 	url = https://github.com/mupen64plus/mupen64plus-rsp-hle.git
 [submodule "m64prs-native/mupen64plus-input-sdl"]
-	path = m64prs-native/mupen64plus-input-sdl
+	path = m64prs/native/mupen64plus-input-sdl
 	url = https://github.com/mupen64plus/mupen64plus-input-sdl.git
 [submodule "m64prs-native/mupen64plus-audio-sdl"]
-	path = m64prs-native/mupen64plus-audio-sdl
+	path = m64prs/native/mupen64plus-audio-sdl
 	url = https://github.com/mupen64plus/mupen64plus-audio-sdl.git
 [submodule "m64prs-native/mupen64plus-video-rice"]
-	path = m64prs-native/mupen64plus-video-rice
+	path = m64prs/native/mupen64plus-video-rice
 	url = https://github.com/mupen64plus/mupen64plus-video-rice.git

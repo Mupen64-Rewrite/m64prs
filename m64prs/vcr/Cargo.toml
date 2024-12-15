@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-m64prs-core = { path = "../m64prs-core" }
-m64prs-sys = { path = "../m64prs-sys", features = ["serde"] }
+m64prs-core = { path = "../core" }
+m64prs-sys = { path = "../sys", features = ["serde"] }
 
 bitflags = "2.6.0"
 thiserror = "1.0.56"
