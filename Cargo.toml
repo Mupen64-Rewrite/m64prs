@@ -9,7 +9,8 @@ members = [
     "m64prs-native", 
     "m64prs-sys",
     "m64prs-vcr", 
-    "tasinput-rs", 
+    "tasinput-bridge", 
+    "tasinput-ui", 
 ]
 
 default-members = ["m64prs-gtk"]
