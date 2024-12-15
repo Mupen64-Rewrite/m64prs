@@ -1,6 +1,8 @@
 use gdk::prelude::*;
 use m64prs_core::key_forward::{Mod, Scancode};
 
+#[cfg(target_os = "windows")]
+mod windows;
 #[cfg(target_os = "linux")]
 mod linux;
 
@@ -9,7 +11,7 @@ pub fn into_sdl_scancode(display: &gdk::Display, code: u32) -> Option<Scancode> 
     #[cfg(target_os = "windows")]
         {
             if display.is::<gdk_win32::Win32Display>() {
-                todo!("not ready");
+                return windows::map_native_keycode(code);
             }
             unreachable!()
         }
