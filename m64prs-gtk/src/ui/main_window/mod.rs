@@ -192,7 +192,7 @@ mod inner {
                             None => return glib::Propagation::Proceed,
                         };
 
-                        eprintln!("key: {}, {}", _key.name().unwrap().as_str(), code);
+                        // eprintln!("key: {}, {}", _key.name().unwrap().as_str(), code);
 
                         if let Some(running) = this.borrow_core().borrow_running() {
                             running.forward_key_down(code, r#mod);

@@ -316,7 +316,7 @@ impl CoreRunningState {
 
             let sdl_key = keyboard::into_sdl_scancode(&display, key_code);
             let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
-            eprintln!("{:?} -> {:?}", key_code, sdl_key);
+            eprintln!("0x{:02X} -> {:?}", key_code, sdl_key);
             let _ = self.core.forward_key_down(sdl_key, sdl_mod);
         }
     }
