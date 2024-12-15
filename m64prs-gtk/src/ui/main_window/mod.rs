@@ -103,6 +103,11 @@ mod inner {
             self.obj().notify_save_slot();
         }
 
+        pub(super) fn set_vcr_active(&self, vcr_active: bool) {
+            self.vcr_active.set(vcr_active);
+            self.obj().notify_vcr_active();
+        }
+
         pub(super) fn set_vcr_read_only(&self, vcr_read_only: bool) {
             self.vcr_read_only.set(vcr_read_only);
             self.obj().notify_vcr_read_only();

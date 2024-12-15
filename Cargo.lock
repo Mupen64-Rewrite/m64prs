@@ -1396,6 +1396,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
  "futures",
+ "log",
  "m64prs-core",
  "m64prs-sys",
  "pollster",

@@ -190,13 +190,13 @@ mod inner {
                 return;
             }
 
-            self.obj().set_visible(false);
             self.close_ok.set(true);
+            self.obj().set_visible(false);
         }
         #[template_callback]
         fn cancel_clicked(&self, _: &gtk::Button) {
-            self.obj().set_visible(false);
             self.close_ok.set(false);
+            self.obj().set_visible(false);
         }
     }
 

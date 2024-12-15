@@ -3,6 +3,7 @@ use std::{error::Error, io};
 use gtk::prelude::*;
 use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
 use m64prs_gtk_utils::actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup};
+use m64prs_vcr::{movie::M64File, VcrState};
 
 use crate::ui::main_window::enums::MainEmuState;
 
@@ -163,6 +164,7 @@ impl AppActions {
 
         c!(new_movie, async new_movie_impl);
         c!(load_movie, async load_movie_impl);
+        c!(discard_movie, discard_movie_impl);
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
@@ -461,19 +463,33 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    main_window.show_load_movie_dialog().await;
-    // let movie_file = match main_window.show_load_movie_dialog().await {
-    //     Ok(file) => file,
-    //     Err(err) => match err.kind::<gtk::DialogError>() {
-    //         Some(gtk::DialogError::Dismissed) => return Ok(()),
-    //         _ => return Err(err.into()),
-    //     },
-    // }
-    // .read_future(glib::Priority::DEFAULT)
-    // .await?
-    // .into_async_buf_read(4096);
+    let movie_file = match main_window.show_load_movie_dialog().await {
+        Some(file) => file,
+        None => return Ok(()),
+    };
+    let reader = movie_file
+        .read_future(glib::Priority::DEFAULT)
+        .await?
+        .into_async_buf_read(4096);
 
-    // let movie = M64File::read_from_async(movie_file).await?;
+    let movie = M64File::read_from_async(reader).await?;
 
+    {
+        let mut core_ref = main_window.borrow_core();
+        let core = core_ref.borrow_running().expect("Core should be running");
+        let vcr_state = VcrState::with_m64(movie_file.path().unwrap(), movie, true);
+        core.set_read_only(true);
+        core.set_vcr_state(vcr_state)?;
+    }
+
+    Ok(())
+}
+
+fn discard_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _ = main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .unset_vcr_state();
     Ok(())
 }

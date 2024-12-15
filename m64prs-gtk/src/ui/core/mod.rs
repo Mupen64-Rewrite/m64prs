@@ -52,6 +52,7 @@ pub(super) struct CoreRunningState {
 
 struct CoreInputHandler {
     vcr_state: Arc<Mutex<Option<VcrState>>>,
+    main_window_ref: SendWeakRef<MainWindow>,
 }
 
 struct CoreFrameHandler {
@@ -216,6 +217,7 @@ impl CoreReadyState {
 
         let input_handler = CoreInputHandler {
             vcr_state: Arc::clone(&vcr_state),
+            main_window_ref: main_window_ref.clone(),
         };
         core.set_input_handler(input_handler)
             .expect("should be able to set input handler");
@@ -316,7 +318,6 @@ impl CoreRunningState {
             let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
             eprintln!("{:?} -> {:?}", key_code, sdl_key);
             let _ = self.core.forward_key_down(sdl_key, sdl_mod);
-
         }
     }
 
@@ -328,24 +329,50 @@ impl CoreRunningState {
             let sdl_mod = keyboard::into_sdl_modifiers(r#mod);
             // eprintln!("{:?} -> {:?}", key.name().unwrap().as_str(), sdl_key);
             let _ = self.core.forward_key_up(sdl_key, sdl_mod);
-
         }
+    }
+
+    fn notify_main_window<F: FnOnce(&MainWindow) + Send + 'static>(&self, f: F) {
+        let main_window_ref = self.main_window_ref.clone();
+        let _ = glib::spawn_future(async move {
+            main_window_ref.upgrade().inspect(f);
+        });
+    }
+
+    pub(super) fn set_vcr_state(&mut self, mut vcr_state: VcrState) -> Result<(), Box<dyn Error>> {
+        {
+            let mut self_vcr_state = self.vcr_state.lock().unwrap();
+            vcr_state.set_read_only(self.vcr_read_only);
+            vcr_state.restart(&self.core)?;
+            *self_vcr_state = Some(vcr_state);
+        }
+        self.notify_main_window(|main_window| main_window.set_vcr_active(true));
+        Ok(())
+    }
+
+    pub(super) fn unset_vcr_state(&mut self) -> Option<VcrState> {
+        let result = self.vcr_state.lock().unwrap().take();
+        self.notify_main_window(|main_window| main_window.set_vcr_active(false));
+        result
+    }
+
+    pub(super) fn set_read_only(&mut self, value: bool) {
+        self.vcr_read_only = value;
+        self.notify_main_window(move |main_window| main_window.set_vcr_read_only(value));
     }
 
     pub(super) fn toggle_read_only(&mut self) {
-        self.vcr_read_only ^= true;
-        {
-            let main_window_ref = self.main_window_ref.clone();
-            let vcr_read_only = self.vcr_read_only;
-            let _ = glib::spawn_future(async move {
-                main_window_ref.upgrade().inspect(|main_window| {
-                    main_window.set_vcr_read_only(vcr_read_only);
-                });
-            });
-        }
+        self.set_read_only(!self.vcr_read_only);
     }
 }
-
+impl CoreInputHandler {
+    fn notify_main_window<F: FnOnce(&MainWindow) + Send + 'static>(&self, f: F) {
+        let main_window_ref = self.main_window_ref.clone();
+        let _ = glib::spawn_future(async move {
+            main_window_ref.upgrade().inspect(f);
+        });
+    }
+}
 impl InputHandler for CoreInputHandler {
     fn filter_inputs(
         &mut self,
@@ -360,6 +387,7 @@ impl InputHandler for CoreInputHandler {
             }
             if should_drop {
                 *vcr_state = None;
+                self.notify_main_window(|main_window| main_window.set_vcr_active(false));
             }
         }
         input
@@ -367,12 +395,14 @@ impl InputHandler for CoreInputHandler {
 
     fn poll_present(&mut self, port: std::ffi::c_int) -> bool {
         let mut vcr_state = self.vcr_state.lock().unwrap();
-        vcr_state.as_mut().map_or(false, |state| state.poll_present(port))
+        vcr_state
+            .as_mut()
+            .map_or(false, |state| state.poll_present(port))
     }
 }
 
 impl FrameHandler for CoreFrameHandler {
-    fn new_frame(&mut self, count: std::ffi::c_uint) {
+    fn new_frame(&mut self, _count: std::ffi::c_uint) {
         let mut vcr_state = self.vcr_state.lock().unwrap();
         if let Some(vcr_state) = vcr_state.as_mut() {
             vcr_state.tick_vi();

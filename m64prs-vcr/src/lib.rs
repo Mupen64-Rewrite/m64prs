@@ -21,6 +21,7 @@ pub struct VcrState {
     index: u32,
     vi_count: u32,
     read_only: bool,
+    first_poll: bool,
 }
 
 impl VcrState {
@@ -34,6 +35,7 @@ impl VcrState {
             index: 0,
             vi_count: 0,
             read_only,
+            first_poll: false,
         }
     }
 
@@ -48,6 +50,7 @@ impl VcrState {
             index: 0,
             vi_count: 0,
             read_only,
+            first_poll: false,
         }
     }
 
@@ -69,7 +72,10 @@ impl VcrState {
         self.index = 0;
 
         match self.header.start_flags {
-            StartType::FROM_RESET => core.reset(true)?,
+            StartType::FROM_RESET => {
+                core.reset(true)?;
+                self.first_poll = true;
+            },
             StartType::FROM_SNAPSHOT => {
                 // search for a valid savestate (TODO: get rid of some of these unwraps)
                 let st_path = fs::read_dir(self.path.parent().unwrap())?
@@ -92,6 +98,7 @@ impl VcrState {
             }
             _ => panic!("invalid start flags"),
         }
+        log::info!("VCR restart");
 
         Ok(())
     }
@@ -105,6 +112,12 @@ impl VcrState {
     pub fn filter_inputs(&mut self, port: c_int, input: Buttons) -> (Buttons, bool) {
         // don't overwrite inputs we don't care about
         if !self.header.controller_flags.port_present(port) {
+            return (input, false);
+        }
+
+        // this works for singleplayer .m64s, not sure about multiplayer
+        if self.first_poll {
+            self.first_poll = false;
             return (input, false);
         }
 
@@ -156,6 +169,14 @@ impl VcrState {
             inputs: self.inputs.clone(),
         }
         .into()
+    }
+
+    pub fn read_only(&self) -> bool {
+        self.read_only
+    }
+
+    pub fn set_read_only(&mut self, value: bool) {
+        self.read_only = value;
     }
 
     ///
