@@ -3,14 +3,26 @@ resolver = "2"
 
 members = [
     "m64prs/core",
-    "m64prs/gtk", 
-    "m64prs/gtk-macros", 
+    "m64prs/gtk",
+    "m64prs/gtk-macros",
     "m64prs/gtk-utils",
-    "m64prs/native", 
+    "m64prs/native",
     "m64prs/sys",
-    "m64prs/vcr", 
-    "tasinput/bridge", 
-    "tasinput/ui", 
+    "m64prs/vcr",
+    "tasinput/bridge",
+    "tasinput/ui",
 ]
 
 default-members = ["m64prs/gtk"]
+
+[workspace.dependencies]
+m64prs-core = { path = "m64prs/core" }
+m64prs-gtk = { path = "m64prs/gtk" }
+m64prs-gtk-macros = { path = "m64prs/gtk-macros" }
+m64prs-gtk-utils = { path = "m64prs/gtk-utils" }
+m64prs-native = { path = "m64prs/native" }
+m64prs-sys = { path = "m64prs/sys" }
+m64prs-vcr = { path = "m64prs/vcr" }
+
+tasinput-bridge = { path = "tasinput/bridge" }
+tasinput-ui = { path = "tasinput/ui" }

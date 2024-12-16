@@ -2021,6 +2021,14 @@ dependencies = [
 [[package]]
 name = "tasinput-ui"
 version = "0.1.0"
+dependencies = [
+ "bitflags 2.6.0",
+ "gdk4",
+ "gio",
+ "glib",
+ "gtk4",
+ "m64prs-sys",
+]
 
 [[package]]
 name = "thiserror"

@@ -1,0 +1,179 @@
+using Gtk 4.0;
+
+template $TasDiMainWindow : Gtk.ApplicationWindow {
+  resizable: false;
+  Box {
+    halign: fill;
+    hexpand: true;
+    valign: fill;
+    vexpand: true;
+
+    orientation: vertical;
+    spacing: 10;
+
+    
+
+    Grid {
+      halign: fill;
+      hexpand: true;
+      valign: fill;
+      vexpand: true;
+
+      row-spacing: 3;
+      column-spacing: 3;
+      row-homogeneous: true;
+      column-homogeneous: true;
+
+      // Triggers
+      ToggleButton {
+        layout {
+          column: 0;
+          row: 0;
+          column-span: 3;
+        }
+
+        css-classes: ["pill"];
+        label: "L";
+      }
+      ToggleButton {
+        layout {
+          column: 3;
+          row: 0;
+          column-span: 3;
+        }
+        
+        css-classes: ["pill"];
+        label: "Z";
+      }
+      ToggleButton {
+        layout {
+          column: 6;
+          row: 0;
+          column-span: 3;
+        }
+        
+        css-classes: ["pill"];
+        label: "R";
+      }
+
+      // D-pad
+      ToggleButton {
+        layout {
+          column: 1;
+          row: 1;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-up";
+      }
+      ToggleButton {
+        layout {
+          column: 1;
+          row: 3;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-down";
+      }
+      ToggleButton {
+        layout {
+          column: 0;
+          row: 2;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-previous";
+      }
+      ToggleButton {
+        layout {
+          column: 2;
+          row: 2;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-next";
+      }
+      Label {
+        layout {
+          column: 1;
+          row: 2;
+        }
+        label: "D";
+      }
+
+      // Start, B, A
+      ToggleButton {
+        layout {
+          column: 4;
+          row: 2;
+        }
+
+        css-classes: ["circular"];
+        label: "S";
+      }
+      ToggleButton {
+        layout {
+          column: 5;
+          row: 3;
+        }
+
+        css-classes: ["circular"];
+        label: "B";
+      }
+      ToggleButton {
+        layout {
+          column: 6;
+          row: 4;
+        }
+
+        css-classes: ["circular"];
+        label: "A";
+      }
+
+      // C buttons
+      ToggleButton {
+        layout {
+          column: 7;
+          row: 1;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-up";
+      }
+      ToggleButton {
+        layout {
+          column: 7;
+          row: 3;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-down";
+      }
+      ToggleButton {
+        layout {
+          column: 6;
+          row: 2;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-previous";
+      }
+      ToggleButton {
+        layout {
+          column: 8;
+          row: 2;
+        }
+
+        css-classes: ["circular"];
+        icon-name: "go-next";
+      }
+      Label {
+        layout {
+          column: 7;
+          row: 2;
+        }
+        label: "C";
+      }
+    }
+  }
+}

@@ -13,7 +13,7 @@ bitflags = { version = "2.5.0" }
 serde = { version = "1.0.215", optional = true, features = ["derive"] }
 
 [build-dependencies]
-m64prs-native = { path = "../native" }
+m64prs-native = { workspace = true }
 
 bindgen = "0.70.1"
 # gix = "0.66.0"

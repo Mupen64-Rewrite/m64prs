@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 
-m64prs-gtk-macros = { path = "../gtk-macros" }
+m64prs-gtk-macros = { workspace = true }
 
 glib = { version = "*", features = ["log"] }
 gio = { version = "*" }

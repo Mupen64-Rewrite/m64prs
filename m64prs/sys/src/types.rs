@@ -20,7 +20,7 @@ impl Display for ConfigType {
 
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 bitflags! {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
     #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[repr(C)]
     pub struct ButtonFlags: u16 {

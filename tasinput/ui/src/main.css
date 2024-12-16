@@ -1,0 +1,4 @@
+/* Emulation of libadwaita .pill */
+.pill {
+    border-radius: 9999px;
+}

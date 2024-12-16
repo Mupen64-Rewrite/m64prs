@@ -8,4 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlopen2 = "0.7.0"
-m64prs-sys = { path = "../../m64prs/sys" }
+m64prs-sys = { workspace = true }

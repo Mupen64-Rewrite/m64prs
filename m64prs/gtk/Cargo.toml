@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-m64prs-core = { path = "../core" }
-m64prs-sys = { path = "../sys" }
-m64prs-native = { path = "../native" }
-m64prs-vcr = { path = "../vcr" }
-m64prs-gtk-utils = { path = "../gtk-utils" }
+m64prs-core = { workspace = true }
+m64prs-sys = { workspace = true }
+m64prs-native = { workspace = true }
+m64prs-vcr = { workspace = true }
+m64prs-gtk-utils = { workspace = true }
 
 send_wrapper = "0.6.0"
 
@@ -100,6 +100,6 @@ x11 = ["dep:gdk_x11", "dep:x11rb", "dep:tiny-xlib", "dep:as-raw-xcb-connection"]
 
 [build-dependencies]
 gl_generator = "0.14.0"
-m64prs-native = { path = "../native" }
+m64prs-native = { workspace = true }
 
 embed-manifest = "1.4.0"
