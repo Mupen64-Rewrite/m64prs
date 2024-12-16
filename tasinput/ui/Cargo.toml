@@ -9,6 +9,8 @@ m64prs-sys = { workspace = true }
 
 glib = { version = "*", features = ["log"] }
 gio = { version = "*" }
+graphene-rs = { version = "*" }
+gsk = { version = "*", package = "gsk4", features = ["v4_14"] }
 gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
 gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }
 bitflags = "2.6.0"

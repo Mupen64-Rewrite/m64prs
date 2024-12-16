@@ -2026,6 +2026,8 @@ dependencies = [
  "gdk4",
  "gio",
  "glib",
+ "graphene-rs",
+ "gsk4",
  "gtk4",
  "m64prs-sys",
 ]

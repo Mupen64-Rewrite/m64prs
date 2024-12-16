@@ -9,7 +9,8 @@ pub(crate) struct PluginState {
 }
 
 impl PluginState {
-    pub(crate) fn init(plugin: FullCoreApi) {
+    pub(crate) fn init() {
+
     }
 }
 

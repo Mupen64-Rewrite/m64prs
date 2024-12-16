@@ -8,10 +8,89 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
     valign: fill;
     vexpand: true;
 
-    orientation: vertical;
-    spacing: 10;
+    margin-bottom: 5;
+    margin-top: 5;
+    margin-start: 5;
+    margin-end: 5;
 
-    
+    orientation: vertical;
+    spacing: 5;
+
+    Box {
+      orientation: horizontal;
+      spacing: 10;
+      AspectFrame {
+        halign: fill;
+        hexpand: true;
+        valign: fill;
+        vexpand: true;
+
+        ratio: 1.0;
+
+        $TasDiJoystick {
+          halign: fill;
+          hexpand: true;
+          valign: fill;
+          vexpand: true;
+
+          pos-x: bind template.joy-x bidirectional;
+          pos-y: bind template.joy-y bidirectional;
+        }
+      }
+
+      Grid {
+        halign: fill;
+        hexpand: true;
+        valign: center;
+        vexpand: true;
+        Label {
+          layout {
+            column: 0;
+            row: 0;
+          }
+
+          label: "X: ";
+        }
+        SpinButton {
+          layout {
+            column: 1;
+            row: 0;
+          }
+
+          snap-to-ticks: true;
+          adjustment: Adjustment {
+            lower: -128;
+            upper: 127;
+            step-increment: 1;
+
+            value: bind template.joy-x bidirectional;
+          };
+        }
+        Label {
+          layout {
+            column: 0;
+            row: 1;
+          }
+
+          label: "Y: ";
+        }
+        SpinButton {
+          layout {
+            column: 1;
+            row: 1;
+          }
+
+          snap-to-ticks: true;
+          adjustment: Adjustment {
+            lower: -128;
+            upper: 127;
+            step-increment: 1;
+
+            value: bind template.joy-y bidirectional;
+          };
+        }
+      }
+    }
 
     Grid {
       halign: fill;
@@ -34,6 +113,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["pill"];
         label: "L";
+        active: bind template.l-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -44,6 +124,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
         
         css-classes: ["pill"];
         label: "Z";
+        active: bind template.z-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -54,6 +135,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
         
         css-classes: ["pill"];
         label: "R";
+        active: bind template.r-pressed bidirectional;
       }
 
       // D-pad
@@ -65,6 +147,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-up";
+        active: bind template.du-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -74,6 +157,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-down";
+        active: bind template.dd-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -83,6 +167,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-previous";
+        active: bind template.dl-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -92,6 +177,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-next";
+        active: bind template.dr-pressed bidirectional;
       }
       Label {
         layout {
@@ -108,8 +194,9 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
           row: 2;
         }
 
-        css-classes: ["circular"];
+        css-classes: ["circular", "btn-start"];
         label: "S";
+        active: bind template.start-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -117,8 +204,9 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
           row: 3;
         }
 
-        css-classes: ["circular"];
+        css-classes: ["circular", "btn-b"];
         label: "B";
+        active: bind template.b-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -126,8 +214,9 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
           row: 4;
         }
 
-        css-classes: ["circular"];
+        css-classes: ["circular", "btn-a"];
         label: "A";
+        active: bind template.a-pressed bidirectional;
       }
 
       // C buttons
@@ -139,6 +228,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-up";
+        active: bind template.cu-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -148,6 +238,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-down";
+        active: bind template.cd-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -157,6 +248,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-previous";
+        active: bind template.cl-pressed bidirectional;
       }
       ToggleButton {
         layout {
@@ -166,6 +258,7 @@ template $TasDiMainWindow : Gtk.ApplicationWindow {
 
         css-classes: ["circular"];
         icon-name: "go-next";
+        active: bind template.cr-pressed bidirectional;
       }
       Label {
         layout {

@@ -2,3 +2,43 @@
 .pill {
     border-radius: 9999px;
 }
+
+td-joystick {
+    border-radius: 5px;
+}
+
+:root {
+    --a-color: rgb(1, 146, 81);
+    --b-color: rgb(0, 112, 192);
+    --start-color: rgb(192, 0, 0);
+}
+
+.btn-start {
+    background: var(--start-color);
+}
+.btn-start:checked {
+    background: shade(var(--start-color), 0.8);
+}
+.btn-start:active {
+    background: shade(var(--start-color), 0.6);
+}
+
+.btn-a {
+    background: var(--a-color);
+}
+.btn-a:checked {
+    background: shade(var(--a-color), 0.8);
+}
+.btn-a:active {
+    background: shade(var(--a-color), 0.6);
+}
+
+.btn-b {
+    background: var(--b-color);
+}
+.btn-b:checked {
+    background: shade(var(--b-color), 0.8);
+}
+.btn-b:active {
+    background: shade(var(--b-color), 0.6);
+}

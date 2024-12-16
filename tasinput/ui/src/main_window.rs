@@ -12,12 +12,12 @@ macro_rules! refcell_bflags_set {
 }
 
 mod inner {
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
 
     use gtk::{prelude::*, subclass::prelude::*};
     use m64prs_sys::ButtonFlags;
 
-    use crate::enums::GButtonFlags;
+    use crate::{enums::GButtonFlags, joystick::Joystick};
 
     #[derive(Default, glib::Properties, gtk::CompositeTemplate)]
     #[template(file = "src/main_window.blp")]
@@ -108,6 +108,10 @@ mod inner {
             set = refcell_bflags_set!(this, L)
         )]
         button_flags: RefCell<GButtonFlags>,
+        #[property(get, set)]
+        joy_x: Cell<i8>,
+        #[property(get, set)]
+        joy_y: Cell<i8>,
     }
 
     #[glib::object_subclass]
@@ -117,6 +121,8 @@ mod inner {
         type ParentType = gtk::ApplicationWindow;
 
         fn class_init(class: &mut Self::Class) {
+            Joystick::ensure_type();
+
             class.bind_template();
         }
 
