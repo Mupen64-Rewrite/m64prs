@@ -1384,6 +1384,7 @@ dependencies = [
  "num_enum",
  "os_pipe",
  "regex",
+ "sdl2",
  "serde",
  "thiserror 2.0.8",
 ]
@@ -1638,6 +1639,8 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "plugin-core"
 version = "0.1.0"
 dependencies = [
+ "decan",
+ "log",
  "m64prs-sys",
 ]
 

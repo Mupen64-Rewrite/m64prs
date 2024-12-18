@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+decan = { workspace = true }
 m64prs-sys = { workspace = true }
+
+log = { workspace = true }

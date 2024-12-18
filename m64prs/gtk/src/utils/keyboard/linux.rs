@@ -22,7 +22,7 @@ freely, subject to the following restrictions:
 ```
 */
 
-use m64prs_core::key_forward::Scancode;
+use m64prs_sys::key::Scancode;
 
 const XF86_KEYSYMS: [Option<Scancode>; 248] = [
     None,                           // NoSymbol

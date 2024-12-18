@@ -1,3 +1,5 @@
+//! Symbol groups from Mupen64Plus, for use with [`decan`].
+
 use std::ffi::{c_char, c_float, c_int, c_void};
 
 use decan::{non_null, SymbolGroup};
@@ -8,6 +10,14 @@ use crate::types::*;
 pub struct FullCoreApi {
     #[subgroup]
     pub base: CoreBaseApi,
+    #[subgroup]
+    pub config: CoreConfigApi,
+    #[subgroup]
+    pub tas: CoreTasApi,
+}
+
+#[derive(SymbolGroup)]
+pub struct PluginCoreApi {
     #[subgroup]
     pub config: CoreConfigApi,
     #[subgroup]

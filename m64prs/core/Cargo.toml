@@ -22,7 +22,7 @@ futures = { workspace = true }
 slotmap = { workspace = true }
 
 [features]
-sdl2 = ["dep:sdl2"]
+sdl2 = ["dep:sdl2", "m64prs-sys/sdl2"]
 
 [build-dependencies]
 

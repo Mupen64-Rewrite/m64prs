@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::plugin::PluginType;
 
-pub use m64prs_sys::common::M64PError;
+pub use m64prs_sys::common::{M64PError, WrongConfigType};
 
 /// Error that may occur during initialization.
 #[derive(Debug, Error)]
@@ -70,26 +70,3 @@ impl Display for WrongPluginType {
 }
 
 impl Error for WrongPluginType {}
-
-#[derive(Debug)]
-pub struct WrongConfigType {
-    expected: ConfigType,
-    actual: ConfigType,
-}
-
-impl WrongConfigType {
-    pub fn new(expected: ConfigType, actual: ConfigType) -> Self {
-        Self { expected, actual }
-    }
-}
-
-impl Display for WrongConfigType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "parameter type is {} (expected {})",
-            self.actual, self.expected
-        ))
-    }
-}
-
-impl Error for WrongConfigType {}

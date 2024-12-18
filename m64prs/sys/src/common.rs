@@ -1,7 +1,11 @@
 //! Common safe types for Mupen64Plus.
 
+use std::{error::Error, ffi::{c_float, c_int, c_void, CString}, fmt::Display};
+
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
+
+use crate::ConfigType;
 
 /// Safer representation of a Mupen64Plus error which always represents an error state.
 #[repr(u32)]
@@ -66,5 +70,129 @@ impl From<M64PError> for crate::Error {
     fn from(value: M64PError) -> Self {
         // SAFETY: every value of M64PError always corresponds to a value of crate::Error.
         unsafe { std::mem::transmute(value) }
+    }
+}
+
+/// Error returned when a the wrong config type is specified.
+#[derive(Debug)]
+pub struct WrongConfigType {
+    expected: ConfigType,
+    actual: ConfigType,
+}
+
+impl WrongConfigType {
+    pub fn new(expected: ConfigType, actual: ConfigType) -> Self {
+        Self { expected, actual }
+    }
+}
+
+impl Display for WrongConfigType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "parameter type is {} (expected {})",
+            self.actual, self.expected
+        ))
+    }
+}
+
+impl Error for WrongConfigType {}
+
+/// Represents the value of a config parameter.
+#[derive(Debug, Clone)]
+#[repr(u32)]
+pub enum ConfigValue {
+    Int(c_int) = ConfigType::Int as u32,
+    Float(c_float) = ConfigType::Float as u32,
+    Bool(bool) = ConfigType::Bool as u32,
+    String(CString) = ConfigType::String as u32,
+}
+
+impl ConfigValue {
+    /// Returns the equivalent [`ConfigType`] for this value.
+    pub fn cfg_type(&self) -> ConfigType {
+        match self {
+            ConfigValue::Int(_) => ConfigType::Int,
+            ConfigValue::Float(_) => ConfigType::Float,
+            ConfigValue::Bool(_) => ConfigType::Bool,
+            ConfigValue::String(_) => ConfigType::String,
+        }
+    }
+
+    /// Obtains a pointer to this value's data.
+    pub unsafe fn as_ptr(&self) -> *const c_void {
+        match self {
+            ConfigValue::Int(value) => value as *const c_int as *const c_void,
+            ConfigValue::Float(value) => value as *const c_float as *const c_void,
+            ConfigValue::Bool(value) => value as *const bool as *const c_void,
+            ConfigValue::String(value) => value.as_ptr() as *const c_void,
+        }
+    }
+}
+
+impl From<c_int> for ConfigValue {
+    fn from(value: c_int) -> Self {
+        Self::Int(value)
+    }
+}
+
+impl From<c_float> for ConfigValue {
+    fn from(value: c_float) -> Self {
+        Self::Float(value)
+    }
+}
+
+impl From<bool> for ConfigValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+
+impl From<CString> for ConfigValue {
+    fn from(value: CString) -> Self {
+        Self::String(value)
+    }
+}
+
+impl TryInto<c_int> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<c_int, Self::Error> {
+        match self {
+            ConfigValue::Int(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type())),
+        }
+    }
+}
+
+impl TryInto<c_float> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<c_float, Self::Error> {
+        match self {
+            ConfigValue::Float(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Float, other.cfg_type())),
+        }
+    }
+}
+
+impl TryInto<bool> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<bool, Self::Error> {
+        match self {
+            ConfigValue::Bool(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Bool, other.cfg_type())),
+        }
+    }
+}
+
+impl TryInto<CString> for ConfigValue {
+    type Error = WrongConfigType;
+
+    fn try_into(self) -> Result<CString, Self::Error> {
+        match self {
+            ConfigValue::String(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::String, other.cfg_type())),
+        }
     }
 }

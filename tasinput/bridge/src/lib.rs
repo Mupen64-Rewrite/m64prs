@@ -1,21 +1,14 @@
 use std::ffi::{c_char, c_int, c_uchar, c_void};
 
-use m64prs_sys::{
-    ptr_ControllerCommand, ptr_GetKeys, ptr_InitiateControllers, ptr_PluginGetVersion,
-    ptr_PluginShutdown, ptr_PluginStartup, ptr_ReadController, ptr_RomClosed, ptr_RomOpen,
-    ptr_SDL_KeyDown, ptr_SDL_KeyUp, Buttons, ControlInfo, DynlibHandle, Error, PluginType,
-};
+use m64prs_sys::*;
 
 mod ffi;
-
-type FFI_DebugCallback =
-    unsafe extern "C" fn(debug_ctx: *mut c_void, msg_level: c_int, message: *const c_char);
 
 #[no_mangle]
 pub extern "C" fn PluginStartup(
     core_handle: DynlibHandle,
     debug_ctx: *mut c_void,
-    debug_callback: Option<FFI_DebugCallback>,
+    debug_callback: ptr_DebugCallback,
 ) -> Error {
     Error::Success
 }
