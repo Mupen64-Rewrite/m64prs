@@ -7,19 +7,18 @@ edition = "2021"
 
 [dependencies]
 
-dlopen2 = "0.7.0"
-num_enum = "0.7.2"
-bitflags = { version = "2.5.0" }
-serde = { version = "1.0.215", optional = true, features = ["derive"] }
+dlopen2 = { workspace = true }
+num_enum = { workspace = true }
+bitflags = { workspace = true }
+serde = { workspace = true, optional = true }
 
 [build-dependencies]
 m64prs-native = { workspace = true }
 
-bindgen = "0.70.1"
-# gix = "0.66.0"
-heck = "0.4.1"
-os_pipe = "1.2.1"
-regex = "1.11.1"
+bindgen = { workspace = true }
+heck = { workspace = true }
+os_pipe = { workspace = true }
+regex = { workspace = true }
 
 [features]
 serde = ["dep:serde", "bitflags/serde"]

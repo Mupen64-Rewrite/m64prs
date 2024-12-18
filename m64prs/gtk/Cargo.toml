@@ -10,8 +10,6 @@ m64prs-native = { workspace = true }
 m64prs-vcr = { workspace = true }
 m64prs-gtk-utils = { workspace = true }
 
-send_wrapper = "0.6.0"
-
 dpi = "0.1.1"
 
 glib = { version = "*", features = ["log"] }
@@ -23,7 +21,6 @@ gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }
 env_logger = "0.11.5"
 log = { version = "0.4.22", features = ["kv", "kv_std"] }
 
-pollster = "0.4.0"
 futures = "0.3.31"
 
 glutin = "0.32.1"

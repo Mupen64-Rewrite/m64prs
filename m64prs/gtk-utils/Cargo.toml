@@ -7,6 +7,6 @@ edition = "2021"
 
 m64prs-gtk-macros = { workspace = true }
 
-glib = { version = "*", features = ["log"] }
-gio = { version = "*" }
-gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }
+glib = { workspace = true }
+gio = { workspace = true }
+gtk = { workspace = true }

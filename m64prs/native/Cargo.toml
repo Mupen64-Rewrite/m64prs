@@ -8,6 +8,6 @@ build = "build/main.rs"
 [dependencies]
 
 [build-dependencies]
-os_pipe = "1.2.1"
-walkdir = "2.5.0"
-which = "6.0.3"
+os_pipe = { workspace = true }
+walkdir = { workspace = true }
+which = { workspace = true }

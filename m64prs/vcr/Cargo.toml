@@ -7,9 +7,8 @@ edition = "2021"
 m64prs-core = { workspace = true }
 m64prs-sys = { workspace = true, features = ["serde"]}
 
-bitflags = "2.6.0"
-thiserror = "1.0.56"
-serde = { version = "1.0.215", features = ["derive"] }
-pollster = "0.4.0"
-futures = "0.3.31"
-log = "0.4.22"
+bitflags = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+futures = { workspace = true }
+log = { workspace = true }

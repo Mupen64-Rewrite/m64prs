@@ -3,10 +3,10 @@ use std::{
 };
 
 use freeze::MovieFreeze;
+use futures::executor::block_on;
 use m64prs_core::{error::M64PError, Core};
 use m64prs_sys::Buttons;
 use movie::{M64File, M64Header, StartType};
-use pollster::FutureExt;
 
 pub mod freeze;
 pub mod movie;
@@ -91,7 +91,7 @@ impl VcrState {
                         io::Error::new(io::ErrorKind::NotFound, "No .st file found for .m64 movie")
                     })?;
 
-                core.load_file(st_path).block_on()?;
+                block_on(core.load_file(st_path))?;
             }
             StartType::FROM_EEPROM => {
                 unimplemented!()
