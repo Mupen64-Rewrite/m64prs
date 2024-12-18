@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 
 dlopen2 = { workspace = true }
+decan = { workspace = true }
 num_enum = { workspace = true }
 bitflags = { workspace = true }
 serde = { workspace = true, optional = true }

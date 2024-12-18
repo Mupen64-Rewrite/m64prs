@@ -7,6 +7,7 @@ use std::{
 };
 
 use async_std::sync::Mutex as AsyncMutex;
+use decan::{can::{Can, OwningCan}, LibraryHandle};
 use dlopen2::wrapper::Container;
 use emu_state::{EmuStateWaitManager, EmuStateWaiter};
 use log::{log, Level};
@@ -57,7 +58,7 @@ pub struct Core {
     audio_handler: Option<Box<dyn FFIHandler>>,
     save_handler: Option<Box<dyn FFIHandler>>,
 
-    api: Container<FullCoreApi>,
+    api: OwningCan<FullCoreApi>,
 }
 
 impl Debug for Core {
@@ -103,7 +104,7 @@ impl Core {
         let data_c_path = data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
 
         // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
-        let api = unsafe { Container::<FullCoreApi>::load(path.as_ref()) }
+        let api = unsafe { Can::load(path.as_ref()) }
             .map_err(StartupError::Library)?;
 
         let (st_tx, st_rx) = mpsc::channel();
@@ -132,7 +133,7 @@ impl Core {
             // context is an &'static CStr, and is guaranteed to outlive the core.
             // The state callback state is guaranteed to live at least as long
             // as the core due to the initialization order of this struct.
-            core_fn(core.api.base.startup(
+            core_fn((core.api.base.startup)(
                 0x02_01_00,
                 config_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
                 data_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
@@ -155,7 +156,7 @@ impl Core {
         int_param: c_int,
         ptr_param: *mut c_void,
     ) -> Result<(), M64PError> {
-        core_fn(unsafe { self.api.base.do_command(command, int_param, ptr_param) })
+        core_fn(unsafe { (self.api.base.do_command)(command, int_param, ptr_param) })
     }
 
     #[inline(always)]
@@ -184,7 +185,7 @@ impl Drop for Core {
         log::debug!("Core is dropped");
         let _ = self.cfg_save_all();
         // SAFETY: the core can be shut down at any time.
-        unsafe { self.api.base.shutdown() };
+        unsafe { (self.api.base.shutdown)() };
     }
 }
 

@@ -6,6 +6,7 @@ use std::{
 };
 
 use ash::vk;
+use futures::executor::block_on;
 use glib::SendWeakRef;
 use m64prs_core::{
     error::M64PError,
@@ -13,7 +14,6 @@ use m64prs_core::{
 };
 use m64prs_sys::RenderMode;
 use opengl::OpenGlState;
-use pollster::FutureExt;
 
 use crate::ui::main_window::{enums::MainViewState, MainWindow};
 
@@ -70,14 +70,13 @@ impl VideoExtension for VideoExtensionState {
                 log::info!("Requesting switch to game view");
                 {
                     let main_window_ref = inst.main_window_ref.clone();
-                    glib::spawn_future(async move {
+                    futures::executor::block_on(glib::spawn_future(async move {
                         let main_window = main_window_ref
                             .upgrade()
                             .expect("Main window should be active");
 
                         main_window.set_current_view(MainViewState::GameView);
-                    })
-                    .block_on();
+                    }));
                 }
 
                 log::info!("Init successful");
@@ -151,14 +150,13 @@ impl VideoExtension for VideoExtensionState {
                         // Request a subsurface
                         let subsurface_handle = {
                             let main_window_ref = self.main_window_ref.clone();
-                            glib::spawn_future(async move {
+                            block_on(glib::spawn_future(async move {
                                 let main_window = main_window_ref
                                     .upgrade()
                                     .expect("Main window should be active");
 
                                 main_window.comp_new_view(attrs)
-                            })
-                            .block_on()
+                            }))
                             .map_err(|_| M64PError::Internal)?
                         };
 

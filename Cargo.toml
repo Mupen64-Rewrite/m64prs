@@ -33,7 +33,7 @@ tasinput-ui = { path = "tasinput/ui" }
 # GIT DEPENDENCIES
 # ===============================================
 
-
+decan = { git = "https://github.com/jgcodes2020/decan.git" }
 
 # CRATES.IO DEPENDENCIES
 # ===============================================

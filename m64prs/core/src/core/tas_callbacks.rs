@@ -21,9 +21,9 @@ impl Core {
 
         // SAFETY: the FFI handler is safe to use as long as the context isn't moved.
         core_fn(unsafe {
-            self.api
+            (self.api
                 .tas
-                .set_input_handler(&input_handler.create_ffi_handler())
+                .set_input_handler)(&input_handler.create_ffi_handler())
         })?;
         // This reference keeps the context from being moved or deleted.
         self.input_handler = Some(Box::new(input_handler));
@@ -42,9 +42,9 @@ impl Core {
         }
 
         core_fn(unsafe {
-            self.api
+            (self.api
                 .tas
-                .set_input_handler(null())
+                .set_input_handler)(null())
         })?;
 
         self.input_handler = None;
@@ -111,9 +111,9 @@ impl Core {
 
         // SAFETY: This works the exact same way as input_handler.
         core_fn(unsafe {
-            self.api
+            (self.api
                 .tas
-                .set_audio_handler(&audio_handler.create_ffi_handler())
+                .set_audio_handler)(&audio_handler.create_ffi_handler())
         })?;
         self.audio_handler = Some(Box::new(audio_handler));
 
@@ -138,9 +138,9 @@ impl Core {
 
         // SAFETY: This also works the same way as input_handler.
         core_fn(unsafe {
-            self.api
+            (self.api
                 .tas
-                .set_savestate_handler(&save_handler.create_ffi_handler())
+                .set_savestate_handler)(&save_handler.create_ffi_handler())
         })?;
         self.save_handler = Some(Box::new(save_handler));
 
@@ -158,9 +158,9 @@ impl Core {
         }
 
         core_fn(unsafe {
-            self.api
+            (self.api
                 .tas
-                .set_savestate_handler(null())
+                .set_savestate_handler)(null())
         })?;
 
         self.input_handler = None;

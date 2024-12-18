@@ -1,12 +1,14 @@
 use std::{
     any::Any,
     ffi::{c_char, c_int, c_void, CStr},
-    mem, ptr::null_mut,
+    mem,
+    ptr::null_mut,
 };
 
 use ash::vk::{self, Handle};
 use m64prs_sys::{
-    EmuState, Error as SysError, GLAttribute, RenderMode, Size2D, VideoExtensionFunctions, VideoFlags, VideoMode
+    EmuState, Error as SysError, GLAttribute, RenderMode, Size2D, VideoExtensionFunctions,
+    VideoFlags, VideoMode,
 };
 use num_enum::TryFromPrimitive;
 use std::sync::Mutex;
@@ -22,36 +24,33 @@ impl Core {
     ) -> Result<(), M64PError> {
         // SAFETY: if the core is running, graphics is using it.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
-        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(None, Box::new(context))));
+        *vidext_box = Some(Box::new(ffi::VideoExtensionWrapper::<V>(
+            None,
+            Box::new(context),
+        )));
         drop(vidext_box);
 
         // SAFETY: VIDEXT_TABLE is 'static, so it should outlive the core.
         // In addition, it is only used during the duration of the function.
         // Mupen64Plus copies the table.
         core_fn(unsafe {
-            self.api
-                .base
-                .override_vidext(&ffi::VIDEXT_TABLE as *const _ as *mut _)
+            (self.api.base.override_vidext)(&ffi::VIDEXT_TABLE as *const _ as *mut _)
         })
     }
 
     pub fn clear_vidext(&mut self) -> Result<(), M64PError> {
         // SAFETY: if the core is running, graphics is using it.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
         let mut vidext_box = ffi::VIDEXT_BOX.lock().unwrap();
         *vidext_box = None;
 
-        core_fn(unsafe {
-            self.api
-                .base
-                .override_vidext(null_mut())
-        })
+        core_fn(unsafe { (self.api.base.override_vidext)(null_mut()) })
     }
 }
 

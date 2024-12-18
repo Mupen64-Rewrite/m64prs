@@ -80,7 +80,7 @@ impl From<M64PError> for m64prs_sys::Error {
 pub enum StartupError {
     /// An error occurred involving a dynamic library.
     #[error("dynamic library load failed")]
-    Library(#[source] ::dlopen2::Error),
+    Library(#[source] decan::LoadOrSymbolGroupError),
     /// An error occurred while initializing Mupen64Plus.
     #[error("Mupen64Plus startup failed")]
     CoreInit(#[source] M64PError),
@@ -103,7 +103,7 @@ pub enum SavestateError {
 pub enum PluginLoadError {
     /// An error occurred involving a dynamic library.
     #[error("dynamic library raised error")]
-    Library(#[source] ::dlopen2::Error),
+    Library(#[source] decan::LoadOrSymbolGroupError),
     /// An error occurred within Mupen64Plus or one of its plugins
     #[error("plugin function raised error: {0}")]
     M64P(#[source] M64PError),

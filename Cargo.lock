@@ -422,6 +422,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f791803201ab277ace03903de1594460708d2d54df6053f2d9e82f592b19e3b"
 
 [[package]]
+name = "decan"
+version = "0.1.0"
+source = "git+https://github.com/jgcodes2020/decan.git#9cbe7239b7e11eb04e12aa09e5d0b78d7f47255a"
+dependencies = [
+ "decan-macros",
+ "libc",
+ "thiserror 2.0.8",
+ "windows 0.52.0",
+]
+
+[[package]]
+name = "decan-macros"
+version = "0.1.0"
+source = "git+https://github.com/jgcodes2020/decan.git#9cbe7239b7e11eb04e12aa09e5d0b78d7f47255a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "dirs"
 version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1293,6 +1314,7 @@ dependencies = [
  "async-std",
  "bindgen 0.69.5",
  "bitflags 2.6.0",
+ "decan",
  "dlopen2",
  "futures",
  "heck 0.4.1",
@@ -1380,6 +1402,7 @@ version = "0.1.0"
 dependencies = [
  "bindgen 0.70.1",
  "bitflags 2.6.0",
+ "decan",
  "dlopen2",
  "heck 0.4.1",
  "m64prs-native",
@@ -2423,6 +2446,16 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48a53791691ab099e5e2ad123536d0fff50652600abaf43bbf952894110d0be"
+dependencies = [
+ "windows-core 0.52.0",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows"
 version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1de69df01bdf1ead2f4ac895dc77c9351aefff65b2f3db429a343f9cbf05e132"
@@ -2438,6 +2471,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd04d41d93c4992d421894c18c8b43496aa748dd4c081bac0dc93eb0489272b6"
 dependencies = [
  "windows-core 0.58.0",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+dependencies = [
  "windows-targets 0.52.6",
 ]
 

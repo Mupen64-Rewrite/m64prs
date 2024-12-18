@@ -16,7 +16,7 @@ use super::{core_fn, Core};
 /// Functions for the configuration system.
 impl Core {
     pub fn cfg_shared_data_filepath(&self, name: &CStr) -> Option<PathBuf> {
-        let path_ptr = unsafe { self.api.config.shared_data_filepath(name.as_ptr()) };
+        let path_ptr = unsafe { (self.api.config.shared_data_filepath)(name.as_ptr()) };
         if path_ptr.is_null() {
             None
         } else {
@@ -46,9 +46,10 @@ impl Core {
         // SAFETY: the reference to the callback should only be used
         // during the function, it is not stored.
         core_fn(unsafe {
-            self.api
-                .config
-                .list_sections(&mut callback as *mut F as *mut c_void, run_callback::<F>)
+            (self.api.config.list_sections)(
+                &mut callback as *mut F as *mut c_void,
+                run_callback::<F>,
+            )
         })?;
 
         Ok(())
@@ -59,9 +60,7 @@ impl Core {
         // SAFETY: the returned handle is guaranteed to be valid if the function
         // returns successfully.
         core_fn(unsafe {
-            self.api
-                .config
-                .open_section(name.as_ptr(), &mut handle as *mut m64prs_sys::Handle)
+            (self.api.config.open_section)(name.as_ptr(), &mut handle as *mut m64prs_sys::Handle)
         })?;
 
         // SAFETY: the lifetime of a ConfigSection cannot exceed that of the core it
@@ -74,11 +73,7 @@ impl Core {
     }
 
     pub fn cfg_save_all(&mut self) -> Result<(), M64PError> {
-        core_fn(unsafe {
-            self.api
-                .config
-                .save_file()
-        })
+        core_fn(unsafe { (self.api.config.save_file)() })
     }
 }
 /// Represents a handle to a configuration section.
@@ -100,14 +95,14 @@ impl ConfigSection<'_> {
     pub fn save(&mut self) -> Result<(), M64PError> {
         // SAFETY: the reference to the name should only be used
         // within the function, it is not stored.
-        core_fn(unsafe { self.core.api.config.save_section(self.name.as_ptr()) })
+        core_fn(unsafe { (self.core.api.config.save_section)(self.name.as_ptr()) })
     }
 
     /// Reverts any unsaved changes in this section.
     pub fn revert(&mut self) -> Result<(), M64PError> {
         // SAFETY: the reference to the name should only be used
         // within the function, it is not stored.
-        core_fn(unsafe { self.core.api.config.revert_section(self.name.as_ptr()) })
+        core_fn(unsafe { (self.core.api.config.revert_section)(self.name.as_ptr()) })
     }
 
     /// Runs the provided callback once for each parameter in the section.
@@ -128,7 +123,7 @@ impl ConfigSection<'_> {
         // SAFETY: the callback is only used within list_parameters,
         // it is not used after that.
         core_fn(unsafe {
-            self.core.api.config.list_parameters(
+            (self.core.api.config.list_parameters)(
                 self.handle,
                 &mut callback as *mut F as *mut c_void,
                 run_callback::<F>,
@@ -144,10 +139,7 @@ impl ConfigSection<'_> {
         // SAFETY: the reference to the callback should only be used
         // during the function, it is not stored.
         core_fn(unsafe {
-            self.core
-                .api
-                .config
-                .get_parameter_type(self.handle, param.as_ptr(), &mut param_type)
+            (self.core.api.config.get_parameter_type)(self.handle, param.as_ptr(), &mut param_type)
         })?;
 
         Ok(param_type)
@@ -158,11 +150,7 @@ impl ConfigSection<'_> {
         unsafe {
             // SAFETY: the CString passed here is only used within
             // the function.
-            let help_ptr = self
-                .core
-                .api
-                .config
-                .get_parameter_help(self.handle, param.as_ptr());
+            let help_ptr = (self.core.api.config.get_parameter_help)(self.handle, param.as_ptr());
 
             if help_ptr.is_null() {
                 Err(M64PError::InputNotFound)
@@ -181,35 +169,24 @@ impl ConfigSection<'_> {
         match param_type {
             ConfigType::Int => Ok(ConfigValue::Int(unsafe {
                 // SAFETY: No values are borrowed.
-                self.core
-                    .api
-                    .config
-                    .get_param_int(self.handle, param.as_ptr())
+                (self.core.api.config.get_param_int)(self.handle, param.as_ptr())
             })),
             ConfigType::Float => Ok(ConfigValue::Float(unsafe {
                 // SAFETY: No values are borrowed.
-                self.core
-                    .api
-                    .config
-                    .get_param_float(self.handle, param.as_ptr())
+                (self.core.api.config.get_param_float)(self.handle, param.as_ptr())
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                self.core
-                    .api
-                    .config
-                    .get_param_bool(self.handle, param.as_ptr())
+                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr())
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString
                 // is valid for an uncertain period of time. It is copied
                 // to ensure that it won't be freed in that time.
-                CStr::from_ptr(
-                    self.core
-                        .api
-                        .config
-                        .get_param_string(self.handle, param.as_ptr()),
-                )
+                CStr::from_ptr((self.core.api.config.get_param_string)(
+                    self.handle,
+                    param.as_ptr(),
+                ))
                 .to_owned()
             })),
         }
@@ -226,7 +203,7 @@ impl ConfigSection<'_> {
 
             // SAFETY: the parameter value pointer is valid during this call,
             // it should also point to a valid value of cfg_type.
-            core_fn(self.core.api.config.set_parameter(
+            core_fn((self.core.api.config.set_parameter)(
                 self.handle,
                 param.as_ptr(),
                 param_type,
@@ -242,7 +219,7 @@ impl ConfigSection<'_> {
         core_fn(unsafe {
             // SAFETY: the two string pointers passed here are only used within
             // the function, they are not stored beyond that.
-            self.core.api.config.set_parameter_help(
+            (self.core.api.config.set_parameter_help)(
                 self.handle,
                 param.as_ptr(),
                 help.map(|help| help.as_ptr()).unwrap_or(null()),

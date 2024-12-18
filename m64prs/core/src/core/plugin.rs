@@ -6,6 +6,10 @@ use std::{
     ptr::{null, null_mut},
 };
 
+use decan::{
+    can::{Can, OwningCan},
+    LibraryHandle,
+};
 use dlopen2::wrapper::Container;
 use m64prs_sys::api::BasePluginApi;
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
@@ -33,7 +37,7 @@ impl Core {
         }
 
         // startup the four plugins
-        let core_ptr = unsafe { self.api.into_raw() };
+        let core_ptr = unsafe { self.api.as_raw() };
         plugins
             .graphics
             .startup(core_ptr as *mut c_void)
@@ -69,54 +73,50 @@ impl Core {
         // SAFETY: the library handles passed to C live only as long as the core
         // does, and will be safe to close after shutdown.
         core_fn(unsafe {
-            self.api.base.attach_plugin(
+            (self.api.base.attach_plugin)(
                 m64prs_sys::PluginType::Graphics,
-                plugins.graphics.api.into_raw() as *mut _,
+                plugins.graphics.api.as_raw() as *mut _,
             )
         })
         .and_then(|_| {
             init_state = 1;
             core_fn(unsafe {
-                self.api.base.attach_plugin(
+                (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Audio,
-                    plugins.audio.api.into_raw() as *mut _,
+                    plugins.audio.api.as_raw() as *mut _,
                 )
             })
         })
         .and_then(|_| {
             init_state = 2;
             core_fn(unsafe {
-                self.api.base.attach_plugin(
+                (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Input,
-                    plugins.input.api.into_raw() as *mut _,
+                    plugins.input.api.as_raw() as *mut _,
                 )
             })
         })
         .and_then(|_| {
             init_state = 3;
             core_fn(unsafe {
-                self.api.base.attach_plugin(
+                (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Rsp,
-                    plugins.rsp.api.into_raw() as *mut _,
+                    plugins.rsp.api.as_raw() as *mut _,
                 )
             })
         })
         .map_err(|err| {
             // SAFETY: detach_plugin does not use any data and is safe to call at any time.
             if init_state >= 3 {
-                unsafe { self.api.base.detach_plugin(m64prs_sys::PluginType::Rsp) };
+                unsafe { (self.api.base.detach_plugin)(m64prs_sys::PluginType::Rsp) };
             }
             if init_state >= 2 {
-                unsafe { self.api.base.detach_plugin(m64prs_sys::PluginType::Input) };
+                unsafe { (self.api.base.detach_plugin)(m64prs_sys::PluginType::Input) };
             }
             if init_state >= 1 {
-                unsafe { self.api.base.detach_plugin(m64prs_sys::PluginType::Audio) };
+                unsafe { (self.api.base.detach_plugin)(m64prs_sys::PluginType::Audio) };
             }
-            unsafe {
-                self.api
-                    .base
-                    .detach_plugin(m64prs_sys::PluginType::Graphics)
-            };
+            unsafe { (self.api.base.detach_plugin)(m64prs_sys::PluginType::Graphics) };
 
             PluginLoadError::M64P(err)
         })?;
@@ -137,12 +137,10 @@ impl Core {
 
         // SAFETY: detach_plugin does not use any data and is safe to call at any time.
         unsafe {
-            self.api
-                .base
-                .detach_plugin(m64prs_sys::PluginType::Graphics);
-            self.api.base.detach_plugin(m64prs_sys::PluginType::Audio);
-            self.api.base.detach_plugin(m64prs_sys::PluginType::Input);
-            self.api.base.detach_plugin(m64prs_sys::PluginType::Rsp);
+            (self.api.base.detach_plugin)(m64prs_sys::PluginType::Graphics);
+            (self.api.base.detach_plugin)(m64prs_sys::PluginType::Audio);
+            (self.api.base.detach_plugin)(m64prs_sys::PluginType::Input);
+            (self.api.base.detach_plugin)(m64prs_sys::PluginType::Rsp);
         };
         // drop the plugins. this shuts them down.
         self.plugins = None;
@@ -224,7 +222,7 @@ pub struct PluginInfo {
 ///
 /// The core is responsible for startup/shutdown of plugins; they are never started while you own them.
 pub struct Plugin<T: PluginTypeTrait> {
-    api: Container<BasePluginApi>,
+    api: OwningCan<BasePluginApi>,
     _marker: PhantomData<T>,
 }
 
@@ -244,15 +242,21 @@ impl<T: PluginTypeTrait> Plugin<T> {
         // SAFETY: we assume the dynamic library loaded here is a plugin. We have
         // no way to tell whether this is malicious, but unfortunately this is by
         // the nature of Mupen64Plus's plugin system.
-        let api: Container<BasePluginApi> =
-            unsafe { Container::load(path.as_ref()) }.map_err(PluginLoadError::Library)?;
+        let api: OwningCan<BasePluginApi> =
+            unsafe { Can::load(path.as_ref()) }.map_err(PluginLoadError::Library)?;
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
             // SAFETY: this function should only use the borrowed value; it
             // shouldn't store any references.
-            core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
-                .map_err(PluginLoadError::M64P)?;
+            core_fn((api.get_version)(
+                &mut value,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+            ))
+            .map_err(PluginLoadError::M64P)?;
             value
         };
         if plugin_type != T::TYPE.into() {
@@ -276,7 +280,7 @@ impl<T: PluginTypeTrait> Plugin<T> {
 
             // SAFETY: this function should only use the borrowed value; it
             // shouldn't store any references.
-            core_fn(self.api.get_version(
+            core_fn((self.api.get_version)(
                 &mut plugin_type,
                 &mut plugin_version,
                 &mut api_version,
@@ -305,8 +309,7 @@ impl<T: PluginTypeTrait> Plugin<T> {
         // SAFETY: We assume the plugin is valid. In addition, the debug ID is a
         // &'static CStr, meaning it will never be freed unexpectedly.
         core_fn(unsafe {
-            self.api
-                .startup(core_ptr, debug_id.as_ptr() as *mut c_void, debug_callback)
+            (self.api.startup)(core_ptr, debug_id.as_ptr() as *mut c_void, debug_callback)
         })
     }
 }
@@ -316,7 +319,7 @@ impl<T: PluginTypeTrait> Drop for Plugin<T> {
     // fast if it hasn't been started up.
     fn drop(&mut self) {
         unsafe {
-            self.api.shutdown();
+            (self.api.shutdown)();
         }
     }
 }
@@ -341,13 +344,19 @@ impl AnyPlugin {
     ///
     /// If you need to load a plugin of a specific type, use [`Plugin<T>::load`].
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, PluginLoadError> {
-        let api: Container<BasePluginApi> =
-            unsafe { Container::load(path.as_ref()) }.map_err(PluginLoadError::Library)?;
+        let api: OwningCan<BasePluginApi> =
+            unsafe { Can::load(path) }.map_err(PluginLoadError::Library)?;
 
         let plugin_type = unsafe {
             let mut value = m64prs_sys::PluginType::Null;
-            core_fn(api.get_version(&mut value, null_mut(), null_mut(), null_mut(), null_mut()))
-                .map_err(PluginLoadError::M64P)?;
+            core_fn((api.get_version)(
+                &mut value,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+            ))
+            .map_err(PluginLoadError::M64P)?;
             value
         };
 
