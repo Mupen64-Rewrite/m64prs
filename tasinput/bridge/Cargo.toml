@@ -7,5 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-dlopen2 = { workspace = true }
+decan = { workspace = true }
 m64prs-sys = { workspace = true }

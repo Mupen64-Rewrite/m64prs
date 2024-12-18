@@ -5,6 +5,7 @@
 
 td-joystick {
     border-radius: 5px;
+    border: 1px solid;
 }
 
 :root {
@@ -14,31 +15,34 @@ td-joystick {
 }
 
 .btn-start {
+    color: white;
     background: var(--start-color);
 }
 .btn-start:checked {
     background: shade(var(--start-color), 0.8);
 }
 .btn-start:active {
-    background: shade(var(--start-color), 0.6);
+    background: shade(var(--start-color), 0.75);
 }
 
 .btn-a {
+    color: white;
     background: var(--a-color);
 }
 .btn-a:checked {
     background: shade(var(--a-color), 0.8);
 }
 .btn-a:active {
-    background: shade(var(--a-color), 0.6);
+    background: shade(var(--a-color), 0.75);
 }
 
 .btn-b {
+    color: white;
     background: var(--b-color);
 }
 .btn-b:checked {
     background: shade(var(--b-color), 0.8);
 }
 .btn-b:active {
-    background: shade(var(--b-color), 0.6);
+    background: shade(var(--b-color), 0.75);
 }

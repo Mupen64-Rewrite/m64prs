@@ -10,7 +10,6 @@ use decan::{
     can::{Can, OwningCan},
     LibraryHandle,
 };
-use dlopen2::wrapper::Container;
 use m64prs_sys::api::BasePluginApi;
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 

@@ -33,6 +33,7 @@ mod inner {
         fn constructed(&self) {
             let ct_drag = gtk::GestureDrag::new();
             ct_drag.set_button(gdk::BUTTON_PRIMARY);
+            ct_drag.set_propagation_phase(gtk::PropagationPhase::Target);
             ct_drag.connect_drag_begin({
                 let this = self.obj().downgrade();
                 move |_, x, y| {

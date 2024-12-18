@@ -146,6 +146,7 @@ mod inner {
             ct_win_move.connect_event({
                 let this = obj.downgrade();
                 move |_, evt: &gdk::Event| {
+
                     let this = match this.upgrade() {
                         Some(this) => this,
                         None => return glib::Propagation::Proceed,
@@ -154,6 +155,7 @@ mod inner {
                         Ok(toplevel) => toplevel,
                         Err(_) => return glib::Propagation::Proceed,
                     };
+
                     if let Some(pointer_evt) = evt.downcast_ref::<gdk::ButtonEvent>() {
                         // Get the button, only allow left click
                         let button = pointer_evt.button();
@@ -166,6 +168,11 @@ mod inner {
                             None => return glib::Propagation::Proceed,
                         };
                         let (x, y) = pointer_evt.position().unwrap();
+                        if !this.pick(x, y, gtk::PickFlags::INSENSITIVE).is_some_and(|w| {
+                            w.first_child().is_some()
+                        }) {
+                            return glib::Propagation::Proceed;
+                        }
                         let timestamp = pointer_evt.time();
 
                         // request to move window
@@ -177,7 +184,7 @@ mod inner {
                 }
             });
 
-            // obj.add_controller(ct_win_move);
+            obj.add_controller(ct_win_move);
         }
 
         fn dispose(&self) {
