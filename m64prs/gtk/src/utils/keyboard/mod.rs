@@ -1,34 +1,34 @@
 use gdk::prelude::*;
 use m64prs_core::key_forward::{Mod, Scancode};
 
-#[cfg(target_os = "windows")]
-mod windows;
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "windows")]
+mod windows;
 
 /// Emulates SDL's native keyboard mapping.
 pub fn into_sdl_scancode(display: &gdk::Display, code: u32) -> Option<Scancode> {
     #[cfg(target_os = "windows")]
-        {
-            if display.is::<gdk_win32::Win32Display>() {
-                return windows::map_native_keycode(code);
-            }
-            unreachable!()
+    {
+        if display.is::<gdk_win32::Win32Display>() {
+            return windows::map_native_keycode(code);
         }
-        #[cfg(target_os = "linux")]
-        {
-            #[cfg(feature = "x11")]
-            if display.is::<gdk_x11::X11Display>() {
-                return linux::map_native_keycode(code);
-            }
-            #[cfg(feature = "wayland")]
-            if display.is::<gdk_wayland::WaylandDisplay>() {
-                return linux::map_native_keycode(code);
-            }
-            unreachable!()
+        unreachable!()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        #[cfg(feature = "x11")]
+        if display.is::<gdk_x11::X11Display>() {
+            return linux::map_native_keycode(code);
         }
-        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
-        compile_error!("Platform is currently not supported");
+        #[cfg(feature = "wayland")]
+        if display.is::<gdk_wayland::WaylandDisplay>() {
+            return linux::map_native_keycode(code);
+        }
+        unreachable!()
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    compile_error!("Platform is currently not supported");
 }
 
 pub fn into_sdl_modifiers(gdk_mod: gdk::ModifierType) -> Mod {

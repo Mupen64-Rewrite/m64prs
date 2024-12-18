@@ -1,5 +1,8 @@
 use std::{
-    env, ffi::OsStr, fs, path::{Path, PathBuf}
+    env,
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
 };
 
 mod dirs;
@@ -20,7 +23,10 @@ pub fn setup_cargo_reruns() {
         for entry in walkdir::WalkDir::new(&core_dir.join("src")) {
             let entry = entry.unwrap();
             let path = entry.path();
-            if !path.components().any(|comp| comp.as_os_str() == OsStr::new("asm_defines")) {
+            if !path
+                .components()
+                .any(|comp| comp.as_os_str() == OsStr::new("asm_defines"))
+            {
                 emit(path);
             }
         }
@@ -35,7 +41,6 @@ pub fn setup_cargo_reruns() {
             let project_dir = &core_dir.join("projects/unix");
             emit(&project_dir.join("Makefile"));
         }
-
     }
 }
 

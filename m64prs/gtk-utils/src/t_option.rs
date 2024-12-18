@@ -8,7 +8,7 @@ mod sealed {
 }
 
 /// Trait representing a type-level option. It can either be [`TNone`] or [`TSome<T>`].
-/// 
+///
 /// The purpose of this is to encapsulate the concept of an optional type parameter.
 /// In most cases, it suffices to use `()` as the `None` type, but on some occasions,
 /// it is necessary to make the distinction between no type and unit type.

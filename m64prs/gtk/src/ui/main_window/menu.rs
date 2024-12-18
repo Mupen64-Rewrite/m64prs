@@ -215,7 +215,7 @@ impl AppActions {
                     (emu_state, vcr_active),
                     (MainEmuState::Running | MainEmuState::Paused, true)
                 )
-             }),
+            }),
         );
 
         let save_slot_gvar = save_slot.chain_closure::<glib::Variant>(glib::closure!(
@@ -243,7 +243,7 @@ impl AppActions {
         b!(set_save_slot."state" => save_slot_gvar);
         b!(save_file."enabled" => can_save);
         b!(load_file."enabled" => can_save);
-        
+
         b!(new_movie."enabled" => emu_active);
         b!(load_movie."enabled" => emu_active);
         b!(save_movie."enabled" => vcr_active);

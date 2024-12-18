@@ -24,7 +24,7 @@ pub enum MainEmuState {
     Uninit = 0,
     Stopped = 1,
     Running = 2,
-    Paused = 3
+    Paused = 3,
 }
 impl Default for MainEmuState {
     fn default() -> Self {

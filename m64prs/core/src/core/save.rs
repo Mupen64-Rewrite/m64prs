@@ -1,11 +1,15 @@
 use std::{
-    ffi::{c_int, CString}, path::Path, pin::Pin, sync::mpsc, task::{Context, Poll}
+    ffi::{c_int, CString},
+    path::Path,
+    pin::Pin,
+    sync::mpsc,
+    task::{Context, Poll},
 };
 
-use std::path::PathBuf;
 use futures::{channel::oneshot, Future};
 use m64prs_sys::{Command, CoreParam};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::path::PathBuf;
 
 use crate::error::{M64PError, SavestateError};
 

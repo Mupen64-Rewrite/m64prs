@@ -33,7 +33,9 @@ use windows::{
             Gdi::{self, CreateRectRgn},
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DestroyWindow, GetWindowRect, SetWindowPos, ShowWindow, HMENU, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WS_CHILD, WS_DISABLED, WS_EX_TOOLWINDOW, WS_POPUP
+            CreateWindowExW, DestroyWindow, GetWindowRect, SetWindowPos, ShowWindow, HMENU,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE,
+            SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WS_CHILD, WS_DISABLED, WS_EX_TOOLWINDOW, WS_POPUP,
         },
     },
 };

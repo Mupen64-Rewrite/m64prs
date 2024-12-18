@@ -1,6 +1,10 @@
 use ffi::{AudioHandlerFFI, InputHandlerFFI, SaveHandlerFFI};
 use m64prs_sys::{Buttons, Command, EmuState};
-use std::{error::Error, ffi::{c_int, c_uint, c_void}, ptr::{null, null_mut}};
+use std::{
+    error::Error,
+    ffi::{c_int, c_uint, c_void},
+    ptr::{null, null_mut},
+};
 
 use crate::error::M64PError;
 
@@ -14,17 +18,13 @@ impl Core {
     pub fn set_input_handler<I: InputHandler>(&mut self, handler: I) -> Result<(), M64PError> {
         // SAFETY: if the core is running, handler is in use.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
         let input_handler = InputHandlerFFI::new(handler);
 
         // SAFETY: the FFI handler is safe to use as long as the context isn't moved.
-        core_fn(unsafe {
-            (self.api
-                .tas
-                .set_input_handler)(&input_handler.create_ffi_handler())
-        })?;
+        core_fn(unsafe { (self.api.tas.set_input_handler)(&input_handler.create_ffi_handler()) })?;
         // This reference keeps the context from being moved or deleted.
         self.input_handler = Some(Box::new(input_handler));
 
@@ -38,14 +38,10 @@ impl Core {
     pub fn clear_input_handler(&mut self) -> Result<(), M64PError> {
         // SAFETY: if the core is running, handler is in use.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
-        core_fn(unsafe {
-            (self.api
-                .tas
-                .set_input_handler)(null())
-        })?;
+        core_fn(unsafe { (self.api.tas.set_input_handler)(null()) })?;
 
         self.input_handler = None;
 
@@ -60,7 +56,7 @@ impl Core {
     pub fn set_frame_handler<F: FrameHandler>(&mut self, handler: F) -> Result<(), M64PError> {
         // SAFETY: if the core is running, handler is in use.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
         let mut frame_handler = ffi::FRAME_HANDLER_BOX.lock().unwrap();
@@ -81,9 +77,9 @@ impl Core {
     ///
     /// # Errors
     /// This function errors if the core fails to clear the frame handler.
-    pub fn clear_frame_handler(&mut self) -> Result<(), M64PError>{
+    pub fn clear_frame_handler(&mut self) -> Result<(), M64PError> {
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
         unsafe { self.do_command_p(Command::SetFrameCallback, null_mut())? };
@@ -110,11 +106,7 @@ impl Core {
         let audio_handler = AudioHandlerFFI::new(handler);
 
         // SAFETY: This works the exact same way as input_handler.
-        core_fn(unsafe {
-            (self.api
-                .tas
-                .set_audio_handler)(&audio_handler.create_ffi_handler())
-        })?;
+        core_fn(unsafe { (self.api.tas.set_audio_handler)(&audio_handler.create_ffi_handler()) })?;
         self.audio_handler = Some(Box::new(audio_handler));
 
         Ok(())
@@ -131,16 +123,14 @@ impl Core {
     pub fn set_save_handler<S: SaveHandler>(&mut self, handler: S) -> Result<(), M64PError> {
         // SAFETY: if the core is running, handler is in use.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
         let save_handler = SaveHandlerFFI::new(handler);
 
         // SAFETY: This also works the same way as input_handler.
         core_fn(unsafe {
-            (self.api
-                .tas
-                .set_savestate_handler)(&save_handler.create_ffi_handler())
+            (self.api.tas.set_savestate_handler)(&save_handler.create_ffi_handler())
         })?;
         self.save_handler = Some(Box::new(save_handler));
 
@@ -154,14 +144,10 @@ impl Core {
     pub fn clear_save_handler(&mut self) -> Result<(), M64PError> {
         // SAFETY: if the core is running, handler is in use.
         if self.emu_state() != EmuState::Stopped {
-            return Err(M64PError::InvalidState)
+            return Err(M64PError::InvalidState);
         }
 
-        core_fn(unsafe {
-            (self.api
-                .tas
-                .set_savestate_handler)(null())
-        })?;
+        core_fn(unsafe { (self.api.tas.set_savestate_handler)(null()) })?;
 
         self.input_handler = None;
 
@@ -194,7 +180,8 @@ pub mod ffi {
     use super::*;
     use std::{
         ffi::{c_char, c_uchar},
-        mem, sync::Mutex,
+        mem,
+        sync::Mutex,
     };
 
     pub(super) static FRAME_HANDLER_BOX: Mutex<Option<Box<dyn FrameHandler>>> = Mutex::new(None);
@@ -320,32 +307,40 @@ pub mod ffi {
                 Ok(size) => {
                     context.temp_buf = Some(buf);
                     size
-                },
+                }
                 Err(err) => {
                     context.temp_buf = Some(Err(err.into()));
                     1
-                },
+                }
             }
         }
 
-        unsafe extern "C" fn ffi_save_xd(context: *mut c_void, data: *mut c_uchar, size: u32) -> bool {
+        unsafe extern "C" fn ffi_save_xd(
+            context: *mut c_void,
+            data: *mut c_uchar,
+            size: u32,
+        ) -> bool {
             let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
             let src_slice = context.temp_buf.take().unwrap();
             let dst_slice = std::slice::from_raw_parts_mut(data as *mut u8, size as usize);
-            
+
             match src_slice {
                 Ok(src_slice) => {
                     dst_slice.copy_from_slice(&src_slice);
                     true
-                },
+                }
                 Err(error) => {
                     log::error!("Failed to save savestate {}", error);
                     false
-                },
+                }
             }
         }
 
-        unsafe extern "C" fn ffi_load_xd(context: *mut c_void, data: *const c_uchar, size: u32) -> bool {
+        unsafe extern "C" fn ffi_load_xd(
+            context: *mut c_void,
+            data: *const c_uchar,
+            size: u32,
+        ) -> bool {
             let context = &mut *(context as *mut SaveHandlerFFIInner<S>);
             let src_slice = if size == 0 {
                 &[]
@@ -358,7 +353,7 @@ pub mod ffi {
                 Err(error) => {
                     log::error!("Failed to load savestate {}", error);
                     false
-                },
+                }
             }
         }
     }

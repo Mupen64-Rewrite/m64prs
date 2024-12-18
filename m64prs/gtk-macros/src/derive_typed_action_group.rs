@@ -158,10 +158,14 @@ impl ActionInfo {
                         lit: syn::Lit::Str(lit_str),
                         ..
                     }) => name = Some(lit_str.clone()),
-                    _ => return Err(syn::Error::new_spanned(pair, "name should be a string literal")),
+                    _ => {
+                        return Err(syn::Error::new_spanned(
+                            pair,
+                            "name should be a string literal",
+                        ))
+                    }
                 }
-            }
-            else if pair.path.is_ident("default") {
+            } else if pair.path.is_ident("default") {
                 default = Some(pair.value.clone());
             }
         }

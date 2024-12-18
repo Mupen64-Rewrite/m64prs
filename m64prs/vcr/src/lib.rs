@@ -1,5 +1,9 @@
 use std::{
-    error::Error, ffi::c_int, fs, io, ops::ControlFlow, path::{Path, PathBuf}
+    error::Error,
+    ffi::c_int,
+    fs, io,
+    ops::ControlFlow,
+    path::{Path, PathBuf},
 };
 
 use freeze::MovieFreeze;
@@ -54,7 +58,7 @@ impl VcrState {
         }
     }
 
-    /// Export the current VCR state to an .m64 file. 
+    /// Export the current VCR state to an .m64 file.
     pub fn export(&self) -> M64File {
         let mut header = self.header.clone();
 
@@ -75,7 +79,7 @@ impl VcrState {
             StartType::FROM_RESET => {
                 core.reset(true)?;
                 self.first_poll = true;
-            },
+            }
             StartType::FROM_SNAPSHOT => {
                 // search for a valid savestate (TODO: get rid of some of these unwraps)
                 let st_path = fs::read_dir(self.path.parent().unwrap())?

@@ -3,7 +3,7 @@ use std::{fmt::Display, hash::Hash, mem};
 
 use bitflags::bitflags;
 
-include!(concat!(env!("OUT_DIR"), "/types.gen.rs"));
+include!(concat!(env!("OUT_DIR"), "/types_gen.rs"));
 
 impl Display for ConfigType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -11,7 +11,8 @@ mod menu;
 mod inner {
     use std::{
         cell::{Cell, RefCell, RefMut},
-        error::Error, path::PathBuf,
+        error::Error,
+        path::PathBuf,
     };
 
     use glib::{
@@ -32,7 +33,10 @@ mod inner {
             self,
             compositor_view::native::{NativeView, NativeViewAttributes, NativeViewKey},
         },
-        ui::{core::{CoreReadyState, CoreState}, movie_dialog::MovieDialog},
+        ui::{
+            core::{CoreReadyState, CoreState},
+            movie_dialog::MovieDialog,
+        },
     };
 
     use super::{

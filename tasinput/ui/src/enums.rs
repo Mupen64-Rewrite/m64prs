@@ -1,6 +1,5 @@
 use m64prs_sys::ButtonFlags;
 
-
 #[glib::flags(name = "TasDiGButtonFlags")]
 pub enum GButtonFlags {
     #[flags_value(skip)]

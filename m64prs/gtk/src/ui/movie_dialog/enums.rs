@@ -4,7 +4,6 @@ use glib::translate::{IntoGlib, TryFromGlib};
 use m64prs_gtk_utils::glib_enum_display;
 use m64prs_vcr::movie::StartType;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, glib::Enum)]
 #[enum_type(name = "M64PRS_MovieStartType")]
 #[repr(u32)]

@@ -73,10 +73,8 @@ pub(crate) fn generate(args: Args, impl_block: syn::ItemImpl) -> syn::Result<Tok
 
     for kv_pair in &args.extra_args {
         match kv_pair {
-            ArgsNameValue::Vis(meta_vis) => {
-                forward_vis = Some(meta_vis.vis.clone())
-            },
-            ArgsNameValue::NameValue(_) => {},
+            ArgsNameValue::Vis(meta_vis) => forward_vis = Some(meta_vis.vis.clone()),
+            ArgsNameValue::NameValue(_) => {}
         }
     }
 
@@ -147,7 +145,7 @@ fn gen_param_list(param: &syn::FnArg, visit_state: &mut ParamVisitState) -> syn:
             visit_state.fwd_args.push(quote! {
                 &#lifetime self
             });
-        },
+        }
         syn::FnArg::Typed(param) => {
             let ty = &*param.ty;
             let ident = match &*param.pat {
@@ -161,7 +159,7 @@ fn gen_param_list(param: &syn::FnArg, visit_state: &mut ParamVisitState) -> syn:
             visit_state.fwd_inputs.push(quote! {
                 #ident
             });
-        },
+        }
     }
 
     Ok(())

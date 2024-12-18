@@ -59,7 +59,8 @@ impl Core {
     /// Async function that returns when the emulator changes state.
     pub fn emu_state_change(&self) -> impl Future<Output = EmuState> {
         let (future, waiter) = emu_pair();
-        self.emu_sender.send(waiter)
+        self.emu_sender
+            .send(waiter)
             .expect("emu state wait queue should still be connected");
 
         future

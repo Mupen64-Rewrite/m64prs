@@ -309,7 +309,11 @@ impl<T: PluginTypeTrait> Plugin<T> {
         // SAFETY: We assume the plugin is valid. In addition, the debug ID is a
         // &'static CStr, meaning it will never be freed unexpectedly.
         core_fn(unsafe {
-            (self.api.startup)(core_ptr, debug_id.as_ptr() as *mut c_void, debug_callback)
+            (self.api.startup)(
+                core_ptr,
+                debug_id.as_ptr() as *mut c_void,
+                Some(debug_callback),
+            )
         })
     }
 }

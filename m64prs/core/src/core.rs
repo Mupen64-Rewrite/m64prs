@@ -7,8 +7,7 @@ use std::{
 };
 
 use async_std::sync::Mutex as AsyncMutex;
-use decan::{can::{Can, OwningCan}, LibraryHandle};
-use dlopen2::wrapper::Container;
+use decan::can::{Can, OwningCan};
 use emu_state::{EmuStateWaitManager, EmuStateWaiter};
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
@@ -104,8 +103,7 @@ impl Core {
         let data_c_path = data_path.map(|path| CString::new(path.to_str().unwrap()).unwrap());
 
         // SAFETY: We assume that the path specified points to a valid Mupen64Plus core library.
-        let api = unsafe { Can::load(path.as_ref()) }
-            .map_err(StartupError::Library)?;
+        let api = unsafe { Can::load(path.as_ref()) }.map_err(StartupError::Library)?;
 
         let (st_tx, st_rx) = mpsc::channel();
         let (es_tx, es_rx) = mpsc::channel();
@@ -138,9 +136,9 @@ impl Core {
                 config_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
                 data_c_path.as_ref().map_or(null(), |s| s.as_ptr()),
                 CORE_DEBUG_ID.as_ptr() as *mut c_void,
-                debug_callback,
+                Some(debug_callback),
                 &*core.pin_state as *const Mutex<PinnedCoreState> as *mut c_void,
-                state_callback,
+                Some(state_callback),
             ))
             .map_err(StartupError::CoreInit)?;
         };

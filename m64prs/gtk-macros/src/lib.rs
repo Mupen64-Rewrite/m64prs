@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
-mod forward_wrapper;
 mod derive_typed_action_group;
+mod forward_wrapper;
 
 /// Forwards methods from the inner class of a subtype.
-/// 
+///
 /// # Usage
 /// Basic usage (visibility defaults to private):
 /// ```rust,ignore
@@ -14,7 +14,7 @@ mod derive_typed_action_group;
 ///     // ...
 /// }
 /// ```
-/// 
+///
 /// Specify visibility:
 /// ```rust,ignore
 /// #[forward_wrapper(super::MyObject, vis = pub(crate))]

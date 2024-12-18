@@ -1,10 +1,10 @@
 use gtk::prelude::*;
 
-
 mod inner {
     use std::{
         cell::{Cell, RefCell},
-        error::Error, pin::pin,
+        error::Error,
+        pin::pin,
     };
 
     use futures::channel::oneshot;
@@ -12,7 +12,10 @@ mod inner {
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
     use m64prs_vcr::movie::{M64File, M64Header, StartType};
 
-    use crate::{controls::SizedTextBuffer, ui::{movie_dialog::enums::MovieStartType, AppDialogError}};
+    use crate::{
+        controls::SizedTextBuffer,
+        ui::{movie_dialog::enums::MovieStartType, AppDialogError},
+    };
 
     #[derive(Default, gtk::CompositeTemplate, glib::Properties)]
     #[template(file = "src/ui/movie_dialog/window.blp")]
@@ -70,12 +73,16 @@ mod inner {
 
         pub(super) fn author(&self) -> String {
             let buffer = self.author_field.buffer();
-            buffer.text(&buffer.start_iter(), &buffer.end_iter(), true).to_string()
+            buffer
+                .text(&buffer.start_iter(), &buffer.end_iter(), true)
+                .to_string()
         }
 
         pub(super) fn description(&self) -> String {
             let buffer = self.description_field.buffer();
-            buffer.text(&buffer.start_iter(), &buffer.end_iter(), true).to_string()
+            buffer
+                .text(&buffer.start_iter(), &buffer.end_iter(), true)
+                .to_string()
         }
     }
 
@@ -115,7 +122,7 @@ mod inner {
         }
 
         #[template_callback]
-        fn start_type_eq(&self, start_type: MovieStartType, value: i32) -> bool{
+        fn start_type_eq(&self, start_type: MovieStartType, value: i32) -> bool {
             start_type.into_glib() == value
         }
 
@@ -138,12 +145,14 @@ mod inner {
                     Ok(path) => path,
                     Err(err) => match err.kind::<gtk::DialogError>().unwrap() {
                         gtk::DialogError::Dismissed => return Ok(()),
-                        _ => return Err(err.into())
-                    }
+                        _ => return Err(err.into()),
+                    },
                 }
             };
             if file.path().is_none() {
-                return Err(AppDialogError("File has no path. Is your app sandboxed?".to_string()).into());
+                return Err(
+                    AppDialogError("File has no path. Is your app sandboxed?".to_string()).into(),
+                );
             }
             if self.load.get() {
                 let header = {
@@ -151,11 +160,13 @@ mod inner {
                         .read_future(glib::Priority::DEFAULT)
                         .await?
                         .into_async_buf_read(1024);
-    
+
                     M64Header::read_async(pin!(&mut file_reader)).await?
                 };
                 self.author_field.buffer().set_text(header.author.read());
-                self.description_field.buffer().set_text(header.description.read());
+                self.description_field
+                    .buffer()
+                    .set_text(header.description.read());
                 if let Some(start_type) = MovieStartType::try_from(header.start_flags).ok() {
                     self.obj().set_start_type(start_type);
                 }
@@ -168,14 +179,11 @@ mod inner {
         fn ui_set_start_type(&self, button: &gtk::Button) {
             let start_type = if button == &*self.reset_btn {
                 MovieStartType::Reset
-            }
-            else if button == &*self.savestate_btn {
+            } else if button == &*self.savestate_btn {
                 MovieStartType::Snapshot
-            }
-            else if button == &*self.eeprom_btn {
+            } else if button == &*self.eeprom_btn {
                 MovieStartType::Eeprom
-            }
-            else {
+            } else {
                 unreachable!()
             };
             self.obj().set_start_type(start_type);

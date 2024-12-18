@@ -8,7 +8,8 @@ use m64prs_sys::{
 
 mod ffi;
 
-type FFI_DebugCallback = unsafe extern "C" fn(debug_ctx: *mut c_void, msg_level: c_int, message: *const c_char);
+type FFI_DebugCallback =
+    unsafe extern "C" fn(debug_ctx: *mut c_void, msg_level: c_int, message: *const c_char);
 
 #[no_mangle]
 pub extern "C" fn PluginStartup(

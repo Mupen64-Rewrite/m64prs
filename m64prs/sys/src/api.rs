@@ -1,7 +1,6 @@
 use std::ffi::{c_char, c_float, c_int, c_void};
 
 use decan::{non_null, SymbolGroup};
-use dlopen2::wrapper::{WrapperApi, WrapperMultiApi};
 
 use crate::types::*;
 
@@ -20,38 +19,19 @@ pub struct CoreBaseApi {
     #[symbol = "PluginGetVersion"]
     pub get_version: non_null!(ptr_PluginGetVersion),
     #[symbol = "CoreErrorMessage"]
-    pub error_message: unsafe extern "C" fn(return_code: Error) -> *const c_char,
+    pub error_message: non_null!(ptr_CoreErrorMessage),
     #[symbol = "CoreStartup"]
-    pub startup: unsafe extern "C" fn(
-        api_version: c_int,
-        config_path: *const c_char,
-        data_path: *const c_char,
-        debug_context: *mut c_void,
-        debug_callback: unsafe extern "C" fn(
-            context: *mut c_void,
-            level: c_int,
-            message: *const c_char,
-        ),
-        state_context: *mut c_void,
-        state_callback: unsafe extern "C" fn(
-            context: *mut c_void,
-            param: CoreParam,
-            new_value: c_int,
-        ),
-    ) -> Error,
+    pub startup: non_null!(ptr_CoreStartup),
     #[symbol = "CoreShutdown"]
-    pub shutdown: unsafe extern "C" fn() -> Error,
+    pub shutdown: non_null!(ptr_CoreShutdown),
     #[symbol = "CoreAttachPlugin"]
-    pub attach_plugin:
-        unsafe extern "C" fn(plugin_type: PluginType, plugin_lib_handle: DynlibHandle) -> Error,
+    pub attach_plugin: non_null!(ptr_CoreAttachPlugin),
     #[symbol = "CoreDetachPlugin"]
-    pub detach_plugin: unsafe extern "C" fn(plugin_type: PluginType) -> Error,
+    pub detach_plugin: non_null!(ptr_CoreDetachPlugin),
     #[symbol = "CoreDoCommand"]
-    pub do_command:
-        unsafe extern "C" fn(command: Command, int_param: c_int, ptr_param: *mut c_void) -> Error,
+    pub do_command: non_null!(ptr_CoreDoCommand),
     #[symbol = "CoreOverrideVidExt"]
-    pub override_vidext:
-        unsafe extern "C" fn(video_function_struct: *mut VideoExtensionFunctions) -> Error,
+    pub override_vidext: non_null!(ptr_CoreOverrideVidExt),
 }
 
 #[derive(SymbolGroup)]
@@ -59,105 +39,69 @@ pub struct CoreConfigApi {
     // DIRECTORIES
     // =================
     #[symbol = "ConfigGetSharedDataFilepath"]
-    pub shared_data_filepath: unsafe extern "C" fn(name: *const c_char) -> *const c_char,
+    pub shared_data_filepath: non_null!(ptr_ConfigGetSharedDataFilepath),
 
     // DISCOVERY
     // =================
     #[symbol = "ConfigListSections"]
-    pub list_sections: unsafe extern "C" fn(
-        context: *mut c_void,
-        callback: unsafe extern "C" fn(context: *mut c_void, section_name: *const c_char),
-    ) -> Error,
+    pub list_sections: non_null!(ptr_ConfigListSections),
     #[symbol = "ConfigOpenSection"]
-    pub open_section: unsafe extern "C" fn(name: *const c_char, handle: *mut Handle) -> Error,
+    pub open_section: non_null!(ptr_ConfigOpenSection),
     #[symbol = "ConfigListParameters"]
-    pub list_parameters: unsafe extern "C" fn(
-        handle: Handle,
-        context: *mut c_void,
-        callback: unsafe extern "C" fn(context: *mut c_void, name: *const c_char, ptype: ConfigType),
-    ) -> Error,
+    pub list_parameters: non_null!(ptr_ConfigListParameters),
 
     // SECTION MODIFIERS
     // =================
     #[symbol = "ConfigDeleteSection"]
-    pub delete_section: unsafe extern "C" fn(name: *const c_char) -> Error,
+    pub delete_section: non_null!(ptr_ConfigDeleteSection),
     #[symbol = "ConfigSaveFile"]
-    pub save_file: unsafe extern "C" fn() -> Error,
+    pub save_file: non_null!(ptr_ConfigSaveFile),
     #[symbol = "ConfigSaveSection"]
-    pub save_section: unsafe extern "C" fn(name: *const c_char) -> Error,
+    pub save_section: non_null!(ptr_ConfigSaveSection),
     #[symbol = "ConfigRevertChanges"]
-    pub revert_section: unsafe extern "C" fn(name: *const c_char) -> Error,
+    pub revert_section: non_null!(ptr_ConfigRevertChanges),
 
     // GETTERS
     // ================
     #[symbol = "ConfigGetParameterHelp"]
-    pub get_parameter_help:
-        unsafe extern "C" fn(handle: Handle, param_name: *const c_char) -> *const c_char,
+    pub get_parameter_help: non_null!(ptr_ConfigGetParameterHelp),
     #[symbol = "ConfigGetParameterType"]
-    pub get_parameter_type: unsafe extern "C" fn(
-        handle: Handle,
-        param_name: *const c_char,
-        param_type: *mut ConfigType,
-    ) -> Error,
+    pub get_parameter_type: non_null!(ptr_ConfigGetParameterType),
     #[symbol = "ConfigGetParamInt"]
-    pub get_param_int: unsafe extern "C" fn(handle: Handle, param_name: *const c_char) -> c_int,
+    pub get_param_int: non_null!(ptr_ConfigGetParamInt),
     #[symbol = "ConfigGetParamFloat"]
-    pub get_param_float: unsafe extern "C" fn(handle: Handle, param_name: *const c_char) -> c_float,
+    pub get_param_float: non_null!(ptr_ConfigGetParamFloat),
     #[symbol = "ConfigGetParamBool"]
-    pub get_param_bool: unsafe extern "C" fn(handle: Handle, param_name: *const c_char) -> bool,
+    pub get_param_bool: non_null!(ptr_ConfigGetParamBool),
     #[symbol = "ConfigGetParamString"]
-    pub get_param_string:
-        unsafe extern "C" fn(handle: Handle, param_name: *const c_char) -> *const c_char,
+    pub get_param_string: non_null!(ptr_ConfigGetParamString),
 
     // SETTERS
     // ==============
     #[symbol = "ConfigSetParameter"]
-    pub set_parameter: unsafe extern "C" fn(
-        handle: Handle,
-        param_name: *const c_char,
-        param_type: ConfigType,
-        param_value: *const c_void,
-    ) -> Error,
+    pub set_parameter: non_null!(ptr_ConfigSetParameter),
     #[symbol = "ConfigSetParameterHelp"]
-    pub set_parameter_help: unsafe extern "C" fn(
-        handle: Handle,
-        param_name: *const c_char,
-        param_help: *const c_char,
-    ) -> Error,
+    pub set_parameter_help: non_null!(ptr_ConfigSetParameterHelp),
 }
 
 #[derive(SymbolGroup)]
 pub struct CoreTasApi {
     #[symbol = "CoreTAS_SetInputHandler"]
-    pub set_input_handler: unsafe extern "C" fn(new_input_handler: *const TasInputHandler) -> Error,
+    pub set_input_handler: non_null!(ptr_CoreTAS_SetInputHandler),
     #[symbol = "CoreTAS_SetAudioHandler"]
-    pub set_audio_handler: unsafe extern "C" fn(new_audio_handler: *const TasAudioHandler) -> Error,
+    pub set_audio_handler: non_null!(ptr_CoreTAS_SetAudioHandler),
     #[symbol = "CoreTAS_SetAudioTapEnabled"]
-    pub set_audio_tap_enabled: unsafe extern "C" fn(value: bool) -> Error,
+    pub set_audio_tap_enabled: non_null!(ptr_CoreTAS_SetAudioTapEnabled),
     #[symbol = "CoreTAS_SetSavestateHandler"]
-    pub set_savestate_handler: unsafe extern "C" fn(new_save_handler: *const TasSaveHandler) -> Error,
+    pub set_savestate_handler: non_null!(ptr_CoreTAS_SetSavestateHandler),
 }
 
 #[derive(SymbolGroup)]
 pub struct BasePluginApi {
     #[symbol = "PluginGetVersion"]
-    pub get_version: unsafe extern "C" fn(
-        plugin_type: *mut PluginType,
-        plugin_version: *mut c_int,
-        api_version: *mut c_int,
-        plugin_name_ptr: *mut *const c_char,
-        capabilities: *mut c_int,
-    ) -> Error,
+    pub get_version: non_null!(ptr_PluginGetVersion),
     #[symbol = "PluginStartup"]
-    pub startup: unsafe extern "C" fn(
-        core_lib_handle: DynlibHandle,
-        debug_context: *mut c_void,
-        debug_callback: unsafe extern "C" fn(
-            context: *mut c_void,
-            level: c_int,
-            message: *const c_char,
-        ),
-    ) -> Error,
+    pub startup: non_null!(ptr_PluginStartup),
     #[symbol = "PluginShutdown"]
-    pub shutdown: unsafe extern "C" fn() -> Error,
+    pub shutdown: non_null!(ptr_PluginShutdown),
 }

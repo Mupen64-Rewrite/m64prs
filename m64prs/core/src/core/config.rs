@@ -35,7 +35,7 @@ impl Core {
         &mut self,
         mut callback: F,
     ) -> Result<(), M64PError> {
-        unsafe extern "C" fn run_callback<F: FnMut(&CStr)>(
+        unsafe extern "C" fn cfg_for_each_section_trampoline<F: FnMut(&CStr)>(
             context: *mut c_void,
             name: *const c_char,
         ) {
@@ -48,7 +48,7 @@ impl Core {
         core_fn(unsafe {
             (self.api.config.list_sections)(
                 &mut callback as *mut F as *mut c_void,
-                run_callback::<F>,
+                Some(cfg_for_each_section_trampoline::<F>),
             )
         })?;
 
@@ -111,7 +111,7 @@ impl ConfigSection<'_> {
         &self,
         mut callback: F,
     ) -> Result<(), M64PError> {
-        unsafe extern "C" fn run_callback<F: FnMut(&CStr, ConfigType)>(
+        unsafe extern "C" fn for_each_param_trampoline<F: FnMut(&CStr, ConfigType)>(
             context: *mut c_void,
             name: *const c_char,
             ptype: ConfigType,
@@ -126,7 +126,7 @@ impl ConfigSection<'_> {
             (self.core.api.config.list_parameters)(
                 self.handle,
                 &mut callback as *mut F as *mut c_void,
-                run_callback::<F>,
+                Some(for_each_param_trampoline::<F>),
             )
         })?;
 
@@ -177,7 +177,7 @@ impl ConfigSection<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr())
+                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString

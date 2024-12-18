@@ -7,7 +7,11 @@ macro_rules! refcell_bflags_get {
 }
 macro_rules! refcell_bflags_set {
     ($this:ident, $button:ident) => {
-        |this: &MainWindow, value| this.button_flags.borrow_mut().set(GButtonFlags::$button, value)
+        |this: &MainWindow, value| {
+            this.button_flags
+                .borrow_mut()
+                .set(GButtonFlags::$button, value)
+        }
     };
 }
 

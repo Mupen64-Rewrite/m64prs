@@ -21,10 +21,13 @@ mod inner {
 
     #[m64prs_gtk_utils::forward_wrapper(super::MovieDialog, vis = pub)]
     impl MovieDialog {
-        pub(super) async fn new_movie(&self, transient_for: Option<&impl IsA<gtk::Window>>) -> Option<(PathBuf, M64Header)> {
+        pub(super) async fn new_movie(
+            &self,
+            transient_for: Option<&impl IsA<gtk::Window>>,
+        ) -> Option<(PathBuf, M64Header)> {
             let window = MovieDialogWindow::with_load(false);
             if !window.prompt(transient_for).await {
-                return None
+                return None;
             };
 
             let mut header = M64Header::default();
@@ -41,10 +44,13 @@ mod inner {
             Some((path, header))
         }
 
-        pub(super) async fn load_movie(&self, transient_for: Option<&impl IsA<gtk::Window>>) -> Option<gio::File> { 
+        pub(super) async fn load_movie(
+            &self,
+            transient_for: Option<&impl IsA<gtk::Window>>,
+        ) -> Option<gio::File> {
             let window = MovieDialogWindow::with_load(true);
             if !window.prompt(transient_for).await {
-                return None
+                return None;
             };
 
             let path = window.cur_file().expect("no file??");

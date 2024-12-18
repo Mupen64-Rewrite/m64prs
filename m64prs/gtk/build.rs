@@ -11,14 +11,15 @@ fn gl_gen() {
         .expect("gl_generator failed");
 }
 
-
 fn win_manifest() {
-    use embed_manifest::{self, manifest::{ActiveCodePage, DpiAwareness}};
+    use embed_manifest::{
+        self,
+        manifest::{ActiveCodePage, DpiAwareness},
+    };
     let manifest = embed_manifest::new_manifest("M64prs.Gtk")
         .dpi_awareness(DpiAwareness::PerMonitorV2)
         .active_code_page(ActiveCodePage::Utf8);
-    embed_manifest::embed_manifest(manifest)
-        .expect("manifest embed failed!");
+    embed_manifest::embed_manifest(manifest).expect("manifest embed failed!");
 }
 
 fn main() {
@@ -26,11 +27,9 @@ fn main() {
     println!("cargo::rerun-if-changed=../m64prs-native/target");
     // copy_stuff_to_target();
     gl_gen();
-    
-    
+
     if std::env::var_os("CARGO_CFG_WINDOWS").is_some() {
         win_manifest();
         println!("cargo::warning=Windows is not supported at the moment due to some outstanding issues in GTK. Proceed with caution.")
     }
-
 }

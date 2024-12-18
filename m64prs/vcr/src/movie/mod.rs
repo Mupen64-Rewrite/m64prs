@@ -2,13 +2,17 @@ use futures::{AsyncRead, AsyncReadExt};
 use helpers::fix_buttons_order;
 use m64prs_sys::Buttons;
 use std::{
-    ffi::c_int, fmt::Debug, io::{self, Read, Write}, mem::{self}, pin::{pin, Pin}
+    ffi::c_int,
+    fmt::Debug,
+    io::{self, Read, Write},
+    mem::{self},
+    pin::{pin, Pin},
 };
 
 pub mod error;
 mod helpers;
 
-pub use helpers::{StringField, AsciiField};
+pub use helpers::{AsciiField, StringField};
 
 pub const M64_MAGIC: [u8; 4] = [b'M', b'6', b'4', 0x1Au8];
 
@@ -174,7 +178,6 @@ impl M64Header {
         unsafe { mem::transmute(self) }
     }
 
-    
     pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
         let mut chunk = [0u8; 1024];
         reader.read_exact(&mut chunk)?;
@@ -265,17 +268,17 @@ bitflags::bitflags! {
 impl ControllerFlags {
     pub fn port_present(self, port: c_int) -> bool {
         assert!((0..4).contains(&port));
-        
+
         self.contains(Self::from_bits_retain(1 << port))
     }
     pub fn port_has_mempak(self, port: c_int) -> bool {
         assert!((0..4).contains(&port));
-        
+
         self.contains(Self::from_bits_retain((1 << 4) << port))
     }
     pub fn port_has_rumblepak(self, port: c_int) -> bool {
         assert!((0..4).contains(&port));
-        
+
         self.contains(Self::from_bits_retain((1 << 8) << port))
     }
 }
@@ -409,7 +412,10 @@ impl M64File {
         Ok(())
     }
 
-    pub async fn write_into_async<W: futures::AsyncWrite>(self, mut writer: Pin<&mut W>) -> io::Result<()> {
+    pub async fn write_into_async<W: futures::AsyncWrite>(
+        self,
+        mut writer: Pin<&mut W>,
+    ) -> io::Result<()> {
         use futures::AsyncWriteExt;
 
         let Self { header, mut inputs } = self;

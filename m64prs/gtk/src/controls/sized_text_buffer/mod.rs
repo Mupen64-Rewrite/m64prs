@@ -36,7 +36,7 @@ mod inner {
                 self.parent_insert_text(iter, new_text);
             }
         }
-        
+
         fn insert_paintable(&self, _iter: &mut gtk::TextIter, _paintable: &gdk::Paintable) {}
     }
 }

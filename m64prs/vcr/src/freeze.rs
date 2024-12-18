@@ -18,7 +18,7 @@ pub mod v1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum MovieFreeze {
-    V1(v1::MovieFreeze)
+    V1(v1::MovieFreeze),
 }
 
 impl From<v1::MovieFreeze> for MovieFreeze {

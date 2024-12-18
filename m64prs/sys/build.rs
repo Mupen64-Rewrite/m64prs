@@ -6,8 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const CORE_RR_HEADERS: [&str; 4] = [
+const CORE_RR_HEADERS: [&str; 6] = [
     "m64p_common.h",
+    "m64p_config.h",
+    "m64p_frontend.h",
     "m64p_types.h",
     "m64p_tas.h",
     "m64p_plugin.h",
@@ -132,7 +134,7 @@ impl ParseCallbacks for M64PParseCallbacks {
 fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
     // Paths
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
-    let out_file = out_dir.join("types.gen.rs");
+    let out_file = out_dir.join("types_gen.rs");
 
     let src_dir = core_dir.as_ref().join("src/");
     let api_dir = core_dir.as_ref().join("src/api/");
