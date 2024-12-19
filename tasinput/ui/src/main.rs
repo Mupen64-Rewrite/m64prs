@@ -21,7 +21,7 @@ fn load_css() {
 
 fn main() {
     let app = gtk::Application::new(Some(APP_ID), ApplicationFlags::FLAGS_NONE);
-    app.connect_startup(|app| load_css());
+    app.connect_startup(|_| load_css());
     app.connect_activate(|app| MainWindow::setup_and_show(app));
     app.run();
 }

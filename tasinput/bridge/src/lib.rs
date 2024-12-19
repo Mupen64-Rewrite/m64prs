@@ -2,7 +2,7 @@ use std::ffi::{c_char, c_int, c_uchar, c_void};
 
 use m64prs_sys::*;
 
-mod ffi;
+mod state;
 
 #[no_mangle]
 pub extern "C" fn PluginStartup(

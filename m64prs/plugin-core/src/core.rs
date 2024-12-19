@@ -1,9 +1,10 @@
-use std::{ffi::c_void, mem};
+use std::{ffi::{c_void, CStr}, mem};
 
 use decan::can::NonOwningCan;
-use m64prs_sys::{api::PluginCoreApi, common::M64PError, ptr_DebugCallback, DynlibHandle};
+use m64prs_sys::{api::PluginCoreApi, common::M64PError, ptr_DebugCallback, DynlibHandle, MsgLevel};
 
-mod config;
+pub mod config;
+pub mod logging;
 
 pub struct Core {
     debug_ctx: *mut c_void,
@@ -23,6 +24,13 @@ impl Core {
             .map_err(|err| M64PError::SystemFail)?;
 
         Ok(Self { debug_ctx, debug_callback, api })
+    }
+
+    /// Logs a debug message to the frontend.
+    pub fn debug_message(&self, level: MsgLevel, message: &CStr) {
+        self.debug_callback.inspect(|callback| unsafe {
+            callback(self.debug_ctx, level as i32, message.as_ptr());
+        });
     }
 }
 
