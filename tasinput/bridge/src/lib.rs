@@ -1,8 +1,12 @@
-use std::{ffi::{c_char, c_int, c_uchar, c_void}, ptr::NonNull};
+use std::ffi::{c_char, c_int, c_uchar, c_void};
 
 use m64prs_sys::*;
+use plugin_state::PluginState;
+use std::sync::Mutex;
 
-mod state;
+mod endpoint;
+mod plugin_state;
+mod util;
 
 include!(concat!(env!("OUT_DIR"), "/version_gen.rs"));
 
@@ -12,11 +16,21 @@ pub unsafe extern "C" fn PluginStartup(
     debug_ctx: *mut c_void,
     debug_callback: ptr_DebugCallback,
 ) -> Error {
+    // let mut state = STATE.lock().unwrap();
+    // if state.is_some() {
+    //     return Error::AlreadyInit;
+    // }
+    check_state!(state uninit);
+    *state = Some(m64p_try!(PluginState::init(core_handle, debug_ctx, debug_callback)));
+
     Error::Success
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn PluginShutdown() -> Error {
+    check_state!(state init);
+    *state = None;
+
     Error::Success
 }
 
@@ -48,7 +62,9 @@ pub unsafe extern "C" fn PluginGetVersion(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar) {}
+pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar) {
+    
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn GetKeys(control: c_int, keys: *mut Buttons) {
@@ -57,7 +73,9 @@ pub unsafe extern "C" fn GetKeys(control: c_int, keys: *mut Buttons) {
 
 #[no_mangle]
 pub unsafe extern "C" fn InitiateControllers(info: ControlInfo) {
-    
+    with_init_state!(state => {
+        state.init_controllers(info);
+    });
 }
 
 #[no_mangle]
@@ -76,6 +94,40 @@ pub unsafe extern "C" fn SDL_KeyDown(sdl_mod: c_int, sdl_key: c_int) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn SDL_KeyUp(sdl_mod: c_int, sdl_key: c_int) {}
+
+static STATE: Mutex<Option<PluginState>> = Mutex::new(None);
+
+macro_rules! m64p_try {
+    ($value:expr) => {
+        match $value {
+            Ok(value) => value,
+            Err(error) => return error.into(),
+        }
+    };
+}
+macro_rules! check_state {
+    ($state:ident init) => {
+        let mut $state = STATE.lock().unwrap();
+        if $state.is_none() {
+            return Error::NotInit;
+        }
+    };
+    ($state:ident uninit) => {
+        let mut $state = STATE.lock().unwrap();
+        if $state.is_some() {
+            return Error::AlreadyInit;
+        }
+    };
+}
+macro_rules! with_init_state {
+    ($state:ident => $content:expr) => {
+        let mut $state = STATE.lock().unwrap();
+        if let Some($state) = &mut *$state {
+            $content
+        }
+    };
+}
+use {m64p_try, check_state, with_init_state};
 
 // Static assertions on FFI signatures
 const _: () = {

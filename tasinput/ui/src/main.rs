@@ -32,8 +32,10 @@ fn on_command_line(app: &gtk::Application, cli: &gio::ApplicationCommandLine) ->
     -1
 }
 fn on_startup(_app: &gtk::Application) {
+    const CSS_CONTENT: &'static str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/main.css"));
+
     let css_provider = gtk::CssProvider::new();
-    css_provider.load_from_bytes(&glib::Bytes::from_static(include_bytes!("main.css")));
+    css_provider.load_from_string(CSS_CONTENT);
 
     gtk::style_context_add_provider_for_display(
         &gdk::Display::default().unwrap(),

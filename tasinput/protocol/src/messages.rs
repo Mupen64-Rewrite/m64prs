@@ -29,21 +29,27 @@ pub enum UiContent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HostRequest {
+    Init,
     Ping,
 }
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UiReply {
-    Pong,
+    Init,
+    Ping,
 }
 
 // UI -> HOST REQUESTS
 // ========================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum UiRequest {}
+pub enum UiRequest {
+    Ping,
+}
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HostReply {}
+pub enum HostReply {
+    Pong,
+}

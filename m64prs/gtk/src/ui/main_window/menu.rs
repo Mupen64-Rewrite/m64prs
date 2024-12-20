@@ -310,7 +310,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
             Ok::<_, PluginLoadError>(PluginSet {
                 graphics: Plugin::load(plugin_path.join(plugin_name("mupen64plus-video-rice")))?,
                 audio: Plugin::load(plugin_path.join(plugin_name("mupen64plus-audio-sdl")))?,
-                input: Plugin::load(plugin_path.join(plugin_name("mupen64plus-input-sdl")))?,
+                input: Plugin::load(plugin_path.join(plugin_name("mupen64plus-input-tasinput")))?,
                 rsp: Plugin::load(plugin_path.join(plugin_name("mupen64plus-rsp-hle")))?,
             })
         })

@@ -6,7 +6,7 @@ use std::{
     sync::{mpsc, Mutex},
 };
 
-use tokio::sync::Mutex as AsyncMutex;
+use futures::lock::Mutex as AsyncMutex;
 use decan::can::{Can, OwningCan};
 use emu_state::{EmuStateWaitManager, EmuStateWaiter};
 use log::{log, Level};

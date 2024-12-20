@@ -13,6 +13,9 @@ pub struct Core {
     api: NonOwningCan<PluginCoreApi>,
 }
 
+unsafe impl Send for Core {}
+unsafe impl Sync for Core {}
+
 impl Core {
     /// Initializes a core handle for a plugin.
     pub unsafe fn new(

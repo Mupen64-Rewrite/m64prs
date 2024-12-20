@@ -16,7 +16,7 @@ decan = { workspace = true }
 serde = { workspace = true }
 serde-brief = { workspace = true }
 tokio = { workspace = true }
-ipc-channel = { workspace = true }
+interprocess = { workspace = true }
 futures = { workspace = true }
 
 [build-dependencies]
