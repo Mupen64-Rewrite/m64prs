@@ -7,5 +7,22 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-decan = { workspace = true }
 m64prs-sys = { workspace = true }
+m64prs-plugin-core = { workspace = true }
+tasinput-protocol = { workspace = true }
+
+decan = { workspace = true }
+
+serde = { workspace = true }
+serde-brief = { workspace = true }
+tokio = { workspace = true }
+ipc-channel = { workspace = true }
+futures = { workspace = true }
+
+[build-dependencies]
+semver = { workspace = true }
+toml = { workspace = true }
+
+[package.metadata.m64plugin]
+plugin_name = "tasinput-rs"
+api_version = "2.1.1"

@@ -72,7 +72,7 @@ def install_dll(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = 
     if dstfile is None:
         dstfile = srcfile
 
-    copy_if_newer(srcdir/dll_name(dstfile), dstdir/dll_name(srcfile))
+    copy_if_newer(srcdir/dll_name(srcfile), dstdir/dll_name(dstfile))
 
 def install_plugin(srcdir: Path, dstdir: Path, srcfile: str, dstfile: str | None = None):
     if dstfile is None:
@@ -115,7 +115,7 @@ def build(args: argparse.Namespace, extra: list[str]):
     plugins_dir.mkdir(parents=True, exist_ok=True)
 
     # compile cargo
-    cargo_args = ["cargo", "build", "--bin", "m64prs-gtk"]
+    cargo_args = ["cargo", "build", "-p", "m64prs-gtk", "-p", "tasinput-bridge", "-p", "tasinput-ui"]
     if args.release:
         cargo_args.append("--release")
     subp.run(
@@ -129,7 +129,7 @@ def build(args: argparse.Namespace, extra: list[str]):
     install_dll(native_target_dir, bin_dir, "mupen64plus")
     install_debug_info(native_target_dir, bin_dir, "mupen64plus")
 
-    # copy plugins
+    # copy native plugins
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-video-rice")
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-audio-sdl") 
     install_plugin(native_target_dir, plugins_dir, "mupen64plus-input-sdl")
@@ -138,6 +138,12 @@ def build(args: argparse.Namespace, extra: list[str]):
     install_debug_info(native_target_dir, plugins_dir, "mupen64plus-audio-sdl")
     install_debug_info(native_target_dir, plugins_dir, "mupen64plus-input-sdl")
     install_debug_info(native_target_dir, plugins_dir, "mupen64plus-rsp-hle")
+
+    # copy tasinput-rs
+    copy_if_newer(target_dir/dll_name("tasinput_bridge"), plugins_dir/plugin_name("mupen64plus-input-tasinput"))
+    install_debug_info(target_dir, plugins_dir, "tasinput_bridge", "mupen64plus_input_tasinput")
+    install_exe(target_dir, plugins_dir, "tasinput-ui")
+    install_debug_info(target_dir, plugins_dir, "tasinput-ui")
 
     # copy Windows dependencies
     if platform.system() == "Windows":

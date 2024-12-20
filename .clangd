@@ -1,4 +1,4 @@
 If:
-  PathMatch: "m64prs-native/mupen64plus-core/src/.*"
+  PathMatch: "m64prs/native/mupen64plus-core/src/.*"
 CompileFlags:
-  CompilationDatabase: "m64prs-native/mupen64plus-core/projects/unix/"
+  CompilationDatabase: "m64prs/native/mupen64plus-core/projects/unix/"

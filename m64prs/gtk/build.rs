@@ -24,7 +24,7 @@ fn win_manifest() {
 
 fn main() {
     println!("cargo::rerun-if-changed=build.rs");
-    println!("cargo::rerun-if-changed=../m64prs-native/target");
+    println!("cargo::rerun-if-changed=../native/target");
     // copy_stuff_to_target();
     gl_gen();
 

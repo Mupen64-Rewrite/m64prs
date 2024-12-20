@@ -1,16 +1,19 @@
 [package]
 name = "tasinput-ui"
 version = "0.1.0"
+description = "UI host process for TASInput."
 edition = "2021"
+
 
 [dependencies]
 
 m64prs-sys = { workspace = true }
 
-glib = { version = "*", features = ["log"] }
-gio = { version = "*" }
-graphene-rs = { version = "*" }
-gsk = { version = "*", package = "gsk4", features = ["v4_14"] }
-gdk = { version = "*", package = "gdk4", features = ["v4_14"] }
-gtk = { version = "0.9.3", package = "gtk4", features = ["v4_14", "blueprint"] }
+glib = { workspace = true }
+gio = { workspace = true }
+graphene-rs = { workspace = true }
+gsk = { workspace = true }
+gdk = { workspace = true }
+gtk = { workspace = true }
+
 bitflags = { workspace = true }

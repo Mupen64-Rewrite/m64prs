@@ -11,10 +11,11 @@ mod msvc;
 
 pub fn setup_cargo_reruns() {
     fn emit(path: &Path) {
-        println!("cargo::rerun-if-changed={}", path.to_str().unwrap())
+        println!("cargo::rerun-if-changed={}", path.display())
     }
 
-    println!("cargo::rerun-if-changed=build.rs");
+    println!("cargo::rerun-if-changed=build/");
+    println!("cargo::rerun-if-changed=m64prs-build-all.py");
     #[cfg(windows)]
     println!("cargo::rerun-if-changed=m64prs-vs-deps.sln");
     // mupen64plus-core-tas
@@ -23,9 +24,10 @@ pub fn setup_cargo_reruns() {
         for entry in walkdir::WalkDir::new(&core_dir.join("src")) {
             let entry = entry.unwrap();
             let path = entry.path();
-            if !path
-                .components()
-                .any(|comp| comp.as_os_str() == OsStr::new("asm_defines"))
+            if entry.file_type().is_file()
+                && !path
+                    .components()
+                    .any(|comp| comp.as_os_str() == OsStr::new("asm_defines"))
             {
                 emit(path);
             }
@@ -74,13 +76,14 @@ fn compile_m64p_deps(out_dir: &Path) {
 
 #[cfg(unix)]
 fn compile_m64p_deps(_out_dir: &Path) {
-    use std::process::Command;
+    use std::process::{Command, Stdio};
 
     let root_dir = PathBuf::from(dirs::ROOT_DIR);
 
     let cmd = Command::new("python3")
         .arg(root_dir.join("m64prs-build-all.py"))
         .arg("build")
+        .stdout(os_pipe::dup_stderr().unwrap())
         .status()
         .expect("script invoke failed");
 

@@ -1,12 +1,11 @@
-use std::sync::Mutex;
+use m64prs_plugin_core::Core;
 
-
-pub(crate) struct PluginState {}
-
-impl PluginState {
-    pub(crate) fn init() -> Result<Self, m64prs_sys::Error> {
-        todo!()
-    }
+pub(crate) struct PluginState {
+    core: Core,
 }
 
-pub(crate) static INSTANCE: Mutex<Option<PluginState>> = Mutex::new(None);
+impl PluginState {
+    pub(crate) fn init(core: Core) -> Result<Self, m64prs_sys::Error> {
+        Ok(Self { core })
+    }
+}

@@ -1,4 +1,3 @@
-use gio::ApplicationFlags;
 use gtk::prelude::*;
 use main_window::MainWindow;
 
@@ -6,9 +5,33 @@ mod enums;
 mod joystick;
 mod main_window;
 
-const APP_ID: &str = "io.github.jgcodes.tasdi";
+fn main() {
+    let app = gtk::Application::new(Some(APP_ID), gio::ApplicationFlags::NON_UNIQUE);
 
-fn load_css() {
+    app.add_main_option(
+        "server-socket",
+        glib::Char::from(b's'),
+        glib::OptionFlags::NONE,
+        glib::OptionArg::String,
+        "ZeroMQ host to connect to.",
+        None,
+    );
+
+    app.connect_command_line(on_command_line);
+    app.connect_startup(on_startup);
+    app.connect_activate(on_activate);
+    app.run();
+}
+
+const APP_ID: &'static str = "io.github.jgcodes2020.tasdi";
+
+fn on_command_line(app: &gtk::Application, cli: &gio::ApplicationCommandLine) -> i32 {
+    let options = cli.options_dict();
+    let socket = options.lookup::<Option<String>>("server-socket");
+    println!("socket: {:?}", socket);
+    -1
+}
+fn on_startup(_app: &gtk::Application) {
     let css_provider = gtk::CssProvider::new();
     css_provider.load_from_bytes(&glib::Bytes::from_static(include_bytes!("main.css")));
 
@@ -19,9 +42,6 @@ fn load_css() {
     );
 }
 
-fn main() {
-    let app = gtk::Application::new(Some(APP_ID), ApplicationFlags::FLAGS_NONE);
-    app.connect_startup(|_| load_css());
-    app.connect_activate(|app| MainWindow::setup_and_show(app));
-    app.run();
+fn on_activate(app: &gtk::Application) {
+    MainWindow::setup_and_show(app);
 }

@@ -17,7 +17,7 @@ thiserror = { workspace = true }
 bitflags = { workspace = true }
 log = { workspace = true }
 
-async-std = { workspace = true }
+tokio = { workspace = true }
 futures = { workspace = true }
 slotmap = { workspace = true }
 

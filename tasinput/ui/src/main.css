@@ -9,8 +9,8 @@ td-joystick {
 }
 
 :root {
-    --a-color: rgb(1, 146, 81);
-    --b-color: rgb(0, 112, 192);
+    --a-color: rgb(0, 112, 192);
+    --b-color: rgb(1, 146, 81);
     --start-color: rgb(192, 0, 0);
 }
 
