@@ -14,10 +14,13 @@ tasinput-protocol = { workspace = true }
 decan = { workspace = true }
 
 serde = { workspace = true }
-serde-brief = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 interprocess = { workspace = true }
 futures = { workspace = true }
+
+log = { workspace = true }
+rand = { workspace = true }
 
 [build-dependencies]
 semver = { workspace = true }

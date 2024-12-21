@@ -5,3 +5,10 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
+serde-brief = { workspace = true }
+
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+
+thiserror = { workspace = true }
+bitflags = { workspace = true }

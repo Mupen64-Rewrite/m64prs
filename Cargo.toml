@@ -94,12 +94,13 @@ ash = "0.38.0"
 
 # Async
 futures = "0.3.30"
-tokio = { version = "1.42.0", features = ["rt", "sync", "net"] }
+tokio = { version = "1.42.0", features = ["rt", "sync", "macros"] }
+tokio-util = { version = "0.7.13", features = ["codec"] }
 
 # Serialization
 serde = { version = "1.0.215", features = ["derive"] }
 bincode = "1.3.3"
-serde-brief = "0.1.1"
+serde-brief = { version = "0.1.1", features = ["std"] }
 
 # IPC
 interprocess = { version = "2.2.2", features = ["tokio"] }
@@ -110,12 +111,13 @@ log = { version = "0.4.22", features = ["kv", "kv_std"] }
 
 # Derive utilities
 num_enum = "0.7.2"
-bitflags = "2.6.0"
+bitflags = { version = "2.6.0", features = ["serde"] }
 thiserror = "2.0.3"
 tracker = "0.2.2"
 
 # Misc. stuff
 dirs = "5.0.1"
+rand = "0.8.5"
 slotmap = "1.0.7"
 
 # Build utilities

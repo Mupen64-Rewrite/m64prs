@@ -1,5 +1,6 @@
 use std::ffi::{c_char, c_int, c_uchar, c_void};
 
+use common::M64PError;
 use m64prs_sys::*;
 use plugin_state::PluginState;
 use std::sync::Mutex;
@@ -10,18 +11,29 @@ mod util;
 
 include!(concat!(env!("OUT_DIR"), "/version_gen.rs"));
 
+static DUMMY_ADDRESS: i32 = 0;
+
 #[no_mangle]
 pub unsafe extern "C" fn PluginStartup(
     core_handle: DynlibHandle,
     debug_ctx: *mut c_void,
     debug_callback: ptr_DebugCallback,
 ) -> Error {
-    // let mut state = STATE.lock().unwrap();
-    // if state.is_some() {
-    //     return Error::AlreadyInit;
-    // }
     check_state!(state uninit);
-    *state = Some(m64p_try!(PluginState::init(core_handle, debug_ctx, debug_callback)));
+
+    let info = m64p_try!(
+        decan::raw::get_address_info(&DUMMY_ADDRESS as *const i32 as *const _).ok_or_else(|| {
+            log::error!("Failed to get own address");
+            M64PError::SystemFail
+        })
+    );
+
+    *state = Some(m64p_try!(PluginState::startup(
+        &info.lib_path,
+        core_handle,
+        debug_ctx,
+        debug_callback
+    )));
 
     Error::Success
 }
@@ -62,9 +74,7 @@ pub unsafe extern "C" fn PluginGetVersion(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar) {
-    
-}
+pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn GetKeys(control: c_int, keys: *mut Buttons) {
@@ -127,7 +137,7 @@ macro_rules! with_init_state {
         }
     };
 }
-use {m64p_try, check_state, with_init_state};
+use {check_state, m64p_try, with_init_state};
 
 // Static assertions on FFI signatures
 const _: () = {

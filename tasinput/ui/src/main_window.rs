@@ -214,11 +214,14 @@ glib::wrapper! {
 }
 
 impl MainWindow {
-    pub fn setup_and_show(app: &impl IsA<gio::Application>) {
-        let window: Self = unsafe {
+    pub fn new(app: &impl IsA<gtk::Application>) -> Self {
+        unsafe {
             glib::Object::with_mut_values(Self::static_type(), &mut [("application", app.into())])
                 .unsafe_cast()
-        };
-        window.present();
+        }
+    }
+
+    pub fn setup_and_show(app: &impl IsA<gtk::Application>) {
+        Self::new(app).present();
     }
 }

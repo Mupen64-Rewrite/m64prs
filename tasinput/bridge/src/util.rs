@@ -27,3 +27,11 @@ impl ControlsRef {
 
 unsafe impl Send for ControlsRef {}
 unsafe impl Sync for ControlsRef {}
+
+pub(crate) fn exe_name(name: &str) -> String {
+    #[cfg(unix)]
+    let result = name.to_owned();
+    #[cfg(windows)]
+    let result = format!("{}.exe", name);
+    result
+}
