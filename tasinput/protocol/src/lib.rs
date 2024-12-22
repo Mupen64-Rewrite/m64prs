@@ -3,6 +3,8 @@
 pub mod codec;
 mod messages;
 pub mod types;
+mod endpoint;
 
 
 pub use messages::*;
+pub use endpoint::*;

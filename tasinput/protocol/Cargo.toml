@@ -9,6 +9,9 @@ serde-brief = { workspace = true }
 
 tokio = { workspace = true }
 tokio-util = { workspace = true }
+futures = { workspace = true }
+interprocess = { workspace = true }
 
 thiserror = { workspace = true }
 bitflags = { workspace = true }
+rand = { workspace = true }

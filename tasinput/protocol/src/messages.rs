@@ -1,48 +1,44 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::PortMask;
+use crate::types::{IpcMessage, IpcPayload, PortMask};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostMessage {
-    pub request_id: u64,
-    pub content: HostContent,
+    pub id: u64,
+    pub payload: IpcPayload<HostRequest, HostReply>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HostContent {
-    Request(HostRequest),
-    Reply(HostReply),
-}
-impl From<HostRequest> for HostContent {
-    fn from(value: HostRequest) -> Self {
-        Self::Request(value)
+impl IpcMessage for HostMessage {
+    type Request = HostRequest;
+    type Reply = HostReply;
+
+    fn encode_payload(id: u64, payload: IpcPayload<Self::Request, Self::Reply>) -> Self {
+        Self { id, payload }
     }
-}
-impl From<HostReply> for HostContent {
-    fn from(value: HostReply) -> Self {
-        Self::Reply(value)
+
+    fn decode_message(self) -> (u64, IpcPayload<Self::Request, Self::Reply>) {
+        let Self { id, payload } = self;
+        (id, payload)
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiMessage {
-    pub request_id: u64,
-    pub content: UiContent,
+    pub id: u64,
+    pub payload: IpcPayload<UiRequest, UiReply>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum UiContent {
-    Request(UiRequest),
-    Reply(UiReply),
-}
-impl From<UiRequest> for UiContent {
-    fn from(value: UiRequest) -> Self {
-        Self::Request(value)
+impl IpcMessage for UiMessage {
+    type Request = UiRequest;
+    type Reply = UiReply;
+
+    fn encode_payload(id: u64, payload: IpcPayload<Self::Request, Self::Reply>) -> Self {
+        Self { id, payload }
     }
-}
-impl From<UiReply> for UiContent {
-    fn from(value: UiReply) -> Self {
-        Self::Reply(value)
+
+    fn decode_message(self) -> (u64, IpcPayload<Self::Request, Self::Reply>) {
+        let Self { id, payload } = self;
+        (id, payload)
     }
 }
 
@@ -53,11 +49,9 @@ impl From<UiReply> for UiContent {
 pub enum HostRequest {
     Ping,
     Close,
-    InitControllers {
-        active: PortMask
-    }
+    InitControllers { active: PortMask },
+    SetVisibility { visible: bool }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -70,10 +64,11 @@ pub enum UiReply {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UiRequest {
+    Dummy,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum HostReply {
+    Ack,
 }

@@ -1929,6 +1929,9 @@ name = "tasinput-protocol"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
+ "futures",
+ "interprocess",
+ "rand",
  "serde",
  "serde-brief",
  "thiserror 2.0.8",

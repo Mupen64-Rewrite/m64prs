@@ -1,15 +1,15 @@
 use std::{ffi::c_void, path::Path, process::{Child, Command}};
 
 use m64prs_plugin_core::Core;
-use m64prs_sys::{common::M64PError, ptr_DebugCallback, ControlInfo, DynlibHandle};
-use tasinput_protocol::{types::PortMask, HostRequest, UiReply};
+use m64prs_sys::{common::M64PError, key::{Mod, Scancode}, ptr_DebugCallback, ControlInfo, DynlibHandle};
+use tasinput_protocol::{gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage, UiReply, UiRequest};
 
-use crate::{endpoint::Endpoint, util::{exe_name, ControlsRef}};
+use crate::{util::{exe_name, ControlsRef}};
 
 pub(crate) struct PluginState {
     _core: Core,
     ui_host: Child,
-    endpoint: Endpoint,
+    endpoint: Endpoint<HostMessage, UiMessage>,
     controllers: Option<ControlsRef>,
 }
 
@@ -39,21 +39,27 @@ impl PluginState {
                 M64PError::Internal
             })?;
 
-        let endpoint = Endpoint::new().map_err(|_| {
+        let socket_id = gen_socket_id("tasinput-");
+
+        let endpoint = Endpoint::listen(&socket_id, |request| async {
+            match request {
+                UiRequest::Dummy => HostReply::Ack,
+            }
+        }).map_err(|_| {
             log::error!("Failed to setup IPC runtime!");
             M64PError::SystemFail
         })?;
 
         let ui_host = Command::new(&ui_host_path)
-            .args(["--server-socket", endpoint.socket_id()])
+            .args(["--server-socket", &socket_id])
             .spawn()
             .map_err(|_| {
                 log::error!("Unabled to start tasinput-ui!");
                 M64PError::Internal
             })?;
 
-        let endpoint = endpoint.wait_ready().map_err(|_| {
-            log::error!("Failed to accept IPC connection from UI!");
+        let endpoint = endpoint.ready_blocking().map_err(|_| {
+            log::error!("Failed to setup IPC runtime! (listen)");
             M64PError::SystemFail
         })?;
 
@@ -71,12 +77,16 @@ impl PluginState {
         unsafe {
             controllers.index_mut(0).Present = 1;
         }
-        match self.endpoint.send_message(HostRequest::InitControllers { active: PortMask::PORT1 }) {
-            UiReply::Ack => (),
-            _ => unreachable!(),
-        };
 
         self.controllers = Some(controllers);
+    }
+
+    pub(crate) fn key_down(&mut self, sdl_key: Scancode, sdl_mod: Mod) {
+        if sdl_key == Scancode::P {
+            println!("ping");
+            let _ = self.endpoint.post_request_blocking(HostRequest::Ping).blocking_recv();
+            println!("pong");
+        }
     }
 }
 
