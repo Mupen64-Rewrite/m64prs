@@ -94,7 +94,7 @@ ash = "0.38.0"
 
 # Async
 futures = "0.3.30"
-tokio = { version = "1.42.0", features = ["rt", "sync", "macros"] }
+tokio = { version = "1.42.0", features = ["macros", "rt", "sync"] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
 
 # Serialization
@@ -104,6 +104,7 @@ serde-brief = { version = "0.1.1", features = ["std"] }
 
 # IPC
 interprocess = { version = "2.2.2", features = ["tokio"] }
+wait-timeout = "0.2.0"
 
 # Logging
 env_logger = "0.11.5"

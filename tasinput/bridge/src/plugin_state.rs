@@ -1,10 +1,23 @@
-use std::{ffi::c_void, path::Path, process::{Child, Command}};
+use std::{
+    ffi::c_void,
+    path::Path,
+    process::{Child, Command},
+    time::Duration,
+};
 
 use m64prs_plugin_core::Core;
-use m64prs_sys::{common::M64PError, key::{Mod, Scancode}, ptr_DebugCallback, ControlInfo, DynlibHandle};
-use tasinput_protocol::{gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage, UiReply, UiRequest};
+use m64prs_sys::{
+    common::M64PError,
+    key::{Mod, Scancode},
+    ptr_DebugCallback, ControlInfo, DynlibHandle,
+};
+use tasinput_protocol::{
+    gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage,
+    UiReply, UiRequest,
+};
+use wait_timeout::ChildExt;
 
-use crate::{util::{exe_name, ControlsRef}};
+use crate::util::{exe_name, ControlsRef};
 
 pub(crate) struct PluginState {
     _core: Core,
@@ -45,7 +58,8 @@ impl PluginState {
             match request {
                 UiRequest::Dummy => HostReply::Ack,
             }
-        }).map_err(|_| {
+        })
+        .map_err(|_| {
             log::error!("Failed to setup IPC runtime!");
             M64PError::SystemFail
         })?;
@@ -82,16 +96,24 @@ impl PluginState {
     }
 
     pub(crate) fn key_down(&mut self, sdl_key: Scancode, sdl_mod: Mod) {
-        if sdl_key == Scancode::P {
-            println!("ping");
-            let _ = self.endpoint.post_request_blocking(HostRequest::Ping).blocking_recv();
-            println!("pong");
-        }
     }
 }
 
 impl Drop for PluginState {
     fn drop(&mut self) {
-        let _ = self.ui_host.kill();
+        let _ = self
+            .endpoint
+            .post_request_blocking(HostRequest::Close)
+            .blocking_recv();
+        match self
+            .ui_host
+            .wait_timeout(Duration::from_millis(250))
+            .unwrap()
+        {
+            Some(exit_code) => {}
+            None => {
+                let _ = self.ui_host.kill();
+            }
+        }
     }
 }

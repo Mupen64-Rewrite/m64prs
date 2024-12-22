@@ -18,6 +18,7 @@ tokio = { workspace = true }
 tokio-util = { workspace = true }
 interprocess = { workspace = true }
 futures = { workspace = true }
+wait-timeout = { workspace = true }
 
 log = { workspace = true }
 rand = { workspace = true }
