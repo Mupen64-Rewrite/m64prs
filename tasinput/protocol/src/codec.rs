@@ -66,7 +66,7 @@ impl<T: Serialize + DeserializeOwned> Decoder for MessageCodec<T> {
         if src.remaining() < 4 {
             return Ok(None);
         }
-        let len = src.copy_to_bytes(4).get_u32_le() as usize;
+        let len = u32::from_le_bytes(*<&[u8; 4]>::try_from(&src[0..4]).unwrap()) as usize;
         let rem = src.remaining();
         if rem < 4 + len {
             return Ok(None);

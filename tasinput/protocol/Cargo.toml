@@ -15,3 +15,9 @@ interprocess = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
 rand = { workspace = true }
+
+[[example]]
+name = "client"
+
+[[example]]
+name = "server"
