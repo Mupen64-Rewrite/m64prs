@@ -1,9 +1,17 @@
-use std::{error::Error, io};
+use std::{error::Error, io, pin::pin};
 
+use gio::FileCreateFlags;
 use gtk::prelude::*;
-use m64prs_core::{error::PluginLoadError, plugin::PluginSet, Plugin};
+use m64prs_core::{
+    error::PluginLoadError,
+    plugin::{PluginSet, PluginType},
+    Plugin,
+};
 use m64prs_gtk_utils::actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup};
-use m64prs_vcr::{movie::M64File, VcrState};
+use m64prs_vcr::{
+    movie::{M64File, M64Header},
+    VcrState,
+};
 
 use crate::ui::main_window::enums::MainEmuState;
 
@@ -164,6 +172,7 @@ impl AppActions {
 
         c!(new_movie, async new_movie_impl);
         c!(load_movie, async load_movie_impl);
+        c!(save_movie, async save_movie_impl);
         c!(discard_movie, discard_movie_impl);
     }
 
@@ -306,7 +315,12 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            println!("tasinput: {}", plugin_path.join(plugin_name("mupen64plus-input-tasinput")).display());
+            println!(
+                "tasinput: {}",
+                plugin_path
+                    .join(plugin_name("mupen64plus-input-tasinput"))
+                    .display()
+            );
 
             // TODO: allow user to configure plugins
             Ok::<_, PluginLoadError>(PluginSet {
@@ -478,7 +492,49 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    main_window.show_new_movie_dialog().await;
+    let (path, mut header) = match main_window.show_new_movie_dialog().await {
+        Some(file) => file,
+        None => return Ok(()),
+    };
+
+    {
+        let mut core_ref = main_window.borrow_core();
+        let core = core_ref.borrow_running().expect("Core should be running");
+
+        let rom_header = core.rom_header();
+        header.rom_cc = rom_header.Country_code as u16;
+        header.rom_crc = rom_header.CRC1;
+
+        let _ = header.graphics_plugin.write_clipped(
+            &core
+                .plugin_info(PluginType::Graphics)
+                .plugin_name
+                .to_string_lossy(),
+        );
+        let _ = header.audio_plugin.write_clipped(
+            &core
+                .plugin_info(PluginType::Audio)
+                .plugin_name
+                .to_string_lossy(),
+        );
+        let _ = header.input_plugin.write_clipped(
+            &core
+                .plugin_info(PluginType::Input)
+                .plugin_name
+                .to_string_lossy(),
+        );
+        let _ = header.rsp_plugin.write_clipped(
+            &core
+                .plugin_info(PluginType::Rsp)
+                .plugin_name
+                .to_string_lossy(),
+        );
+
+        let vcr_state = VcrState::new(path, header, false);
+        core.set_read_only(false);
+        core.set_vcr_state(vcr_state, true).await?;
+    };
+
     Ok(())
 }
 
@@ -499,7 +555,29 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
         let core = core_ref.borrow_running().expect("Core should be running");
         let vcr_state = VcrState::with_m64(movie_file.path().unwrap(), movie, true);
         core.set_read_only(true);
-        core.set_vcr_state(vcr_state)?;
+        core.set_vcr_state(vcr_state, false).await?;
+    }
+
+    Ok(())
+}
+
+async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let vcr_state = main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .unset_vcr_state();
+
+    if let Some(vcr_state) = vcr_state {
+        let (path, data) = vcr_state.export();
+        let out_file = gio::File::for_path(&path);
+        let rw = pin!(out_file
+            .create_readwrite_future(FileCreateFlags::REPLACE_DESTINATION, glib::Priority::DEFAULT)
+            .await?
+            .into_async_read_write()
+            .unwrap());
+
+        data.write_into_async(rw).await?;
     }
 
     Ok(())

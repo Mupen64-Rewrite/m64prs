@@ -170,8 +170,10 @@ fn core_bindgen<P: AsRef<Path>>(core_dir: P) -> Result<(), Box<dyn Error>> {
         builder = builder.blocklist_type(name);
     }
 
-    // Add extern crate for num_enum
-    builder = builder.raw_line("extern crate num_enum;");
+    // Misc extra things (e.g. crate decl for num_enum)
+    builder = builder
+        .raw_line("extern crate num_enum;")
+        .derive_default(true);
 
     // add headers
     for header in CORE_RR_HEADERS {

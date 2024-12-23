@@ -70,7 +70,7 @@ impl VideoExtension for VideoExtensionState {
                 log::info!("Requesting switch to game view");
                 {
                     let main_window_ref = inst.main_window_ref.clone();
-                    futures::executor::block_on(glib::spawn_future(async move {
+                    block_on(glib::spawn_future(async move {
                         let main_window = main_window_ref
                             .upgrade()
                             .expect("Main window should be active");

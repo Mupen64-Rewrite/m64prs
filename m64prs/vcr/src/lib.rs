@@ -8,7 +8,7 @@ use std::{
 
 use freeze::MovieFreeze;
 use futures::executor::block_on;
-use m64prs_core::{error::M64PError, Core};
+use m64prs_core::{error::M64PError, save::SavestateFormat, Core};
 use m64prs_sys::Buttons;
 use movie::{M64File, M64Header, StartType};
 
@@ -59,7 +59,7 @@ impl VcrState {
     }
 
     /// Export the current VCR state to an .m64 file.
-    pub fn export(&self) -> M64File {
+    pub fn export(&self) -> (PathBuf, M64File) {
         let mut header = self.header.clone();
 
         header.length_samples = self.inputs.len().try_into().unwrap();
@@ -67,11 +67,12 @@ impl VcrState {
 
         let inputs = self.inputs.clone();
 
-        M64File { header, inputs }
+        (self.path.clone(), M64File { header, inputs })
     }
 
     /// Resets all counters to frame 0 and sets up the core to restart playback.
-    pub fn restart(&mut self, core: &Core) -> Result<(), Box<dyn Error>> {
+    /// If `new` is set, creates any necessary auxilliary files instead of loading them.
+    pub async fn reset(&mut self, core: &Core, new: bool) -> Result<(), Box<dyn Error>> {
         self.vi_count = 0;
         self.index = 0;
 
@@ -80,23 +81,31 @@ impl VcrState {
                 core.reset(true)?;
                 self.first_poll = true;
             }
-            StartType::FROM_SNAPSHOT => {
-                // search for a valid savestate (TODO: get rid of some of these unwraps)
-                let st_path = fs::read_dir(self.path.parent().unwrap())?
-                    .filter_map(|entry| {
-                        let entry = entry.unwrap();
-                        entry
-                            .file_type()
-                            .is_ok_and(|ty| ty.is_file())
-                            .then(|| entry.path())
-                    })
-                    .next()
-                    .ok_or_else(|| {
-                        io::Error::new(io::ErrorKind::NotFound, "No .st file found for .m64 movie")
-                    })?;
+            StartType::FROM_SNAPSHOT => match new {
+                false => {
+                    let st_path = fs::read_dir(self.path.parent().unwrap())?
+                        .filter_map(|entry| {
+                            let entry = entry.unwrap();
+                            entry
+                                .file_type()
+                                .is_ok_and(|ty| ty.is_file())
+                                .then(|| entry.path())
+                        })
+                        .next()
+                        .ok_or_else(|| {
+                            io::Error::new(
+                                io::ErrorKind::NotFound,
+                                "No .st file found for .m64 movie",
+                            )
+                        })?;
 
-                block_on(core.load_file(st_path))?;
-            }
+                    core.load_file(st_path).await?;
+                }
+                true => {
+                    let st_path = self.path.with_extension("st");
+                    core.save_file(st_path, SavestateFormat::Mupen64Plus).await?;
+                }
+            },
             StartType::FROM_EEPROM => {
                 unimplemented!()
             }

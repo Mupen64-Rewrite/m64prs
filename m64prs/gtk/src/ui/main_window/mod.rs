@@ -277,7 +277,7 @@ mod inner {
                     // (if the focus is not the compositor, then change it to the compositor)
                     if self.current_view.get() == MainViewState::GameView
                         && !gtk::prelude::GtkWindowExt::focus(&*self.obj())
-                            .is_some_and(|w| &w == &*self.compositor)
+                            .is_some_and(|w| w == *self.compositor)
                     {
                         self.compositor.grab_focus();
                     }

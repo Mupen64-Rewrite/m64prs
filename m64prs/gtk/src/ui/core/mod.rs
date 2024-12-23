@@ -12,12 +12,12 @@ use glib::SendWeakRef;
 use gtk::prelude::NativeExt;
 use m64prs_core::{
     error::{M64PError, PluginLoadError, SavestateError},
-    plugin::PluginSet,
+    plugin::{PluginInfo, PluginSet, PluginType},
     save::SavestateFormat,
     tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
     Core,
 };
-use m64prs_sys::{CoreParam, EmuState};
+use m64prs_sys::{CoreParam, EmuState, RomHeader, RomSettings};
 use m64prs_vcr::VcrState;
 use num_enum::TryFromPrimitive;
 use threading::RunningCore;
@@ -347,11 +347,11 @@ impl CoreRunningState {
         });
     }
 
-    pub(super) fn set_vcr_state(&mut self, mut vcr_state: VcrState) -> Result<(), Box<dyn Error>> {
+    pub(super) async fn set_vcr_state(&mut self, mut vcr_state: VcrState, new: bool) -> Result<(), Box<dyn Error>> {
         {
             let mut self_vcr_state = self.vcr_state.lock().unwrap();
             vcr_state.set_read_only(self.vcr_read_only);
-            vcr_state.restart(&self.core)?;
+            vcr_state.reset(&self.core, new).await?;
             *self_vcr_state = Some(vcr_state);
         }
         self.notify_main_window(|main_window| main_window.set_vcr_active(true));
@@ -371,6 +371,18 @@ impl CoreRunningState {
 
     pub(super) fn toggle_read_only(&mut self) {
         self.set_read_only(!self.vcr_read_only);
+    }
+
+    pub(super) fn rom_header(&self) -> RomHeader {
+        self.core.rom_header().expect("couldn't get ROM header!")
+    }
+
+    pub(super) fn rom_settings(&self) -> RomSettings {
+        self.core.rom_settings().expect("couldn't get ROM settings!")
+    }
+
+    pub(super) fn plugin_info(&self, ptype: PluginType) -> PluginInfo {
+        self.core.plugin_info(ptype).unwrap().unwrap()
     }
 }
 impl CoreInputHandler {

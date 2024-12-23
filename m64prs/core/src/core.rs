@@ -25,6 +25,7 @@ pub mod config;
 pub mod emu_state;
 pub mod key_forward;
 pub mod plugin;
+pub mod rom;
 pub mod save;
 pub mod tas_callbacks;
 pub mod vidext;
@@ -189,27 +190,6 @@ impl Drop for Core {
 
 // Synchronous core commands
 impl Core {
-    /// Opens a ROM that is pre-loaded into memory.
-    pub fn open_rom(&mut self, rom_data: &[u8]) -> Result<(), M64PError> {
-        unsafe {
-            // SAFETY: Mupen64Plus copies the ROM data passed into this function.
-            // This means that it won't be invalidated if the ROM data borrowed here
-            // goes out of scope.
-            self.do_command_ip(
-                Command::RomOpen,
-                rom_data
-                    .len()
-                    .try_into()
-                    .expect("size of ROM should fit into c_int"),
-                rom_data.as_ptr() as *mut c_void,
-            )
-        }
-    }
-
-    /// Closes a currently open ROM.
-    pub fn close_rom(&mut self) -> Result<(), M64PError> {
-        self.do_command(Command::RomClose)
-    }
 
     /// Installs a *state handler*, which can pick up on any changes to various core
     /// state parameters; see [`m64prs_sys::CoreParam`] for a list of parameters that
