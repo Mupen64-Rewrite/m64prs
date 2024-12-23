@@ -1,5 +1,7 @@
 # m64prs
-A WIP TASing emulator based on Mupen64Plus and written in Rust. The 
+A WIP TASing emulator based on Mupen64Plus and written in Rust. This is my attempt to clean up some of the rougher points
+of [M64RPFW](https://github.com/Mupen64-Rewrite/M64RPFW) and simplify the core integration so that we can keep up with
+features and fixes added to Mupen64Plus.
 
 ## Building
 MSRV (**M**inimum **S**upported **R**ust **V**ersion) is currently the latest stable release of Rust.
@@ -59,10 +61,10 @@ Windows support will be limited until those bugs are fixed.
 - Callback system on top of Mupen64Plus to hook into input, audio, and savestates
 - `.m64` file parser
 - GTK-based UI on Linux and Windows (half-broken ATM)
+- VCR features (input recording, savestate linkage)
+- An equivalent to TASInput
 - Key input passthrough
 
 ## To-do list
 - Video encoding via `rsmpeg`
-- An equivalent to TASInput
-- VCR features (input recording, savestate linkage)
 - Scripting (potentially not via Lua)
