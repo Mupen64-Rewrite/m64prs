@@ -15,10 +15,10 @@ pub use m64prs_sys::common::{M64PError, WrongConfigType};
 #[derive(Debug, Error)]
 pub enum StartupError {
     /// An error occurred involving a dynamic library.
-    #[error("dynamic library load failed")]
+    #[error("dynamic library load failed: {0}")]
     Library(#[source] decan::LoadOrSymbolGroupError),
     /// An error occurred while initializing Mupen64Plus.
-    #[error("Mupen64Plus startup failed")]
+    #[error("Mupen64Plus startup failed: {0}")]
     CoreInit(#[source] M64PError),
 }
 
@@ -38,7 +38,7 @@ pub enum SavestateError {
 #[derive(Debug, Error)]
 pub enum PluginLoadError {
     /// An error occurred involving a dynamic library.
-    #[error("dynamic library raised error")]
+    #[error("dynamic library raised error: {0}")]
     Library(#[source] decan::LoadOrSymbolGroupError),
     /// An error occurred within Mupen64Plus or one of its plugins
     #[error("plugin function raised error: {0}")]

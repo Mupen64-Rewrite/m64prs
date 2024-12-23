@@ -306,6 +306,8 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
                 }
             }
 
+            println!("tasinput: {}", plugin_path.join(plugin_name("mupen64plus-input-tasinput")).display());
+
             // TODO: allow user to configure plugins
             Ok::<_, PluginLoadError>(PluginSet {
                 graphics: Plugin::load(plugin_path.join(plugin_name("mupen64plus-video-rice")))?,

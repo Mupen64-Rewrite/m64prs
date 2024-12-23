@@ -1,16 +1,12 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr},
-    fmt::Display,
-    marker::PhantomData,
-    path::Path,
-    ptr::{null, null_mut},
+    ffi::{c_char, c_int, c_void, CStr}, fmt::Display, marker::PhantomData, mem, path::Path, ptr::{null, null_mut}
 };
 
 use decan::{
     can::{Can, OwningCan},
     LibraryHandle,
 };
-use m64prs_sys::api::BasePluginApi;
+use m64prs_sys::{api::BasePluginApi, DynlibHandle};
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 
 use crate::error::{M64PError, PluginLoadError, WrongPluginType};
@@ -36,25 +32,25 @@ impl Core {
         }
 
         // startup the four plugins
-        let core_ptr = unsafe { self.api.as_raw() };
+        let core_ptr = unsafe { mem::transmute::<_, DynlibHandle>(self.api.as_raw()) };
         plugins
             .graphics
-            .startup(core_ptr as *mut c_void)
+            .startup(core_ptr)
             .map_err(PluginLoadError::M64P)?;
         log::debug!("Started up graphics plugin");
         plugins
             .audio
-            .startup(core_ptr as *mut c_void)
+            .startup(core_ptr)
             .map_err(PluginLoadError::M64P)?;
         log::debug!("Started up audio plugin");
         plugins
             .input
-            .startup(core_ptr as *mut c_void)
+            .startup(core_ptr)
             .map_err(PluginLoadError::M64P)?;
         log::debug!("Started up input plugin");
         plugins
             .rsp
-            .startup(core_ptr as *mut c_void)
+            .startup(core_ptr)
             .map_err(PluginLoadError::M64P)?;
         log::debug!("Started up RSP plugin");
 
@@ -74,7 +70,7 @@ impl Core {
         core_fn(unsafe {
             (self.api.base.attach_plugin)(
                 m64prs_sys::PluginType::Graphics,
-                plugins.graphics.api.as_raw() as *mut _,
+                mem::transmute(plugins.graphics.api.as_raw()),
             )
         })
         .and_then(|_| {
@@ -82,7 +78,7 @@ impl Core {
             core_fn(unsafe {
                 (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Audio,
-                    plugins.audio.api.as_raw() as *mut _,
+                    mem::transmute(plugins.audio.api.as_raw()),
                 )
             })
         })
@@ -91,7 +87,7 @@ impl Core {
             core_fn(unsafe {
                 (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Input,
-                    plugins.input.api.as_raw() as *mut _,
+                    mem::transmute(plugins.input.api.as_raw()),
                 )
             })
         })
@@ -100,7 +96,7 @@ impl Core {
             core_fn(unsafe {
                 (self.api.base.attach_plugin)(
                     m64prs_sys::PluginType::Rsp,
-                    plugins.rsp.api.as_raw() as *mut _,
+                    mem::transmute(plugins.rsp.api.as_raw()),
                 )
             })
         })
