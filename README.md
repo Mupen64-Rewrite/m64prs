@@ -2,6 +2,7 @@
 A WIP TASing emulator based on Mupen64Plus and written in Rust. The 
 
 ## Building
+MSRV (**M**inimum **S**upported **R**ust **V**ersion) is currently the latest stable release of Rust.
 
 ### Linux
 ***Dependencies:***
@@ -28,7 +29,7 @@ First things first:
 - Install Visual Studio 2022 *with a Windows 10 SDK* (preferably the latest one).
 - Install the latest stable Rust compiler through *rustup*.
 - Install Python ***SPECIFICALLY*** through the Microsoft Store, due to [a bug with GTK's build tooling](https://github.com/wingtk/gvsbuild/pull/1474).
-  - If you installed Python via `winget` or the installer from the website, it *may not work* unless they fixed it.
+  - If you installed Python via `winget` or the installer from the website, it *may not work* unless they fixed it. (UPDATE: they fixed it, but I haven't tested myself.)
 
 Install GTK and some Python dependencies:
 ```powershell
