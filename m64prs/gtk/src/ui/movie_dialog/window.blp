@@ -158,6 +158,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           active: bind $start_type_eq(template.start-type, 2) as <bool>;
           sensitive: bind $not(template.load) as <bool>;
 
+          clicked => $ui_set_start_type() swapped;
+
           label: "Reset";
         }
         ToggleButton savestate_btn {
@@ -169,6 +171,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           sensitive: bind $not(template.load) as <bool>;
           group: reset_btn;
 
+          clicked => $ui_set_start_type() swapped;
+
           label: "Savestate";
         }
         ToggleButton eeprom_btn {
@@ -179,6 +183,8 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
           active: bind $start_type_eq(template.start-type, 4) as <bool>;
           sensitive: false;
           group: reset_btn;
+
+          clicked => $ui_set_start_type() swapped;
 
           label: "EEPROM";
         }

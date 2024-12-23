@@ -1,4 +1,5 @@
 pub mod actions;
+pub mod error;
 pub mod t_option;
 
 pub use m64prs_gtk_macros::forward_wrapper;

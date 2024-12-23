@@ -194,7 +194,7 @@ mod inner {
             if self.obj().cur_file().is_none() {
                 self.error_dialog.set_message("Missing info!");
                 self.error_dialog.set_detail("Please select a file.");
-                self.error_dialog.choose_future(Some(&*self.obj())).await;
+                let _ = self.error_dialog.choose_future(Some(&*self.obj())).await;
                 return;
             }
 
@@ -235,6 +235,12 @@ mod inner {
 
         fn dispose(&self) {
             self.dispose_template();
+        }
+
+        fn notify(&self, pspec: &glib::ParamSpec) {
+            if pspec.name() == "start-type" {
+                println!("start type: {}", self.obj().start_type());
+            }
         }
     }
     impl WidgetImpl for MovieDialogWindow {}

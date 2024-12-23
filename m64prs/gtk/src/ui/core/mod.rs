@@ -3,10 +3,11 @@ use std::{
     env,
     error::Error,
     fs,
-    path::Path,
-    sync::{Arc, Mutex},
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
+use futures::{executor::block_on, lock::Mutex};
 use gdk::prelude::SurfaceExt;
 use glib::SendWeakRef;
 use gtk::prelude::NativeExt;
@@ -18,7 +19,7 @@ use m64prs_core::{
     Core,
 };
 use m64prs_sys::{CoreParam, EmuState, RomHeader, RomSettings};
-use m64prs_vcr::VcrState;
+use m64prs_vcr::{movie::M64File, VcrState};
 use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
@@ -230,21 +231,18 @@ impl CoreReadyState {
 
         let core = RunningCore::execute(core);
 
-        let vcr_read_only = true;
-
-        // notify core
-
         Ok(CoreRunningState {
             core,
             main_window_ref,
-            vcr_read_only,
+            vcr_read_only: false,
             vcr_state,
         })
     }
 }
 
 impl CoreRunningState {
-    pub(super) async fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
+    pub(super) async fn stop_rom(mut self) -> (CoreReadyState, Option<M64PError>) {
+        let _ = self.unset_vcr_state().await;
         let (mut core, error) = gio::spawn_blocking(|| self.core.stop()).await.unwrap();
 
         let main_window_ref = self.main_window_ref;
@@ -288,7 +286,7 @@ impl CoreRunningState {
 
     pub(super) async fn load_slot(&mut self) -> Result<(), SavestateError> {
         self.core.load_slot().await?;
-        if let Some(vcr_state) = &mut *self.vcr_state.lock().unwrap() {
+        if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
             vcr_state.set_read_only(self.vcr_read_only);
         }
         Ok(())
@@ -312,7 +310,7 @@ impl CoreRunningState {
         path: P,
     ) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await?;
-        if let Some(vcr_state) = &mut *self.vcr_state.lock().unwrap() {
+        if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
             vcr_state.set_read_only(self.vcr_read_only);
         }
         Ok(())
@@ -348,20 +346,25 @@ impl CoreRunningState {
     }
 
     pub(super) async fn set_vcr_state(&mut self, mut vcr_state: VcrState, new: bool) -> Result<(), Box<dyn Error>> {
-        {
-            let mut self_vcr_state = self.vcr_state.lock().unwrap();
             vcr_state.set_read_only(self.vcr_read_only);
             vcr_state.reset(&self.core, new).await?;
+        {
+            let mut self_vcr_state = self.vcr_state.lock().await;
             *self_vcr_state = Some(vcr_state);
         }
         self.notify_main_window(|main_window| main_window.set_vcr_active(true));
         Ok(())
     }
 
-    pub(super) fn unset_vcr_state(&mut self) -> Option<VcrState> {
-        let result = self.vcr_state.lock().unwrap().take();
+    pub(super) async fn unset_vcr_state(&mut self) -> Option<VcrState> {
+        let result = self.vcr_state.lock().await.take();
         self.notify_main_window(|main_window| main_window.set_vcr_active(false));
         result
+    }
+
+    pub(super) async fn export_vcr(&mut self) -> Option<(PathBuf, M64File)> {
+        let vcr_state = self.vcr_state.lock().await;
+        vcr_state.as_ref().map(|state| state.export())
     }
 
     pub(super) fn set_read_only(&mut self, value: bool) {
@@ -400,7 +403,7 @@ impl InputHandler for CoreInputHandler {
         mut input: m64prs_sys::Buttons,
     ) -> m64prs_sys::Buttons {
         {
-            let mut vcr_state = self.vcr_state.lock().unwrap();
+            let mut vcr_state = block_on(self.vcr_state.lock());
             let mut should_drop = false;
             if let Some(vcr_state) = vcr_state.as_mut() {
                 (input, should_drop) = vcr_state.filter_inputs(port, input);
@@ -414,7 +417,7 @@ impl InputHandler for CoreInputHandler {
     }
 
     fn poll_present(&mut self, port: std::ffi::c_int) -> bool {
-        let mut vcr_state = self.vcr_state.lock().unwrap();
+        let mut vcr_state = block_on(self.vcr_state.lock());
         vcr_state
             .as_mut()
             .map_or(false, |state| state.poll_present(port))
@@ -423,7 +426,7 @@ impl InputHandler for CoreInputHandler {
 
 impl FrameHandler for CoreFrameHandler {
     fn new_frame(&mut self, _count: std::ffi::c_uint) {
-        let mut vcr_state = self.vcr_state.lock().unwrap();
+        let mut vcr_state = block_on(self.vcr_state.lock());
         if let Some(vcr_state) = vcr_state.as_mut() {
             vcr_state.tick_vi();
         }
@@ -434,7 +437,7 @@ impl SaveHandler for CoreSaveHandler {
     const SIGNATURE: u32 = u32::from_le_bytes([b'R', b'S', b'X', b'T']);
 
     fn save_xd(&mut self) -> Result<Box<[u8]>, Box<dyn Error>> {
-        let mut vcr_state = self.vcr_state.lock().unwrap();
+        let mut vcr_state = block_on(self.vcr_state.lock());
         if let Some(vcr_state) = vcr_state.as_mut() {
             Ok(bincode::serialize(&vcr_state.freeze())?.into_boxed_slice())
         } else {
@@ -443,7 +446,7 @@ impl SaveHandler for CoreSaveHandler {
     }
 
     fn load_xd(&mut self, data: &[u8]) -> Result<(), Box<dyn Error>> {
-        let mut vcr_state = self.vcr_state.lock().unwrap();
+        let mut vcr_state = block_on(self.vcr_state.lock());
         if let Some(vcr_state) = vcr_state.as_mut() {
             let freeze = bincode::deserialize(data)?;
             vcr_state.load_freeze(freeze)?;

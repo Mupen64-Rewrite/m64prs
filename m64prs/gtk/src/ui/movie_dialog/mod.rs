@@ -35,6 +35,8 @@ mod inner {
             header.author.write_clipped(&window.author());
             header.description.write_clipped(&window.description());
 
+            println!("start flags: {:?}", header.start_flags);
+
             let path = window
                 .cur_file()
                 .as_ref()

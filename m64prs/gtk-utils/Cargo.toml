@@ -10,3 +10,5 @@ m64prs-gtk-macros = { workspace = true }
 glib = { workspace = true }
 gio = { workspace = true }
 gtk = { workspace = true }
+
+futures = { workspace = true }

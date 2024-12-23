@@ -1,13 +1,14 @@
 use std::{error::Error, io, pin::pin};
 
 use gio::FileCreateFlags;
+use glib::Priority;
 use gtk::prelude::*;
 use m64prs_core::{
     error::PluginLoadError,
     plugin::{PluginSet, PluginType},
     Plugin,
 };
-use m64prs_gtk_utils::actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup};
+use m64prs_gtk_utils::{actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup}, error::GlibErrorExt};
 use m64prs_vcr::{
     movie::{M64File, M64Header},
     VcrState,
@@ -55,8 +56,8 @@ pub(super) struct AppActions {
     load_movie: BaseAction,
     #[action(name = "vcr.save_movie")]
     save_movie: BaseAction,
-    #[action(name = "vcr.discard_movie")]
-    discard_movie: BaseAction,
+    #[action(name = "vcr.close_movie")]
+    close_movie: BaseAction,
     #[action(name = "vcr.toggle_read_only", default = false)]
     toggle_read_only: StateAction<bool>,
 }
@@ -173,7 +174,8 @@ impl AppActions {
         c!(new_movie, async new_movie_impl);
         c!(load_movie, async load_movie_impl);
         c!(save_movie, async save_movie_impl);
-        c!(discard_movie, discard_movie_impl);
+        c!(close_movie, async close_movie_impl);
+        c!(toggle_read_only, toggle_read_only_impl);
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
@@ -181,6 +183,7 @@ impl AppActions {
         let saving_state = main_window.property_expression_weak("saving-state");
         let save_slot = main_window.property_expression_weak("save-slot");
         let vcr_active = main_window.property_expression_weak("vcr-active");
+        let vcr_read_only = main_window.property_expression_weak("vcr-read-only");
 
         let emu_stopped =
             emu_state.chain_closure::<bool>(glib::closure!(|_: Option<glib::Object>,
@@ -230,6 +233,9 @@ impl AppActions {
         let save_slot_gvar = save_slot.chain_closure::<glib::Variant>(glib::closure!(
             |_: Option<glib::Object>, save_slot: u8| -> glib::Variant { save_slot.into() }
         ));
+        let vcr_read_only_gvar = vcr_read_only.chain_closure::<glib::Variant>(glib::closure!(
+            |_: Option<glib::Object>, read_only: bool| -> glib::Variant { read_only.into() }
+        ));
 
         /// Bind an action's property to an expression.
         macro_rules! b {
@@ -255,8 +261,10 @@ impl AppActions {
 
         b!(new_movie."enabled" => emu_active);
         b!(load_movie."enabled" => emu_active);
-        b!(save_movie."enabled" => vcr_active);
-        b!(discard_movie."enabled" => vcr_active);
+        b!(save_movie."enabled" => has_vcr);
+        b!(close_movie."enabled" => has_vcr);
+        b!(toggle_read_only."enabled" => emu_active);
+        b!(toggle_read_only."state" => vcr_read_only_gvar);
     }
 }
 
@@ -532,6 +540,7 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 
         let vcr_state = VcrState::new(path, header, false);
         core.set_read_only(false);
+        println!("setting VCR state");
         core.set_vcr_state(vcr_state, true).await?;
     };
 
@@ -562,32 +571,69 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 }
 
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let vcr_state = main_window
+    let exported = main_window
         .borrow_core()
         .borrow_running()
         .expect("Core should be running")
-        .unset_vcr_state();
+        .export_vcr()
+        .await;
 
-    if let Some(vcr_state) = vcr_state {
-        let (path, data) = vcr_state.export();
-        let out_file = gio::File::for_path(&path);
-        let rw = pin!(out_file
-            .create_readwrite_future(FileCreateFlags::REPLACE_DESTINATION, glib::Priority::DEFAULT)
-            .await?
-            .into_async_read_write()
-            .unwrap());
+    if let Some((path, data)) = exported {
+        gio::spawn_blocking(move || -> Result<(), io::Error> {
+            let out_file = gio::File::for_path(&path);
+            let out_iostream = out_file
+                .open_readwrite(None::<&gio::Cancellable>)
+                .map_err(|err| err.try_into_io_error().unwrap())?;
+            let mut out_ostream = out_iostream
+                .output_stream()
+                .into_write();
 
-        data.write_into_async(rw).await?;
+            data.write_into(&mut out_ostream)?;
+
+            Ok(())
+        }).await.unwrap()?;
     }
 
     Ok(())
 }
 
-fn discard_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let vcr_state = main_window
+        .borrow_core()
+        .borrow_running()
+        .expect("Core should be running")
+        .unset_vcr_state()
+        .await;
+    let vcr_read_only = main_window.vcr_read_only();
+
+    // Only save if we're not in read-only mode.
+    if let (false, Some(vcr_state)) = (vcr_read_only, vcr_state) {
+        // GIO async doesn't work for us. Move the data to a blocking task,
+        // then await that instead.
+        let (path, data) = vcr_state.export();
+        gio::spawn_blocking(move || -> Result<(), io::Error> {
+            let out_file = gio::File::for_path(&path);
+            let mut out_stream = out_file
+                .open_readwrite(None::<&gio::Cancellable>)
+                .map_err(|err| err.try_into_io_error().unwrap())?
+                .output_stream()
+                .into_write();
+
+            data.write_into(&mut out_stream)?;
+
+            Ok(())
+        }).await.unwrap()?;
+
+    }
+
+    Ok(())
+}
+
+fn toggle_read_only_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _ = main_window
         .borrow_core()
         .borrow_running()
         .expect("Core should be running")
-        .unset_vcr_state();
+        .toggle_read_only();
     Ok(())
 }

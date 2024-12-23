@@ -191,7 +191,6 @@ mod inner {
             self.parent_command_line(command_line);
             let options = command_line.options_dict();
             let socket = options.lookup::<String>(FLAG_SOCKET).unwrap();
-            println!("server socket: {:?}", socket);
 
             if let Some(socket) = socket {
                 unsafe {
@@ -210,8 +209,6 @@ mod inner {
 
         fn activate(&self) {
             self.parent_activate();
-            println!("registered: {}", self.obj().is_registered());
-
             self.connect_endpoint();
         }
     }

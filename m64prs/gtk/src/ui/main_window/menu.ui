@@ -119,8 +119,8 @@ I will port this to Blueprint when it adds support.
         <attribute name="action">app.vcr.save_movie</attribute>
       </item>
       <item>
-        <attribute name="label">Discard Movie</attribute>
-        <attribute name="action">app.vcr.discard_movie</attribute>
+        <attribute name="label">Close Movie</attribute>
+        <attribute name="action">app.vcr.close_movie</attribute>
       </item>
       <item>
         <attribute name="label">Read-only Mode</attribute>

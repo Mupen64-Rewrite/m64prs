@@ -1189,6 +1189,7 @@ dependencies = [
 name = "m64prs-gtk-utils"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "gio",
  "glib",
  "gtk4",
