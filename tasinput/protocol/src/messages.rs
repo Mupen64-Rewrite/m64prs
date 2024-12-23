@@ -1,3 +1,4 @@
+use m64prs_sys::Buttons;
 use serde::{Deserialize, Serialize};
 
 use crate::types::{IpcMessage, IpcPayload, PortMask};
@@ -50,13 +51,15 @@ pub enum HostRequest {
     Ping,
     Close,
     InitControllers { active: PortMask },
-    SetVisibility { visible: bool }
+    SetVisible { visible: bool },
+    PollState { controller: u8 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum UiReply {
     Ack,
+    PolledState { buttons: Buttons }
 }
 
 // UI -> HOST REQUESTS

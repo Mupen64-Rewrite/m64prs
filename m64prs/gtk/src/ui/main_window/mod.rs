@@ -1,6 +1,4 @@
-use std::{cell::RefMut, error::Error};
 
-use glib::subclass::types::ObjectSubclassIsExt;
 use gtk::prelude::*;
 
 use super::core::CoreState;

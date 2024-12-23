@@ -1,54 +1,31 @@
-use glib::{clone::Downgrade, translate::ToGlibPtr, SendWeakRef};
+use glib::{translate::ToGlibPtr, SendWeakRef};
 use gtk::prelude::*;
 
 mod inner {
-    use std::{
-        cell::{OnceCell, RefCell},
-        rc::Rc,
-        sync::{Arc, Mutex},
-    };
+    use std::{cell::RefCell, mem};
 
     use glib::SendWeakRef;
     use gtk::{prelude::*, subclass::prelude::*};
-    use tasinput_protocol::{Endpoint, HostMessage, UiMessage, UiReply};
+    use m64prs_sys::Buttons;
+    use tasinput_protocol::{Endpoint, HostMessage, UiMessage, UiReply, PING_TIMEOUT};
+    use tokio::{
+        sync::mpsc::{self, error::TryRecvError},
+        time::{sleep_until, Instant},
+    };
 
-    use crate::app::{FLAG_SOCKET, SOCKET_ID_KEY};
-
-    use super::ApplicationHoldSendRef;
+    use crate::{
+        app::{FLAG_SOCKET, SOCKET_ID_KEY},
+        main_window::MainWindow,
+    };
 
     #[derive(Default)]
     pub struct TasDiApp {
         endpoint: RefCell<Option<Endpoint<UiMessage, HostMessage>>>,
+        windows: RefCell<[Option<MainWindow>; 4]>,
     }
 
-    #[glib::object_subclass]
-    impl ObjectSubclass for TasDiApp {
-        const NAME: &'static str = "TasDiApp";
-        type Type = super::TasDiApp;
-        type ParentType = gtk::Application;
-    }
-
-    impl ObjectImpl for TasDiApp {}
-    impl ApplicationImpl for TasDiApp {
-        fn command_line(&self, command_line: &gio::ApplicationCommandLine) -> glib::ExitCode {
-            let options = command_line.options_dict();
-            let socket = options.lookup::<String>(FLAG_SOCKET).unwrap();
-            println!("server socket: {:?}", socket);
-
-            if let Some(socket) = socket {
-                unsafe {
-                    self.obj().set_data::<String>(SOCKET_ID_KEY, socket);
-                }
-            }
-
-            self.obj().activate();
-
-            glib::ExitCode::SUCCESS
-        }
-
-        fn startup(&self) {
-            self.parent_startup();
-
+    impl TasDiApp {
+        fn load_css(&self) {
             const CSS_CONTENT: &'static str =
                 include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/main.css"));
 
@@ -62,46 +39,180 @@ mod inner {
             );
         }
 
-        fn activate(&self) {
-            self.parent_activate();
-
+        fn connect_endpoint(&self) {
             let mut endpoint = self.endpoint.borrow_mut();
+
+            // Increment the reference count. We will explicitly quit the app
+            // when the socket server tells us to do so.
+            mem::forget(self.obj().hold());
 
             // extract the socket key from CLI
             let socket_id = unsafe { self.obj().steal_data::<String>(SOCKET_ID_KEY).unwrap() };
 
             let app_ref: SendWeakRef<_> = self.obj().downgrade().into();
-            let app_hold: Arc<Mutex<Option<ApplicationHoldSendRef>>> = Arc::new(Mutex::new(Some(
-                ApplicationHoldSendRef::new(self.obj().upcast_ref::<gio::Application>()),
-            )));
-            *endpoint = Some(
-                Endpoint::<UiMessage, HostMessage>::connect(&socket_id, move |request| {
+            *endpoint = Some({
+                // This channel keeps a record of ping expiry times. Whenever a ping is sent,
+                // its expiry time is put on the channel. If the receiving task depletes this queue,
+                // then the host has probably crashed and we should shut down.
+                let (timeout_send, mut timeout_recv) = mpsc::channel::<Instant>(16);
+
+                // Main endpoint request handler.
+                let mut endpoint = Endpoint::<UiMessage, HostMessage>::connect(&socket_id, {
+                    // These need to be cloned so that the FnMut can hand out copies.
                     let app_ref = app_ref.clone();
-                    let app_hold = app_hold.clone();
-                    async move {
-                        use tasinput_protocol::HostRequest::*;
-                        match request {
-                            Ping => {
-                                println!("pong!");
-                                UiReply::Ack
+                    let timeout_send = timeout_send.clone();
+                    move |request| {
+                        // These need to be cloned so that each future gets a copy.
+                        let app_ref = app_ref.clone();
+                        let timeout_send = timeout_send.clone();
+                        async move {
+                            use tasinput_protocol::HostRequest::*;
+                            match request {
+                                Ping => {
+                                    timeout_send
+                                        .try_send(Instant::now() + PING_TIMEOUT)
+                                        .unwrap();
+                                    UiReply::Ack
+                                }
+                                Close => {
+                                    let app_ref = app_ref.clone();
+                                    glib::spawn_future(async move {
+                                        if let Some(app) = app_ref.upgrade() {
+                                            app.quit();
+                                        }
+                                    });
+                                    UiReply::Ack
+                                }
+                                InitControllers { active } => {
+                                    let app_ref = app_ref.clone();
+                                    glib::spawn_future(async move {
+                                        if let Some(app) = app_ref.upgrade() {
+                                            let bits = active.bits();
+                                            let mut windows = app.imp().windows.borrow_mut();
+                                            for i in 0..4 {
+                                                if (bits & (1 << i)) != 0 {
+                                                    windows[i] = Some(MainWindow::new(&app))
+                                                }
+                                            }
+                                        }
+                                    });
+                                    UiReply::Ack
+                                }
+                                SetVisible { visible } => {
+                                    let app_ref = app_ref.clone();
+                                    glib::spawn_future(async move {
+                                        if let Some(app) = app_ref.upgrade() {
+                                            let windows = app.imp().windows.borrow();
+                                            for window in &*windows {
+                                                window
+                                                    .as_ref()
+                                                    .inspect(|&window| window.set_visible(visible));
+                                            }
+                                        }
+                                    });
+                                    UiReply::Ack
+                                }
+                                PollState { controller } => {
+                                    let app_ref = app_ref.clone();
+                                    let buttons = glib::spawn_future(async move {
+                                        if let Some(app) = app_ref.upgrade() {
+                                            let windows = app.imp().windows.borrow();
+                                            windows[controller as usize]
+                                                .as_ref()
+                                                .map_or(Buttons::BLANK, |val| val.to_buttons())
+                                        } else {
+                                            Buttons::BLANK
+                                        }
+                                    })
+                                    .await
+                                    .unwrap();
+
+                                    UiReply::PolledState { buttons }
+                                }
                             }
-                            Close => {
-                                let app_ref = app_ref.clone();
-                                glib::spawn_future(async move {
-                                    app_hold.lock().unwrap().take();
-                                    if let Some(app) = app_ref.upgrade() {
-                                        app.quit();
-                                    }
-                                });
-                                UiReply::Ack
-                            }
-                            InitControllers { active } => UiReply::Ack,
-                            SetVisibility { visible } => UiReply::Ack,
                         }
                     }
                 })
-                .unwrap(),
-            );
+                .unwrap();
+
+                // Ping timeout handler.
+                endpoint.spawn(|handle| {
+                    let app_ref = app_ref.clone();
+                    async move {
+                        let cancel_token = handle.cancel_token();
+                        // Wait for the first ping.
+                        let mut next_time = tokio::select! {
+                            biased;
+                            _ = cancel_token.cancelled() => return,
+                            first_time = timeout_recv.recv() => first_time.unwrap()
+                        };
+                        // Ensure that any subsequent pings occur before the timeout.
+                        loop {
+                            tokio::select! {
+                                biased;
+                                _ = cancel_token.cancelled() => return,
+                                _ = sleep_until(next_time) => (),
+                            }
+                            match timeout_recv.try_recv() {
+                                Ok(time) => {
+                                    next_time = time;
+                                }
+                                Err(TryRecvError::Empty) => {
+                                    let app_ref = app_ref.clone();
+                                    glib::spawn_future(async move {
+                                        if let Some(app) = app_ref.upgrade() {
+                                            app.quit();
+                                        }
+                                    });
+                                }
+                                Err(TryRecvError::Disconnected) => {
+                                    panic!("The sender should not disconnect.")
+                                }
+                            }
+                        }
+                    }
+                });
+
+                endpoint
+            });
+        }
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for TasDiApp {
+        const NAME: &'static str = "TasDiApp";
+        type Type = super::TasDiApp;
+        type ParentType = gtk::Application;
+    }
+
+    impl ObjectImpl for TasDiApp {}
+    impl ApplicationImpl for TasDiApp {
+        fn command_line(&self, command_line: &gio::ApplicationCommandLine) -> glib::ExitCode {
+            self.parent_command_line(command_line);
+            let options = command_line.options_dict();
+            let socket = options.lookup::<String>(FLAG_SOCKET).unwrap();
+            println!("server socket: {:?}", socket);
+
+            if let Some(socket) = socket {
+                unsafe {
+                    self.obj().set_data::<String>(SOCKET_ID_KEY, socket);
+                }
+            }
+            self.obj().activate();
+
+            glib::ExitCode::SUCCESS
+        }
+
+        fn startup(&self) {
+            self.parent_startup();
+            self.load_css();
+        }
+
+        fn activate(&self) {
+            self.parent_activate();
+            println!("registered: {}", self.obj().is_registered());
+
+            self.connect_endpoint();
         }
     }
     impl GtkApplicationImpl for TasDiApp {}
@@ -147,24 +258,5 @@ impl TasDiApp {
         );
 
         result
-    }
-}
-
-struct ApplicationHoldSendRef(SendWeakRef<gio::Application>);
-
-impl ApplicationHoldSendRef {
-    fn new(app: &gio::Application) -> Self {
-        unsafe {
-            gio::ffi::g_application_hold(app.to_glib_none().0);
-        }
-        Self(glib::object::ObjectExt::downgrade(app).into())
-    }
-}
-
-impl Drop for ApplicationHoldSendRef {
-    fn drop(&mut self) {
-        if let Some(app) = self.0.upgrade() {
-            unsafe { gio::ffi::g_application_release(app.to_glib_none().0) }
-        }
     }
 }

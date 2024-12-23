@@ -3,7 +3,7 @@ mod window;
 
 mod inner {
     use std::cell::Cell;
-    use std::fs;
+    
     use std::path::PathBuf;
 
     use gtk::prelude::*;

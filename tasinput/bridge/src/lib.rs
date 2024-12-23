@@ -1,7 +1,6 @@
 use std::ffi::{c_char, c_int, c_uchar, c_void};
 
 use common::M64PError;
-use key::{Mod, Scancode};
 use m64prs_sys::*;
 use plugin_state::PluginState;
 use std::sync::Mutex;
@@ -78,7 +77,9 @@ pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar
 
 #[no_mangle]
 pub unsafe extern "C" fn GetKeys(control: c_int, keys: *mut Buttons) {
-    *keys = Buttons::BLANK;
+    with_init_state!(state => {
+        *keys = state.get_keys(control as u8)
+    });
 }
 
 #[no_mangle]
@@ -93,18 +94,21 @@ pub unsafe extern "C" fn ReadController(control: c_int, command: *mut c_uchar) {
 
 #[no_mangle]
 pub unsafe extern "C" fn RomOpen() -> c_int {
+    with_init_state!(state => {
+        state.rom_open();
+    });
     1
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn RomClosed() {}
-
-#[no_mangle]
-pub unsafe extern "C" fn SDL_KeyDown(sdl_mod: c_int, sdl_key: c_int) {
+pub unsafe extern "C" fn RomClosed() {
     with_init_state!(state => {
-        state.key_down(Scancode::from_i32(sdl_key).unwrap(), Mod::from_bits_retain(sdl_mod as u16));
+        state.rom_closed();
     });
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn SDL_KeyDown(sdl_mod: c_int, sdl_key: c_int) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn SDL_KeyUp(sdl_mod: c_int, sdl_key: c_int) {}

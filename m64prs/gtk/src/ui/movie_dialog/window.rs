@@ -10,7 +10,7 @@ mod inner {
     use futures::channel::oneshot;
     use glib::{subclass::InitializingObject, translate::IntoGlib};
     use gtk::{prelude::*, subclass::prelude::*, TemplateChild};
-    use m64prs_vcr::movie::{M64File, M64Header, StartType};
+    use m64prs_vcr::movie::M64Header;
 
     use crate::{
         controls::SizedTextBuffer,

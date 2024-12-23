@@ -6,15 +6,11 @@ use std::{
 };
 
 use m64prs_plugin_core::Core;
-use m64prs_sys::{
-    common::M64PError,
-    key::{Mod, Scancode},
-    ptr_DebugCallback, ControlInfo, DynlibHandle,
-};
+use m64prs_sys::{common::M64PError, ptr_DebugCallback, Buttons, ControlInfo, DynlibHandle};
 use tasinput_protocol::{
-    gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage,
-    UiReply, UiRequest,
+    gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage, UiReply, UiRequest, PING_INTERVAL
 };
+use tokio::time::{interval, timeout, MissedTickBehavior};
 use wait_timeout::ChildExt;
 
 use crate::util::{exe_name, ControlsRef};
@@ -72,10 +68,41 @@ impl PluginState {
                 M64PError::Internal
             })?;
 
-        let endpoint = endpoint.ready_blocking().map_err(|_| {
+        let mut endpoint = endpoint.ready_blocking().map_err(|_| {
             log::error!("Failed to setup IPC runtime! (listen)");
             M64PError::SystemFail
         })?;
+
+        // setup future to regularly ping the client
+        endpoint.spawn(|mut handle| async move {
+            const PING_ROUNDTRIP_TIMEOUT: Duration = Duration::from_millis(500);
+
+            let mut timer = interval(PING_INTERVAL);
+            timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
+            let cancel = handle.cancel_token();
+
+            loop {
+                tokio::select! {
+                    biased;
+                    _ = cancel.cancelled() => {
+                        return;
+                    }
+                    _ = timer.tick() => {
+                        match timeout(
+                            PING_ROUNDTRIP_TIMEOUT, 
+                            handle.post_request_async(HostRequest::Ping).await
+                        )
+                        .await {
+                            Ok(_) => (),
+                            Err(timeout) => {
+                                // ping timed out
+                                log::warn!("tasinput-ui ping timed out after {}", timeout);
+                            },
+                        }
+                    }
+                }
+            }
+        });
 
         Ok(Self {
             _core: core,
@@ -91,11 +118,39 @@ impl PluginState {
         unsafe {
             controllers.index_mut(0).Present = 1;
         }
+        self.endpoint
+            .post_request_blocking(HostRequest::InitControllers {
+                active: PortMask::PORT1,
+            })
+            .blocking_recv()
+            .unwrap();
 
         self.controllers = Some(controllers);
     }
 
-    pub(crate) fn key_down(&mut self, sdl_key: Scancode, sdl_mod: Mod) {
+    pub(crate) fn get_keys(&mut self, controller: u8) -> Buttons {
+        let reply = self.endpoint
+            .post_request_blocking(HostRequest::PollState { controller })
+            .blocking_recv()
+            .unwrap();
+        match reply {
+            UiReply::PolledState { buttons } => buttons,
+            _ => panic!()
+        }
+    }
+
+    pub(crate) fn rom_open(&mut self) {
+        self.endpoint
+            .post_request_blocking(HostRequest::SetVisible { visible: true })
+            .blocking_recv()
+            .unwrap();
+    }
+
+    pub(crate) fn rom_closed(&mut self) {
+        self.endpoint
+            .post_request_blocking(HostRequest::SetVisible { visible: false })
+            .blocking_recv()
+            .unwrap();
     }
 }
 
@@ -110,8 +165,11 @@ impl Drop for PluginState {
             .wait_timeout(Duration::from_millis(250))
             .unwrap()
         {
-            Some(exit_code) => {}
+            Some(exit_code) => {
+                log::info!("tasinput-ui exited (code {})", exit_code);
+            }
             None => {
+                log::info!("killing tasinput-ui");
                 let _ = self.ui_host.kill();
             }
         }

@@ -21,5 +21,6 @@ graphene-rs = { workspace = true }
 gsk = { workspace = true }
 gdk = { workspace = true }
 gtk = { workspace = true }
+m64prs-gtk-utils = { workspace = true }
 
 bitflags = { workspace = true }

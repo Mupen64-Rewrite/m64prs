@@ -1,6 +1,5 @@
-use std::num::TryFromIntError;
 
-use glib::translate::{IntoGlib, TryFromGlib};
+use glib::translate::TryFromGlib;
 use m64prs_gtk_utils::glib_enum_display;
 use m64prs_vcr::movie::StartType;
 

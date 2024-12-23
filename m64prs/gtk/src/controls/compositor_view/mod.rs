@@ -5,7 +5,7 @@ use native::{NativeView, NativeViewAttributes, NativeViewKey, StackOrder};
 pub mod native;
 
 mod inner {
-    use std::cell::{OnceCell, RefCell};
+    use std::cell::RefCell;
 
     use glib::subclass::{
         object::{ObjectImpl, ObjectImplExt},

@@ -22,8 +22,7 @@ fn main() {
                         let _ = close_src.lock().unwrap().take().unwrap().send(());
                         UiReply::Ack
                     }
-                    HostRequest::InitControllers { active } => todo!(),
-                    HostRequest::SetVisibility { visible } => todo!(),
+                    _ => UiReply::Ack
                 }
             }
         })

@@ -27,7 +27,7 @@ m64prs-gtk-macros = { path = "m64prs/gtk-macros" }
 m64prs-gtk-utils = { path = "m64prs/gtk-utils" }
 m64prs-native = { path = "m64prs/native" }
 m64prs-plugin-core = { path = "m64prs/plugin-core" }
-m64prs-sys = { path = "m64prs/sys" }
+m64prs-sys = { path = "m64prs/sys", features = ["serde"] }
 m64prs-vcr = { path = "m64prs/vcr" }
 
 tasinput-bridge = { path = "tasinput/bridge" }

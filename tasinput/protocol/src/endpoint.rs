@@ -229,8 +229,9 @@ where
         waiter
     }
 
-    /// Spawns a future on the I/O runtime. If your future runs for a long period of time
-    pub unsafe fn spawn<T, F, Fut>(&mut self, future_gen: F) -> tokio::task::JoinHandle<T>
+    /// Spawns a future on the I/O runtime. If your future runs for a long period of time,
+    /// it is recommended to allow cancellation through the provided handle.
+    pub fn spawn<T, F, Fut>(&mut self, future_gen: F) -> tokio::task::JoinHandle<T>
     where
         T: Send + 'static,
         F: FnOnce(EndpointHandle<OwnMsg, RemoteMsg>) -> Fut,
@@ -308,9 +309,9 @@ where
         waiter
     }
 
-    ///
-    pub async fn cancelled(&mut self) {
-        self.cancel.cancelled().await;
+    /// Returns a cancellation token that is triggered when this endpoint is dropped.
+    pub fn cancel_token(&self) -> CancellationToken {
+        self.cancel.clone()
     }
 }
 

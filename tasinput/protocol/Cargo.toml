@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+m64prs-sys = { workspace = true }
+
 serde = { workspace = true }
 serde-brief = { workspace = true }
 
