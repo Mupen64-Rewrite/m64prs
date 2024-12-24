@@ -32,6 +32,34 @@ mod inner {
     impl ObjectImpl for Joystick {
         fn constructed(&self) {
             let ct_drag = gtk::GestureDrag::new();
+
+            fn update_joy_pos(this: &super::Joystick, x: f64, y: f64) {
+                // start + (x, y) = current pos
+                let pos = graphene::Point::from_vec2(
+                    &this
+                        .imp()
+                        .drag_pos
+                        .get()
+                        .to_vec2()
+                        .add(&Vec2::new(x as f32, y as f32)),
+                );
+                let width = this.width() as f32;
+                let height = this.height() as f32;
+
+                const DEADZONE: i8 = 8;
+                // convert mouse position to joystick position, accounting for deadzones
+                let (mut jx, mut jy) = widget_to_js(pos, width, height);
+                if -DEADZONE < jx && jx < DEADZONE {
+                    jx = 0;
+                }
+                if -DEADZONE < jy && jy < DEADZONE {
+                    jy = 0;
+                }
+
+                this.set_pos_x(jx);
+                this.set_pos_y(jy);
+            }
+
             ct_drag.set_button(gdk::BUTTON_PRIMARY);
             ct_drag.set_propagation_phase(gtk::PropagationPhase::Target);
             ct_drag.connect_drag_begin({
@@ -44,6 +72,7 @@ mod inner {
                     this.imp()
                         .drag_pos
                         .set(graphene::Point::new(x as f32, y as f32));
+                    update_joy_pos(&this, x, y);
                 }
             });
             ct_drag.connect_drag_update({
@@ -53,30 +82,7 @@ mod inner {
                         Some(this) => this,
                         None => return,
                     };
-                    // start + (x, y) = current pos
-                    let pos = graphene::Point::from_vec2(
-                        &this
-                            .imp()
-                            .drag_pos
-                            .get()
-                            .to_vec2()
-                            .add(&Vec2::new(x as f32, y as f32)),
-                    );
-                    let width = this.width() as f32;
-                    let height = this.height() as f32;
-
-                    const DEADZONE: i8 = 8;
-                    // convert mouse position to joystick position, accounting for deadzones
-                    let (mut jx, mut jy) = widget_to_js(pos, width, height);
-                    if -DEADZONE < jx && jx < DEADZONE {
-                        jx = 0;
-                    }
-                    if -DEADZONE < jy && jy < DEADZONE {
-                        jy = 0;
-                    }
-
-                    this.set_pos_x(jx);
-                    this.set_pos_y(jy);
+                    update_joy_pos(&this, x, y);
                 }
             });
             ct_drag.connect_drag_end({
@@ -86,6 +92,7 @@ mod inner {
                         Some(this) => this,
                         None => return,
                     };
+                    update_joy_pos(&this, x, y);
                 }
             });
             self.obj().add_controller(ct_drag);

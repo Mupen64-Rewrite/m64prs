@@ -176,6 +176,11 @@ mod inner {
                 endpoint
             });
         }
+    
+        fn show_ui(&self) {
+            let window = MainWindow::new(&*self.obj());
+            window.present();
+        }
     }
 
     #[glib::object_subclass]
@@ -209,7 +214,15 @@ mod inner {
 
         fn activate(&self) {
             self.parent_activate();
-            self.connect_endpoint();
+
+            let has_socket = unsafe { self.obj().data::<String>(SOCKET_ID_KEY).is_some() };
+
+            if has_socket {
+                self.connect_endpoint();
+            }
+            else {
+                self.show_ui();
+            }
         }
     }
     impl GtkApplicationImpl for TasDiApp {}
