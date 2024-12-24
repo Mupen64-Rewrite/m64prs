@@ -1,7 +1,12 @@
-use std::{ffi::{c_void, CStr}, mem};
+use std::{
+    ffi::{c_void, CStr},
+    mem,
+};
 
 use decan::can::NonOwningCan;
-use m64prs_sys::{api::PluginCoreApi, common::M64PError, ptr_DebugCallback, DynlibHandle, MsgLevel};
+use m64prs_sys::{
+    api::PluginCoreApi, common::M64PError, ptr_DebugCallback, DynlibHandle, MsgLevel,
+};
 
 pub mod config;
 pub mod logging;
@@ -26,7 +31,11 @@ impl Core {
         let api = NonOwningCan::wrap_raw(mem::transmute::<_, decan::raw::Handle>(core_handle))
             .map_err(|err| M64PError::SystemFail)?;
 
-        Ok(Self { debug_ctx, debug_callback, api })
+        Ok(Self {
+            debug_ctx,
+            debug_callback,
+            api,
+        })
     }
 
     /// Logs a debug message to the frontend.

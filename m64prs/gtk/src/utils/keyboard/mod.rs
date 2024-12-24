@@ -1,5 +1,5 @@
 use gdk::prelude::*;
-use m64prs_sys::key::{Scancode, Mod};
+use m64prs_sys::key::{Mod, Scancode};
 
 #[cfg(target_os = "linux")]
 mod linux;

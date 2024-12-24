@@ -3,8 +3,6 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use m64prs_sys::ConfigType;
-use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
 use crate::plugin::PluginType;

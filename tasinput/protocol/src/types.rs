@@ -40,8 +40,7 @@ pub trait IpcMessage: Serialize + DeserializeOwned + Clone + Send + Sync + 'stat
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum IpcPayload<Request, Reply>
-{
+pub enum IpcPayload<Request, Reply> {
     /// A request.
     Request(Request),
     /// A reply.

@@ -6,9 +6,9 @@ use std::{
     sync::{mpsc, Mutex},
 };
 
-use futures::lock::Mutex as AsyncMutex;
 use decan::can::{Can, OwningCan};
 use emu_state::{EmuStateWaitManager, EmuStateWaiter};
+use futures::lock::Mutex as AsyncMutex;
 use log::{log, Level};
 use num_enum::TryFromPrimitive;
 use plugin::PluginSet;
@@ -190,7 +190,6 @@ impl Drop for Core {
 
 // Synchronous core commands
 impl Core {
-
     /// Installs a *state handler*, which can pick up on any changes to various core
     /// state parameters; see [`m64prs_sys::CoreParam`] for a list of parameters that
     /// you can listen to.

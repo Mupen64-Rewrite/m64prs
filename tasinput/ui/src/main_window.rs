@@ -20,7 +20,6 @@ mod inner {
 
     use gtk::{prelude::*, subclass::prelude::*};
     use m64prs_sys::Buttons;
-    
 
     use crate::{enums::GButtonFlags, joystick::Joystick};
 
@@ -122,9 +121,9 @@ mod inner {
     #[m64prs_gtk_utils::forward_wrapper(super::MainWindow, vis = pub(crate))]
     impl MainWindow {
         pub(super) fn to_buttons(&self) -> Buttons {
-            Buttons { 
-                button_bits: self.button_flags.borrow().clone().into(), 
-                x_axis: self.joy_x.get(), 
+            Buttons {
+                button_bits: self.button_flags.borrow().clone().into(),
+                x_axis: self.joy_x.get(),
                 y_axis: self.joy_y.get(),
             }
         }
@@ -158,7 +157,6 @@ mod inner {
             ct_win_move.connect_event({
                 let this = obj.downgrade();
                 move |_, evt: &gdk::Event| {
-
                     let this = match this.upgrade() {
                         Some(this) => this,
                         None => return glib::Propagation::Proceed,
@@ -180,9 +178,10 @@ mod inner {
                             None => return glib::Propagation::Proceed,
                         };
                         let (x, y) = pointer_evt.position().unwrap();
-                        if !this.pick(x, y, gtk::PickFlags::INSENSITIVE).is_some_and(|w| {
-                            w.first_child().is_some()
-                        }) {
+                        if !this
+                            .pick(x, y, gtk::PickFlags::INSENSITIVE)
+                            .is_some_and(|w| w.first_child().is_some())
+                        {
                             return glib::Propagation::Proceed;
                         }
                         let timestamp = pointer_evt.time();

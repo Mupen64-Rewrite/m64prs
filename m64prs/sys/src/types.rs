@@ -2,7 +2,6 @@
 use std::{fmt::Display, hash::Hash, mem};
 
 use bitflags::bitflags;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use thiserror::Error;
 
 include!(concat!(env!("OUT_DIR"), "/types_gen.rs"));

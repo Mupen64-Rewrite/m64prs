@@ -6,7 +6,6 @@ mod enums;
 mod joystick;
 mod main_window;
 
-
 fn main() {
     let app = TasDiApp::new();
     app.run();

@@ -9,7 +9,6 @@ use std::{
 use futures::{channel::oneshot, Future};
 use m64prs_sys::{Command, CoreParam};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::path::PathBuf;
 
 use crate::error::{M64PError, SavestateError};
 

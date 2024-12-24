@@ -8,7 +8,8 @@ use std::{
 use m64prs_plugin_core::Core;
 use m64prs_sys::{common::M64PError, ptr_DebugCallback, Buttons, ControlInfo, DynlibHandle};
 use tasinput_protocol::{
-    gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage, UiReply, UiRequest, PING_INTERVAL
+    gen_socket_id, types::PortMask, Endpoint, HostMessage, HostReply, HostRequest, UiMessage,
+    UiReply, UiRequest, PING_INTERVAL,
 };
 use tokio::time::{interval, timeout, MissedTickBehavior};
 use wait_timeout::ChildExt;
@@ -89,7 +90,7 @@ impl PluginState {
                     }
                     _ = timer.tick() => {
                         match timeout(
-                            PING_ROUNDTRIP_TIMEOUT, 
+                            PING_ROUNDTRIP_TIMEOUT,
                             handle.post_request_async(HostRequest::Ping).await
                         )
                         .await {
@@ -129,13 +130,14 @@ impl PluginState {
     }
 
     pub(crate) fn get_keys(&mut self, controller: u8) -> Buttons {
-        let reply = self.endpoint
+        let reply = self
+            .endpoint
             .post_request_blocking(HostRequest::PollState { controller })
             .blocking_recv()
             .unwrap();
         match reply {
             UiReply::PolledState { buttons } => buttons,
-            _ => panic!()
+            _ => panic!(),
         }
     }
 

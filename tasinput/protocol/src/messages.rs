@@ -59,7 +59,7 @@ pub enum HostRequest {
 #[non_exhaustive]
 pub enum UiReply {
     Ack,
-    PolledState { buttons: Buttons }
+    PolledState { buttons: Buttons },
 }
 
 // UI -> HOST REQUESTS

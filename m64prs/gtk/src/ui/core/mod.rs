@@ -345,9 +345,13 @@ impl CoreRunningState {
         });
     }
 
-    pub(super) async fn set_vcr_state(&mut self, mut vcr_state: VcrState, new: bool) -> Result<(), Box<dyn Error>> {
-            vcr_state.set_read_only(self.vcr_read_only);
-            vcr_state.reset(&self.core, new).await?;
+    pub(super) async fn set_vcr_state(
+        &mut self,
+        mut vcr_state: VcrState,
+        new: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        vcr_state.set_read_only(self.vcr_read_only);
+        vcr_state.reset(&self.core, new).await?;
         {
             let mut self_vcr_state = self.vcr_state.lock().await;
             *self_vcr_state = Some(vcr_state);
@@ -381,7 +385,9 @@ impl CoreRunningState {
     }
 
     pub(super) fn rom_settings(&self) -> RomSettings {
-        self.core.rom_settings().expect("couldn't get ROM settings!")
+        self.core
+            .rom_settings()
+            .expect("couldn't get ROM settings!")
     }
 
     pub(super) fn plugin_info(&self, ptype: PluginType) -> PluginInfo {

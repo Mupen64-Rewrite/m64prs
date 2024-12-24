@@ -1,6 +1,8 @@
 use std::io;
 
-use tasinput_protocol::{Endpoint, EndpointListening, HostMessage, HostReply, HostRequest, UiMessage, UiRequest};
+use tasinput_protocol::{
+    Endpoint, EndpointListening, HostMessage, HostReply, HostRequest, UiMessage, UiRequest,
+};
 
 fn main() {
     let server: EndpointListening<HostMessage, UiMessage> =
@@ -19,7 +21,9 @@ fn main() {
 
     for i in 0..10 {
         println!("ping {}", i);
-        let _ = server.post_request_blocking(HostRequest::Ping).blocking_recv();
+        let _ = server
+            .post_request_blocking(HostRequest::Ping)
+            .blocking_recv();
         println!("pong {}", i);
     }
 
@@ -30,6 +34,8 @@ fn main() {
     }
 
     println!("closing...");
-    let _ = server.post_request_blocking(HostRequest::Close).blocking_recv();
+    let _ = server
+        .post_request_blocking(HostRequest::Close)
+        .blocking_recv();
     println!("closed...");
 }

@@ -1,5 +1,10 @@
 use std::{
-    ffi::{c_char, c_int, c_void, CStr}, fmt::Display, marker::PhantomData, mem, path::Path, ptr::{null, null_mut}
+    ffi::{c_char, c_int, c_void, CStr},
+    fmt::Display,
+    marker::PhantomData,
+    mem,
+    path::Path,
+    ptr::{null, null_mut},
 };
 
 use decan::{

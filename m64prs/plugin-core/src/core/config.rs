@@ -7,7 +7,7 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use m64prs_sys::{ConfigType, common::ConfigValue};
+use m64prs_sys::{common::ConfigValue, ConfigType};
 
 use crate::error::M64PError;
 

@@ -1,8 +1,7 @@
-
 use m64prs_sys::Control;
 
 pub(crate) struct ControlsRef {
-    controls: *mut Control
+    controls: *mut Control,
 }
 
 impl ControlsRef {
@@ -13,8 +12,7 @@ impl ControlsRef {
     pub(crate) unsafe fn get_mut(&mut self, port: usize) -> Option<&mut Control> {
         if port < 4 {
             Some(&mut *(self.controls.offset(port as isize)))
-        }
-        else {
+        } else {
             None
         }
     }

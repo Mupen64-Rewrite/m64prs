@@ -2,7 +2,7 @@ use std::{
     ffi::{c_int, c_void},
     future::Future,
     pin::Pin,
-    sync::{atomic::AtomicI32, mpsc, Arc},
+    sync::mpsc,
     task::{Context, Poll},
 };
 

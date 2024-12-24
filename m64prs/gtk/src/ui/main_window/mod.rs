@@ -1,4 +1,3 @@
-
 use gtk::prelude::*;
 
 use super::core::CoreState;

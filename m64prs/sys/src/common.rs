@@ -1,6 +1,10 @@
 //! Common safe types for Mupen64Plus.
 
-use std::{error::Error, ffi::{c_float, c_int, c_void, CString}, fmt::Display};
+use std::{
+    error::Error,
+    ffi::{c_float, c_int, c_void, CString},
+    fmt::Display,
+};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;

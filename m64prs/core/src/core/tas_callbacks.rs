@@ -178,11 +178,7 @@ pub trait FrameHandler: Send + 'static {
 
 pub mod ffi {
     use super::*;
-    use std::{
-        ffi::{c_char, c_uchar},
-        mem,
-        sync::Mutex,
-    };
+    use std::{ffi::c_uchar, mem, sync::Mutex};
 
     pub(super) static FRAME_HANDLER_BOX: Mutex<Option<Box<dyn FrameHandler>>> = Mutex::new(None);
 

@@ -1,4 +1,4 @@
-pub mod error;
 mod core;
+pub mod error;
 
 pub use core::*;

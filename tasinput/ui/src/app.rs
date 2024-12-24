@@ -1,4 +1,3 @@
-use glib::{translate::ToGlibPtr, SendWeakRef};
 use gtk::prelude::*;
 
 mod inner {
@@ -176,7 +175,7 @@ mod inner {
                 endpoint
             });
         }
-    
+
         fn show_ui(&self) {
             let window = MainWindow::new(&*self.obj());
             window.present();
@@ -219,8 +218,7 @@ mod inner {
 
             if has_socket {
                 self.connect_endpoint();
-            }
-            else {
+            } else {
                 self.show_ui();
             }
         }

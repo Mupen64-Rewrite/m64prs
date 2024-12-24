@@ -1,7 +1,5 @@
 //! Symbol groups from Mupen64Plus, for use with [`decan`].
 
-use std::ffi::{c_char, c_float, c_int, c_void};
-
 use decan::{non_null, SymbolGroup};
 
 use crate::types::*;

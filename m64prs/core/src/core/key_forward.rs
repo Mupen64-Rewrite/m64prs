@@ -1,4 +1,7 @@
-use m64prs_sys::{key::{Mod, Scancode}, Command};
+use m64prs_sys::{
+    key::{Mod, Scancode},
+    Command,
+};
 
 use crate::error::M64PError;
 

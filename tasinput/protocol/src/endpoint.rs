@@ -1,14 +1,10 @@
 use std::{
-    borrow::BorrowMut,
     cell::RefCell,
     collections::HashMap,
     future::Future,
     io,
     mem::ManuallyDrop,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        LazyLock,
-    },
+    sync::atomic::{AtomicU64, Ordering},
     thread,
     time::Duration,
 };
@@ -19,11 +15,10 @@ use interprocess::local_socket::{
     traits::tokio::{Listener as _, Stream as _},
     GenericNamespaced, ToNsName as _,
 };
-use rand::{rngs::OsRng, Rng, RngCore};
+use rand::{rngs::OsRng, RngCore};
 use tokio::{
     runtime::Handle,
     sync::{mpsc, oneshot},
-    time::{self, Interval, Timeout},
 };
 use tokio_util::{
     codec::{FramedRead, FramedWrite},
@@ -82,9 +77,7 @@ where
         H: FnMut(RemoteMsg::Request) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = OwnMsg::Reply>,
     {
-        let socket_name = socket_id
-            .to_ns_name::<GenericNamespaced>()?
-            .into_owned();
+        let socket_name = socket_id.to_ns_name::<GenericNamespaced>()?.into_owned();
         let (send_queue, send_queue_out) =
             mpsc::channel::<(OwnMsg::Request, oneshot::Sender<RemoteMsg::Reply>)>(16);
         let cancel = CancellationToken::new();
@@ -147,9 +140,7 @@ where
         H: FnMut(RemoteMsg::Request) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = OwnMsg::Reply>,
     {
-        let socket_name = socket_id
-            .to_ns_name::<GenericNamespaced>()?
-            .into_owned();
+        let socket_name = socket_id.to_ns_name::<GenericNamespaced>()?.into_owned();
         let (send_queue, send_queue_out) =
             mpsc::channel::<(OwnMsg::Request, oneshot::Sender<RemoteMsg::Reply>)>(16);
         let cancel = CancellationToken::new();

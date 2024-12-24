@@ -1,4 +1,4 @@
-use std::{sync::{Arc, Mutex}, thread, time::Duration};
+use std::sync::{Arc, Mutex};
 
 use tasinput_protocol::{Endpoint, HostMessage, HostRequest, UiMessage, UiReply};
 use tokio::sync::oneshot;
@@ -22,7 +22,7 @@ fn main() {
                         let _ = close_src.lock().unwrap().take().unwrap().send(());
                         UiReply::Ack
                     }
-                    _ => UiReply::Ack
+                    _ => UiReply::Ack,
                 }
             }
         })

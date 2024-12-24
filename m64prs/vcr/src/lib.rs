@@ -1,13 +1,6 @@
-use std::{
-    error::Error,
-    ffi::c_int,
-    fs, io,
-    ops::ControlFlow,
-    path::{Path, PathBuf},
-};
+use std::{error::Error, ffi::c_int, fs, io, path::PathBuf};
 
 use freeze::MovieFreeze;
-use futures::executor::block_on;
 use m64prs_core::{error::M64PError, save::SavestateFormat, Core};
 use m64prs_sys::Buttons;
 use movie::{M64File, M64Header, StartType};
@@ -103,7 +96,8 @@ impl VcrState {
                 }
                 true => {
                     let st_path = self.path.with_extension("st");
-                    core.save_file(st_path, SavestateFormat::Mupen64Plus).await?;
+                    core.save_file(st_path, SavestateFormat::Mupen64Plus)
+                        .await?;
                 }
             },
             StartType::FROM_EEPROM => {

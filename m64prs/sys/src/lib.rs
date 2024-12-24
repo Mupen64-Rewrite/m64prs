@@ -2,8 +2,8 @@
 //! manual tweaking for ease-of-use.
 
 pub mod api;
-mod types;
 pub mod common;
 pub mod key;
+mod types;
 
 pub use types::*;

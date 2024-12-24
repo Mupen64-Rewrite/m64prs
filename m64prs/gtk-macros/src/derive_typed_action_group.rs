@@ -1,6 +1,6 @@
 use proc_macro2::{Literal, TokenStream};
 use quote::quote;
-use syn::{meta::ParseNestedMeta, punctuated::Punctuated, spanned::Spanned, Token};
+use syn::{punctuated::Punctuated, Token};
 
 pub(crate) fn generate(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let data = match &input.data {

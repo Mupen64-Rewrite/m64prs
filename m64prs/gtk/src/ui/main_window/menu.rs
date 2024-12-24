@@ -1,18 +1,16 @@
-use std::{error::Error, io, pin::pin};
+use std::{error::Error, io};
 
-use gio::FileCreateFlags;
-use glib::Priority;
 use gtk::prelude::*;
 use m64prs_core::{
     error::PluginLoadError,
     plugin::{PluginSet, PluginType},
     Plugin,
 };
-use m64prs_gtk_utils::{actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup}, error::GlibErrorExt};
-use m64prs_vcr::{
-    movie::{M64File, M64Header},
-    VcrState,
+use m64prs_gtk_utils::{
+    actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup},
+    error::GlibErrorExt,
 };
+use m64prs_vcr::{movie::M64File, VcrState};
 
 use crate::ui::main_window::enums::MainEmuState;
 
@@ -584,14 +582,14 @@ async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
             let out_iostream = out_file
                 .open_readwrite(None::<&gio::Cancellable>)
                 .map_err(|err| err.try_into_io_error().unwrap())?;
-            let mut out_ostream = out_iostream
-                .output_stream()
-                .into_write();
+            let mut out_ostream = out_iostream.output_stream().into_write();
 
             data.write_into(&mut out_ostream)?;
 
             Ok(())
-        }).await.unwrap()?;
+        })
+        .await
+        .unwrap()?;
     }
 
     Ok(())
@@ -622,8 +620,9 @@ async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>
             data.write_into(&mut out_stream)?;
 
             Ok(())
-        }).await.unwrap()?;
-
+        })
+        .await
+        .unwrap()?;
     }
 
     Ok(())
