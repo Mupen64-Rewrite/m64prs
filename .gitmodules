@@ -1,6 +1,6 @@
 [submodule "m64prs/native/mupen64plus-core"]
 	path = m64prs/native/mupen64plus-core
-	url = https://github.com/jgcodes2020/mupen64plus-core
+	url = https://github.com/Mupen64-Rewrite/mupen64plus-core-tas.git
 	branch = rerecording
 [submodule "m64prs/native/mupen64plus-audio-sdl"]
 	path = m64prs/native/mupen64plus-audio-sdl

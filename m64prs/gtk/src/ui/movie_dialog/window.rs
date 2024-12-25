@@ -2,7 +2,7 @@ use gtk::prelude::*;
 
 mod inner {
     use std::{
-        cell::{Cell, RefCell},
+        cell::{Cell, OnceCell, RefCell},
         error::Error,
         pin::pin,
     };
@@ -35,6 +35,11 @@ mod inner {
         file_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
         error_dialog: TemplateChild<gtk::AlertDialog>,
+        
+        #[property(get, set)]
+        new_movie_title: OnceCell<String>,
+        #[property(get, set)]
+        load_movie_title: OnceCell<String>,
 
         #[property(get, construct_only, default_value = false)]
         load: Cell<bool>,

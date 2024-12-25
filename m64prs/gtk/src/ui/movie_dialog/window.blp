@@ -2,7 +2,9 @@ using Gtk 4.0;
 using Gio 2.0;
 
 template $M64PRS_MovieDialogWindow: Gtk.Window {
-  title: bind $cond_string(template.load, "Load Movie...", "New Movie...") as <string>;
+  title: bind $cond_string(template.load, template.load-movie-title, template.new-movie-title) as <string>;
+  new-movie-title: _("New Movie...");
+  load-movie-title: _("Load Movie...");
 
   Box {
     orientation: vertical;
@@ -28,7 +30,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: "Path: ";
+        label: _("Path: ");
       }
 
       Box {
@@ -49,7 +51,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         }
 
         Button {
-          label: "Browse...";
+          label: _("Browse...");
           clicked => $prompt_file() swapped;
         }
       }
@@ -63,7 +65,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: "Author: \n(max 222 bytes)";
+        label: _("Author: \n(max 222 bytes)");
       }
 
       ScrolledWindow {
@@ -97,7 +99,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: "Description: \n(max 256 bytes)";
+        label: _("Description: \n(max 256 bytes)");
       }
 
       ScrolledWindow {
@@ -131,7 +133,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: "Start Type: ";
+        label: _("Start Type: ");
       }
 
       Box {
@@ -160,7 +162,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: "Reset";
+          label: C_("Reset", "movie_dialog");
         }
         ToggleButton savestate_btn {
           halign: fill;
@@ -173,7 +175,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: "Savestate";
+          label: C_("Savestate", "movie_dialog");
         }
         ToggleButton eeprom_btn {
           halign: fill;
@@ -186,7 +188,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: "EEPROM";
+          label: C_("EEPROM", "movie_dialog");
         }
       }
     }
@@ -198,12 +200,12 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
       Button {
         width-request: 100;
-        label: "OK";
+        label: _("OK");
         clicked => $ok_clicked() swapped;
       }
       Button {
         width-request: 100;
-        label: "Cancel";
+        label: _("Cancel");
         clicked => $cancel_clicked() swapped;
       }
     }
@@ -211,11 +213,11 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 }
 
 FileDialog file_dialog {
-  title: bind $cond_string(template.load, "Load Movie...", "New Movie...") as <string>;
+  title: bind $cond_string(template.load, template.load-movie-title, template.new-movie-title) as <string>;
   modal: true;
   filters: Gio.ListStore {
     FileFilter {
-      name: "Mupen64 movie (*.m64)";
+      name: _("Mupen64 movie (*.m64)");
       patterns ["*.m64"]
     }
   };

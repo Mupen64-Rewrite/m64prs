@@ -2,7 +2,7 @@ using Gtk 4.0;
 using Gio 2.0;
 
 template $M64PRS_MainWindow: Gtk.ApplicationWindow {
-  title: "m64prs";
+  title: _("m64prs");
   default-height: 400;
   default-width: 400;
 
@@ -27,10 +27,10 @@ template $M64PRS_MainWindow: Gtk.ApplicationWindow {
 }
 
 FileDialog open_rom_dialog {
-  title: "Open ROM...";
+  title: _("Open ROM...");
   filters: Gio.ListStore {
     FileFilter {
-      name: "N64 ROM (*.n64, *.v64, *.z64)";
+      name: _("N64 ROM (*.n64, *.v64, *.z64)");
       mime-types ["application/x-n64-rom"]
       patterns ["*.n64", "*.v64", "*.z64"]
     }
@@ -46,7 +46,7 @@ FileDialog save_state_dialog {
   title: "Save State To...";
   filters: Gio.ListStore {
     FileFilter {
-      name: "Mupen64Plus savestate (*.st, *.savestate)";
+      name: _("Mupen64Plus savestate (*.st, *.savestate)");
       patterns ["*.st", "*.savestate"]
     }
   };
@@ -56,7 +56,7 @@ FileDialog load_state_dialog {
   title: "Load State From...";
   filters: Gio.ListStore {
     FileFilter {
-      name: "Mupen64Plus savestate (*.st, *.savestate)";
+      name: _("Mupen64Plus savestate (*.st, *.savestate)");
       patterns ["*.st", "*.savestate"]
     }
   };
