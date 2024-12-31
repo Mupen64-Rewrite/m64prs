@@ -6,7 +6,6 @@ use std::{
     mem::ManuallyDrop,
     sync::atomic::{AtomicU64, Ordering},
     thread,
-    time::Duration,
 };
 
 use futures::{SinkExt as _, StreamExt as _};
@@ -30,8 +29,6 @@ use crate::{
     types::{IpcMessage, IpcPayload},
 };
 
-const PING_TIMEOUT: Duration = Duration::from_secs(5);
-
 /// An IPC endpoint with its own event loop thread.
 pub struct Endpoint<OwnMsg, RemoteMsg>
 where
@@ -44,6 +41,7 @@ where
     cancel: CancellationToken,
 }
 
+/// A handle to a currently running IPC endpoint.
 pub struct EndpointHandle<OwnMsg, RemoteMsg>
 where
     OwnMsg: IpcMessage,
@@ -63,19 +61,32 @@ where
     io_ready: oneshot::Receiver<io::Result<()>>,
 }
 
+/// Trait representing something that is able to handle requests. This is auto-implemented for
+/// closures.
+pub trait RequestHandler<OwnMsg, RemoteMsg>: Send + Sync + 'static
+where
+    OwnMsg: IpcMessage,
+    RemoteMsg: IpcMessage,
+{
+    /// Handles an incoming request from the other endpoint, returning a corresponding reply.
+    fn handle_request(
+        &mut self,
+        request: RemoteMsg::Request,
+    ) -> impl Future<Output = OwnMsg::Reply>;
+}
+
 impl<OwnMsg, RemoteMsg> Endpoint<OwnMsg, RemoteMsg>
 where
     OwnMsg: IpcMessage,
     RemoteMsg: IpcMessage,
 {
     /// Begins listening on a socket.
-    pub fn listen<H, Fut>(
+    pub fn listen<H>(
         socket_id: &str,
         handler: H,
     ) -> io::Result<EndpointListening<OwnMsg, RemoteMsg>>
     where
-        H: FnMut(RemoteMsg::Request) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = OwnMsg::Reply>,
+        H: RequestHandler<OwnMsg, RemoteMsg>,
     {
         let socket_name = socket_id.to_ns_name::<GenericNamespaced>()?.into_owned();
         let (send_queue, send_queue_out) =
@@ -101,7 +112,7 @@ where
                             return;
                         },
                         // Listen for a connection.
-                        io_ctx = EndpointContext::<OwnMsg, RemoteMsg, H, Fut>::listen(
+                        io_ctx = EndpointContext::<OwnMsg, RemoteMsg, H>::listen(
                             handler,
                             socket_name,
                             cancel,
@@ -135,10 +146,9 @@ where
     }
 
     /// Connects to an existing socket.
-    pub fn connect<H, Fut>(socket_id: &str, handler: H) -> io::Result<Self>
+    pub fn connect<H>(socket_id: &str, handler: H) -> io::Result<Self>
     where
-        H: FnMut(RemoteMsg::Request) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = OwnMsg::Reply>,
+        H: RequestHandler<OwnMsg, RemoteMsg>,
     {
         let socket_name = socket_id.to_ns_name::<GenericNamespaced>()?.into_owned();
         let (send_queue, send_queue_out) =
@@ -164,7 +174,7 @@ where
                             return;
                         },
                         // Listen for a connection.
-                        io_ctx = EndpointContext::<OwnMsg, RemoteMsg, H, Fut>::connect(
+                        io_ctx = EndpointContext::<OwnMsg, RemoteMsg, H>::connect(
                             handler,
                             socket_name,
                             cancel,
@@ -196,17 +206,18 @@ where
         })
     }
 
-    /// Posts a message to the socket, returning a one-shot receiver that may contain the reply.
-    /// Dropping the receiver will simply discard the reply.
+    /// Posts a message to the socket and blocks until the other side replies.
+    /// If the endpoint thread dies before the reply is sent, this function may
+    /// return a [`RecvError`][oneshot::error::RecvError].
     pub fn post_request_blocking(
         &mut self,
         request: OwnMsg::Request,
-    ) -> oneshot::Receiver<RemoteMsg::Reply> {
+    ) -> Result<RemoteMsg::Reply, oneshot::error::RecvError> {
         let (waiter_src, waiter) = oneshot::channel();
         self.send_queue
             .blocking_send((request, waiter_src))
             .unwrap();
-        waiter
+        waiter.blocking_recv()
     }
 
     /// Posts a message to the socket, returning a one-shot receiver that may contain the reply.
@@ -278,20 +289,7 @@ where
 {
     /// Posts a message to the socket, returning a one-shot receiver that may contain the reply.
     /// Dropping the receiver will simply discard the reply.
-    pub fn post_request(
-        &mut self,
-        request: OwnMsg::Request,
-    ) -> oneshot::Receiver<RemoteMsg::Reply> {
-        let (waiter_src, waiter) = oneshot::channel();
-        self.send_queue
-            .blocking_send((request, waiter_src))
-            .unwrap();
-        waiter
-    }
-
-    /// Posts a message to the socket, returning a one-shot receiver that may contain the reply.
-    /// Dropping the receiver will simply discard the reply.
-    pub async fn post_request_async(
+    pub async fn post_request(
         &mut self,
         request: OwnMsg::Request,
     ) -> oneshot::Receiver<RemoteMsg::Reply> {
@@ -306,6 +304,22 @@ where
     }
 }
 
+impl<Handler, Fut, OwnMsg, RemoteMsg> RequestHandler<OwnMsg, RemoteMsg> for Handler
+where
+    Handler: FnMut(RemoteMsg::Request) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = OwnMsg::Reply>,
+    OwnMsg: IpcMessage,
+    RemoteMsg: IpcMessage,
+{
+    async fn handle_request(
+        &mut self,
+        request: <RemoteMsg as IpcMessage>::Request,
+    ) -> OwnMsg::Reply {
+        self(request).await
+    }
+}
+
+/// Constructs a very-likely unique socket ID with the given prefix.
 pub fn gen_socket_id(prefix: &str) -> String {
     thread_local! {
         static OS_RAND: RefCell<OsRng> = RefCell::new(OsRng::default());
@@ -318,12 +332,11 @@ pub fn gen_socket_id(prefix: &str) -> String {
     format!("{}{:016X}", prefix, uid)
 }
 
-struct EndpointContext<OwnMsg, RemoteMsg, Handler, Fut>
+struct EndpointContext<OwnMsg, RemoteMsg, Handler>
 where
     OwnMsg: IpcMessage,
     RemoteMsg: IpcMessage,
-    Handler: FnMut(RemoteMsg::Request) -> Fut,
-    Fut: Future<Output = OwnMsg::Reply>,
+    Handler: RequestHandler<OwnMsg, RemoteMsg>,
 {
     // socket data
     recv: FramedRead<local_socket::tokio::RecvHalf, MessageCodec<RemoteMsg>>,
@@ -338,12 +351,11 @@ where
     id_counter: AtomicU64,
 }
 
-impl<OwnMsg, RemoteMsg, Handler, Fut> EndpointContext<OwnMsg, RemoteMsg, Handler, Fut>
+impl<OwnMsg, RemoteMsg, Handler> EndpointContext<OwnMsg, RemoteMsg, Handler>
 where
     OwnMsg: IpcMessage,
     RemoteMsg: IpcMessage,
-    Handler: FnMut(RemoteMsg::Request) -> Fut,
-    Fut: Future<Output = OwnMsg::Reply>,
+    Handler: RequestHandler<OwnMsg, RemoteMsg>,
 {
     async fn listen(
         handler: Handler,
@@ -421,7 +433,7 @@ where
         let (id, content) = msg.decode_message();
         match content {
             IpcPayload::Request(request) => {
-                let reply = (self.handler)(request).await;
+                let reply = self.handler.handle_request(request).await;
                 self.send
                     .send(OwnMsg::encode_reply(id, reply))
                     .await

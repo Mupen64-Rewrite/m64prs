@@ -120,7 +120,7 @@ mod inner {
 
     #[m64prs_gtk_utils::forward_wrapper(super::MainWindow, vis = pub(crate))]
     impl MainWindow {
-        pub(super) fn to_buttons(&self) -> Buttons {
+        pub(super) fn poll_input(&self) -> Buttons {
             Buttons {
                 button_bits: self.button_flags.borrow().clone().into(),
                 x_axis: self.joy_x.get(),

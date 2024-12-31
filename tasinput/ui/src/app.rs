@@ -118,7 +118,7 @@ mod inner {
                                             let windows = app.imp().windows.borrow();
                                             windows[controller as usize]
                                                 .as_ref()
-                                                .map_or(Buttons::BLANK, |val| val.to_buttons())
+                                                .map_or(Buttons::BLANK, |val| val.poll_input())
                                         } else {
                                             Buttons::BLANK
                                         }

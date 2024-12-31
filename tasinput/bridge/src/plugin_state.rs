@@ -91,7 +91,7 @@ impl PluginState {
                     _ = timer.tick() => {
                         match timeout(
                             PING_ROUNDTRIP_TIMEOUT,
-                            handle.post_request_async(HostRequest::Ping).await
+                            handle.post_request(HostRequest::Ping).await
                         )
                         .await {
                             Ok(_) => (),
@@ -123,7 +123,6 @@ impl PluginState {
             .post_request_blocking(HostRequest::InitControllers {
                 active: PortMask::PORT1,
             })
-            .blocking_recv()
             .unwrap();
 
         self.controllers = Some(controllers);
@@ -133,7 +132,6 @@ impl PluginState {
         let reply = self
             .endpoint
             .post_request_blocking(HostRequest::PollState { controller })
-            .blocking_recv()
             .unwrap();
         match reply {
             UiReply::PolledState { buttons } => buttons,
@@ -144,14 +142,12 @@ impl PluginState {
     pub(crate) fn rom_open(&mut self) {
         self.endpoint
             .post_request_blocking(HostRequest::SetVisible { visible: true })
-            .blocking_recv()
             .unwrap();
     }
 
     pub(crate) fn rom_closed(&mut self) {
         self.endpoint
             .post_request_blocking(HostRequest::SetVisible { visible: false })
-            .blocking_recv()
             .unwrap();
     }
 }
@@ -160,8 +156,7 @@ impl Drop for PluginState {
     fn drop(&mut self) {
         let _ = self
             .endpoint
-            .post_request_blocking(HostRequest::Close)
-            .blocking_recv();
+            .post_request_blocking(HostRequest::Close);
         match self
             .ui_host
             .wait_timeout(Duration::from_millis(250))
