@@ -4,23 +4,7 @@ use glib::{LogField, LogLevel as GLogLevel, LogWriterOutput};
 use log::kv;
 
 pub fn retarget_glib_logs() {
-    glib::log_set_default_handler(log_handler);
     glib::log_set_writer_func(log_writer);
-}
-
-fn log_handler(domain: Option<&str>, g_level: GLogLevel, message: &str) {
-    let level = match g_level {
-        GLogLevel::Error | GLogLevel::Critical => log::Level::Error,
-        GLogLevel::Warning => log::Level::Warn,
-        GLogLevel::Message | GLogLevel::Info => log::Level::Info,
-        GLogLevel::Debug => log::Level::Debug,
-    };
-    let prefix = match g_level {
-        GLogLevel::Error => "(ERROR) ",
-        GLogLevel::Critical => "(CRITICAL) ",
-        _ => "",
-    };
-    log::log!(target: domain.unwrap_or("<null>"), level, "{}{}", prefix, message);
 }
 
 fn log_writer(level: GLogLevel, fields: &[LogField<'_>]) -> LogWriterOutput {

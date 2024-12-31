@@ -1,6 +1,7 @@
 use std::ffi::{c_char, c_int, c_uchar, c_void};
 
 use common::M64PError;
+use ext::FrontendInterfaceFFI;
 use m64prs_sys::*;
 use plugin_state::PluginState;
 use std::sync::Mutex;
@@ -113,7 +114,13 @@ pub unsafe extern "C" fn SDL_KeyDown(sdl_mod: c_int, sdl_key: c_int) {}
 #[no_mangle]
 pub unsafe extern "C" fn SDL_KeyUp(sdl_mod: c_int, sdl_key: c_int) {}
 
+#[no_mangle]
+pub unsafe extern "C" fn M64PRS_UseFrontendInterface(pointer: *const FrontendInterfaceFFI) {
+    // *FRONTEND.lock().unwrap() = Some((&*pointer).clone());
+}
+
 static STATE: Mutex<Option<PluginState>> = Mutex::new(None);
+// static FRONTEND: Mutex<Option<FrontendInterfaceFFI>> = Mutex::new(None);
 
 macro_rules! m64p_try {
     ($value:expr) => {

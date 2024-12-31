@@ -10,6 +10,8 @@ m64prs-native = { workspace = true }
 m64prs-vcr = { workspace = true }
 m64prs-gtk-utils = { workspace = true }
 
+gettext-rs = { workspace = true }
+
 dpi = { workspace = true }
 
 glib = { workspace = true }

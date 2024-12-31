@@ -1,8 +1,9 @@
-//! Symbol groups from Mupen64Plus, for use with [`decan`].
+//! [`decan`]-compatible [`SymbolGroup`] implementations for the
+//! Mupen64Plus API.
 
 use decan::{non_null, SymbolGroup};
 
-use crate::types::*;
+use crate::{ext::ptr_M64PRS_UseFrontendHandle, types::*};
 
 #[derive(SymbolGroup)]
 pub struct FullCoreApi {
@@ -112,4 +113,10 @@ pub struct BasePluginApi {
     pub startup: non_null!(ptr_PluginStartup),
     #[symbol = "PluginShutdown"]
     pub shutdown: non_null!(ptr_PluginShutdown),
+}
+
+#[derive(SymbolGroup)]
+pub struct ExtPluginApi {
+    #[symbol = "M64PRS_UseFrontendHandle"]
+    pub use_frontend_interface: non_null!(ptr_M64PRS_UseFrontendHandle),
 }
