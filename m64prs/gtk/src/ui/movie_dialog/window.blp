@@ -3,8 +3,8 @@ using Gio 2.0;
 
 template $M64PRS_MovieDialogWindow: Gtk.Window {
   title: bind $cond_string(template.load, template.load-movie-title, template.new-movie-title) as <string>;
-  new-movie-title: _("New Movie...");
-  load-movie-title: _("Load Movie...");
+  new-movie-title: C_("New Movie...", "movie_dialog");
+  load-movie-title: C_("Load Movie...", "movie_dialog");
 
   Box {
     orientation: vertical;
@@ -30,7 +30,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: _("Path: ");
+        label: C_("movie_dialog", "Path: ");
       }
 
       Box {
@@ -65,7 +65,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: _("Author: \n(max 222 bytes)");
+        label: C_("movie_dialog", "Author: \n(max 222 bytes)");
       }
 
       ScrolledWindow {
@@ -99,7 +99,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: _("Description: \n(max 256 bytes)");
+        label: C_("movie_dialog", "Description: \n(max 256 bytes)");
       }
 
       ScrolledWindow {
@@ -133,7 +133,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
         halign: end;
         xalign: 1.0;
 
-        label: _("Start Type: ");
+        label: C_("movie_dialog", "Start Type: ");
       }
 
       Box {
@@ -162,7 +162,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: C_("Reset", "movie_dialog");
+          label: C_("movie_dialog", "Reset");
         }
         ToggleButton savestate_btn {
           halign: fill;
@@ -175,7 +175,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: C_("Savestate", "movie_dialog");
+          label: C_("movie_dialog", "Savestate");
         }
         ToggleButton eeprom_btn {
           halign: fill;
@@ -188,7 +188,7 @@ template $M64PRS_MovieDialogWindow: Gtk.Window {
 
           clicked => $ui_set_start_type() swapped;
 
-          label: C_("EEPROM", "movie_dialog");
+          label: C_("movie_dialog", "EEPROM");
         }
       }
     }

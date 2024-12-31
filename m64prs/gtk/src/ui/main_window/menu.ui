@@ -11,9 +11,9 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/merge_requests/224
   <requires lib="gtk" version="4.0"/>
   <menu id="root">
     <submenu>
-      <attribute name="label">File</attribute>
+      <attribute name="label" translatable="yes" context="main_menu">File</attribute>
       <item>
-        <attribute name="label">Open ROM</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Open ROM</attribute>
         <attribute name="action">app.file.open_rom</attribute>
       </item>
       <item>
@@ -22,74 +22,74 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/merge_requests/224
       </item>
     </submenu>
     <submenu>
-      <attribute name="label">Emulator</attribute>
+      <attribute name="label" translatable="yes" context="main_menu">Emulator</attribute>
       <section>
         <item>
-          <attribute name="label">Pause/Resume</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Pause/Resume</attribute>
           <attribute name="action">app.emu.toggle_pause</attribute>
         </item>
         <item>
-          <attribute name="label">Frame Advance</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Frame Advance</attribute>
           <attribute name="action">app.emu.frame_advance</attribute>
         </item>
         <item>
-          <attribute name="label">Reset ROM</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Reset ROM</attribute>
           <attribute name="action">app.emu.reset_rom</attribute>
         </item>
       </section>
       <section>
         <item>
-          <attribute name="label">Save State</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Save State</attribute>
           <attribute name="action">app.emu.save_slot</attribute>
         </item>
         <item>
-          <attribute name="label">Load State</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Load State</attribute>
           <attribute name="action">app.emu.load_slot</attribute>
         </item>
         <submenu>
-          <attribute name="label">Current Slot</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Current Slot</attribute>
           <item>
-            <attribute name="label">1</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">1</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">1</attribute>
           </item>
           <item>
-            <attribute name="label">2</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">2</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">2</attribute>
           </item>
           <item>
-            <attribute name="label">3</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">3</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">3</attribute>
           </item>
           <item>
-            <attribute name="label">4</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">4</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">4</attribute>
           </item>
           <item>
-            <attribute name="label">5</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">5</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">5</attribute>
           </item>
           <item>
-            <attribute name="label">6</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">6</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">6</attribute>
           </item>
           <item>
-            <attribute name="label">7</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">7</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">7</attribute>
           </item>
           <item>
-            <attribute name="label">8</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">8</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">8</attribute>
           </item>
           <item>
-            <attribute name="label">9</attribute>
+            <attribute name="label" translatable="yes" context="main_menu">9</attribute>
             <attribute name="action">app.emu.set_save_slot</attribute>
             <attribute name="target" type="y">9</attribute>
           </item>
@@ -97,35 +97,35 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/merge_requests/224
       </section>
       <section>
         <item>
-          <attribute name="label">Save State to...</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Save State to...</attribute>
           <attribute name="action">app.emu.save_file</attribute>
         </item>
         <item>
-          <attribute name="label">Load State from...</attribute>
+          <attribute name="label" translatable="yes" context="main_menu">Load State from...</attribute>
           <attribute name="action">app.emu.load_file</attribute>
         </item>
       </section>
     </submenu>
     <submenu>
-      <attribute name="label">Movie</attribute>
+      <attribute name="label" translatable="yes" context="main_menu">Movie</attribute>
       <item>
-        <attribute name="label">New Movie</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">New Movie</attribute>
         <attribute name="action">app.vcr.new_movie</attribute>
       </item>
       <item>
-        <attribute name="label">Load Movie</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Load Movie</attribute>
         <attribute name="action">app.vcr.load_movie</attribute>
       </item>
       <item>
-        <attribute name="label">Save Movie</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Save Movie</attribute>
         <attribute name="action">app.vcr.save_movie</attribute>
       </item>
       <item>
-        <attribute name="label">Close Movie</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Close Movie</attribute>
         <attribute name="action">app.vcr.close_movie</attribute>
       </item>
       <item>
-        <attribute name="label">Read-only Mode</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Read-only Mode</attribute>
         <attribute name="action">app.vcr.toggle_read_only</attribute>
       </item>
     </submenu>
