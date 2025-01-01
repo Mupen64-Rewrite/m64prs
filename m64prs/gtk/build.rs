@@ -30,6 +30,6 @@ fn main() {
 
     if std::env::var_os("CARGO_CFG_WINDOWS").is_some() {
         win_manifest();
-        println!("cargo::warning=Windows is not supported at the moment due to some outstanding issues in GTK. Proceed with caution.")
+        println!("cargo::warning=Windows is not fully supported at the moment due to some outstanding issues in GTK. Proceed with caution.")
     }
 }

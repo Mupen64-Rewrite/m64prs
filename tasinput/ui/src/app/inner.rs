@@ -2,11 +2,10 @@ use std::{cell::RefCell, mem};
 
 use glib::SendWeakRef;
 use gtk::{prelude::*, subclass::prelude::*};
-use m64prs_sys::Buttons;
-use tasinput_protocol::{Endpoint, HostMessage, UiMessage, UiReply, PING_TIMEOUT};
+use tasinput_protocol::{Endpoint, HostMessage, UiMessage};
 use tokio::{
-    sync::mpsc::{self, error::TryRecvError},
-    time::{sleep_until, Instant},
+    sync::mpsc::{self},
+    time::Instant,
 };
 
 use crate::{

@@ -1,6 +1,5 @@
 use std::{
     borrow::Borrow,
-    env,
     error::Error,
     fs,
     path::{Path, PathBuf},

@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, sync::LazyLock};
+use std::{path::PathBuf, sync::LazyLock};
 
 pub struct InstallDirs {
     // system installation

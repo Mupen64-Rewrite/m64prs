@@ -21,5 +21,8 @@ pub fn run_ui() {
 
     let app = gtk::Application::new(Some(APP_ID), ApplicationFlags::FLAGS_NONE);
     app.connect_activate(|app| MainWindow::setup_and_show(app));
+
+    app.set_accels_for_action("app.file.open_rom", &["<Ctrl>o"]);
+
     app.run();
 }
