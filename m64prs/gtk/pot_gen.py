@@ -32,7 +32,6 @@ if not shutil.which("xtr"):
 
 # generate base .pot files
 
-
 def pot_gen(tmpdir: Path):
     rs_pot = tmpdir / "rs.pot"
     ui_pot = tmpdir / "ui.pot"

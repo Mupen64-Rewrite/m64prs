@@ -6,6 +6,16 @@ import shutil
 import platform
 import os
 
+# COMPILATION STUFF
+# =====================
+def compile_po(src: Path, dst: Path, domain: str):
+    for srcfile in src.glob("*.po"):
+        dstdir = dst / srcfile.stem / "LC_MESSAGES"
+        dstfile = dstdir / f"{domain}.mo"
+        dstdir.mkdir(parents=True, exist_ok=True)
+        subp.run(["msgfmt", srcfile, "-o", dstfile]).check_returncode()
+
+
 # INSTALL FUNCTIONS
 # ======================
 
@@ -138,6 +148,8 @@ def build(args: argparse.Namespace, extra: list[str]):
     native_root_dir = project_dir.joinpath("m64prs/native")
     native_target_dir = native_root_dir.joinpath("target")
 
+    m64prs_i18n_dir = project_dir.joinpath("m64prs/gtk/i18n")
+
     scheme = INSTALL_DIRS[args.install_scheme]
     default_scheme_name = next(iter(INSTALL_DIRS.keys()))
 
@@ -164,6 +176,11 @@ def build(args: argparse.Namespace, extra: list[str]):
         cargo_args,
         cwd=project_dir
     ).check_returncode()
+
+
+    compile_po(m64prs_i18n_dir, i18n_dir, "m64prs")
+
+
 
     # copy binaries
     install_exe(target_dir, bin_dir, "m64prs-gtk")
