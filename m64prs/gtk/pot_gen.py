@@ -8,7 +8,7 @@ from tempfile import mkdtemp
 
 BASE_PATH = Path(__file__).parent
 SRC_PATH = BASE_PATH / "src"
-POT_PATH = BASE_PATH / "i18n" / "messages.pot"
+POT_PATH = BASE_PATH / "i18n" / "m64prs.pot"
 
 if len(sys.argv) == 2 and sys.argv[1] == "--help":
     print(f"Usage: {sys.argv[0]} [--help]")
