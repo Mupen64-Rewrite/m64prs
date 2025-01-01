@@ -1,175 +1,174 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# English translations for m64prs 0.1.0Report-Msgid-Bugs-To: package.
+# Copyright (C) 2025 THE m64prs 0.1.0Report-Msgid-Bugs-To:'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the m64prs 0.1.0Report-Msgid-Bugs-To: package.
+# Jacky Guo <j349guo@uwaterloo.ca>, 2025.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: m64prs 0.1.0"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: m64prs 0.1.0Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-01-01 12:05-0500\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2025-01-01 12:08-0500\n"
+"Last-Translator: Jacky Guo <j349guo@uwaterloo.ca>\n"
+"Language-Team: English\n"
+"Language: en_US\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:14
 msgctxt "main_menu"
 msgid "File"
-msgstr ""
+msgstr "File"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:16
 msgctxt "main_menu"
 msgid "Open ROM"
-msgstr ""
+msgstr "Open ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:20
 msgctxt "main_menu"
 msgid "Close ROM"
-msgstr ""
+msgstr "Close ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:25
 msgctxt "main_menu"
 msgid "Emulator"
-msgstr ""
+msgstr "Emulator"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:28
 msgctxt "main_menu"
 msgid "Pause/Resume"
-msgstr ""
+msgstr "Pause/Resume"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:32
 msgctxt "main_menu"
 msgid "Frame Advance"
-msgstr ""
+msgstr "Frame Advance"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:36
 msgctxt "main_menu"
 msgid "Reset ROM"
-msgstr ""
+msgstr "Reset ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:42
 msgctxt "main_menu"
 msgid "Save State"
-msgstr ""
+msgstr "Save State"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:46
 msgctxt "main_menu"
 msgid "Load State"
-msgstr ""
+msgstr "Load State"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:50
 msgctxt "main_menu"
 msgid "Current Slot"
-msgstr ""
+msgstr "Current Slot"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:52
 msgctxt "main_menu"
 msgid "1"
-msgstr ""
+msgstr "1"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:57
 msgctxt "main_menu"
 msgid "2"
-msgstr ""
+msgstr "2"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:62
 msgctxt "main_menu"
 msgid "3"
-msgstr ""
+msgstr "3"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:67
 msgctxt "main_menu"
 msgid "4"
-msgstr ""
+msgstr "4"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:72
 msgctxt "main_menu"
 msgid "5"
-msgstr ""
+msgstr "5"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:77
 msgctxt "main_menu"
 msgid "6"
-msgstr ""
+msgstr "6"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:82
 msgctxt "main_menu"
 msgid "7"
-msgstr ""
+msgstr "7"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:87
 msgctxt "main_menu"
 msgid "8"
-msgstr ""
+msgstr "8"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:92
 msgctxt "main_menu"
 msgid "9"
-msgstr ""
+msgstr "9"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:100
 msgctxt "main_menu"
 msgid "Save State to..."
-msgstr ""
+msgstr "Save State to..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:104
 msgctxt "main_menu"
 msgid "Load State from..."
-msgstr ""
+msgstr "Load State from..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:110
 msgctxt "main_menu"
 msgid "Movie"
-msgstr ""
+msgstr "Movie"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:112
 msgctxt "main_menu"
 msgid "New Movie"
-msgstr ""
+msgstr "New Movie"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:116
 msgctxt "main_menu"
 msgid "Load Movie"
-msgstr ""
+msgstr "Load Movie"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:120
 msgctxt "main_menu"
 msgid "Save Movie"
-msgstr ""
+msgstr "Save Movie"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:124
 msgctxt "main_menu"
 msgid "Close Movie"
-msgstr ""
+msgstr "Close Movie"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:128
 msgctxt "main_menu"
 msgid "Read-only Mode"
-msgstr ""
+msgstr "Read-only Mode"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:6
 msgctxt "movie_dialog"
 msgid "New Movie..."
-msgstr ""
+msgstr "New Movie..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:7
 msgctxt "movie_dialog"
 msgid "Load Movie..."
-msgstr ""
+msgstr "Load Movie..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:33
 msgctxt "movie_dialog"
 msgid "Path: "
-msgstr ""
+msgstr "Path: "
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:54
 msgid "Browse..."
-msgstr ""
+msgstr "Browse..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:68
 msgctxt "movie_dialog"
@@ -177,6 +176,8 @@ msgid ""
 "Author: \n"
 "(max 222 bytes)"
 msgstr ""
+"Author: \n"
+"(max 222 bytes)"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:102
 msgctxt "movie_dialog"
@@ -184,52 +185,54 @@ msgid ""
 "Description: \n"
 "(max 256 bytes)"
 msgstr ""
+"Description: \n"
+"(max 256 bytes)"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:136
 msgctxt "movie_dialog"
 msgid "Start Type: "
-msgstr ""
+msgstr "Start Type: "
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:165
 msgctxt "movie_dialog"
 msgid "Reset"
-msgstr ""
+msgstr "Reset"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:178
 msgctxt "movie_dialog"
 msgid "Savestate"
-msgstr ""
+msgstr "Savestate"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:191
 msgctxt "movie_dialog"
 msgid "EEPROM"
-msgstr ""
+msgstr "EEPROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:203
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:208
 msgid "Cancel"
-msgstr ""
+msgstr "Cancel"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:220
 msgid "Mupen64 movie (*.m64)"
-msgstr ""
+msgstr "Mupen64 movie (*.m64)"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:5
 msgid "m64prs"
-msgstr ""
+msgstr "m64prs"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:30
 msgid "Open ROM..."
-msgstr ""
+msgstr "Open ROM..."
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:33
 msgid "N64 ROM (*.n64, *.v64, *.z64)"
-msgstr ""
+msgstr "N64 ROM (*.n64, *.v64, *.z64)"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:49
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:59
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
-msgstr ""
+msgstr "Mupen64Plus savestate (*.st, *.savestate)"

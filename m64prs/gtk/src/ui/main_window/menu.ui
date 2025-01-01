@@ -17,7 +17,7 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/merge_requests/224
         <attribute name="action">app.file.open_rom</attribute>
       </item>
       <item>
-        <attribute name="label">Close ROM</attribute>
+        <attribute name="label" translatable="yes" context="main_menu">Close ROM</attribute>
         <attribute name="action">app.file.close_rom</attribute>
       </item>
     </submenu>

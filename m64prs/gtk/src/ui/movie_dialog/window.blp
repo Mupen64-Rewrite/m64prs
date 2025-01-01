@@ -3,8 +3,8 @@ using Gio 2.0;
 
 template $M64PRS_MovieDialogWindow: Gtk.Window {
   title: bind $cond_string(template.load, template.load-movie-title, template.new-movie-title) as <string>;
-  new-movie-title: C_("New Movie...", "movie_dialog");
-  load-movie-title: C_("Load Movie...", "movie_dialog");
+  new-movie-title: C_("movie_dialog", "New Movie...");
+  load-movie-title: C_("movie_dialog", "Load Movie...");
 
   Box {
     orientation: vertical;
