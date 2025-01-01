@@ -24,7 +24,7 @@ use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
-use crate::utils::keyboard;
+use crate::utils::{dirs::INSTALL_DIRS, keyboard};
 
 use super::main_window::MainWindow;
 
@@ -113,13 +113,8 @@ impl CoreReadyState {
         #[cfg(target_os = "linux")]
         const MUPEN_FILENAME: &str = "libmupen64plus.so";
 
-        let self_path = env::current_exe().expect("should be able to find current_exe");
-        let self_dir = self_path
-            .parent()
-            .expect("self path should be in a directory");
-
-        let mupen_dll_path = self_dir.join(MUPEN_FILENAME);
-        let data_dir = self_dir.join("data\\");
+        let mupen_dll_path = INSTALL_DIRS.core_dir.join(MUPEN_FILENAME);
+        let data_dir = &INSTALL_DIRS.data_dir;
 
         let config_dir = dirs::config_dir().unwrap().join("m64prs");
         let _ = fs::create_dir_all(&config_dir);

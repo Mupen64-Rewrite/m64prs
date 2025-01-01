@@ -1,4 +1,4 @@
-use std::{error::Error, io};
+use std::{error::Error, io, path::Path};
 
 use gtk::prelude::*;
 use m64prs_core::{
@@ -12,7 +12,7 @@ use m64prs_gtk_utils::{
 };
 use m64prs_vcr::{movie::M64File, VcrState};
 
-use crate::ui::main_window::enums::MainEmuState;
+use crate::{ui::main_window::enums::MainEmuState, utils::dirs::INSTALL_DIRS};
 
 use super::{CoreState, MainWindow};
 
@@ -303,8 +303,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
         async move { Ok::<_, glib::Error>(rom_file.load_contents_future().await?.0) };
     let plugin_fut = async {
         gio::spawn_blocking(|| {
-            let self_path = std::env::current_exe().unwrap();
-            let plugin_path = self_path.parent().unwrap().join("plugins");
+            let plugin_dir: &Path = &INSTALL_DIRS.plugin_dir;
 
             fn plugin_name(name: &str) -> String {
                 #[cfg(target_os = "windows")]
@@ -321,19 +320,12 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            println!(
-                "tasinput: {}",
-                plugin_path
-                    .join(plugin_name("mupen64plus-input-tasinput"))
-                    .display()
-            );
-
             // TODO: allow user to configure plugins
             Ok::<_, PluginLoadError>(PluginSet {
-                graphics: Plugin::load(plugin_path.join(plugin_name("mupen64plus-video-rice")))?,
-                audio: Plugin::load(plugin_path.join(plugin_name("mupen64plus-audio-sdl")))?,
-                input: Plugin::load(plugin_path.join(plugin_name("mupen64plus-input-tasinput")))?,
-                rsp: Plugin::load(plugin_path.join(plugin_name("mupen64plus-rsp-hle")))?,
+                graphics: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-video-rice")))?,
+                audio: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-audio-sdl")))?,
+                input: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-input-tasinput")))?,
+                rsp: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-rsp-hle")))?,
             })
         })
         .await

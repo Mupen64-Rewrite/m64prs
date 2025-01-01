@@ -60,6 +60,7 @@ panic = "abort"
 
 [features]
 default = ["x11", "wayland"]
+# Linux-specific features
 wayland = [
     "dep:gdk_wayland",
     "dep:wayland-client",
@@ -69,8 +70,11 @@ wayland = [
 ]
 x11 = ["dep:gdk_x11", "dep:x11rb", "dep:tiny-xlib", "dep:as-raw-xcb-connection"]
 
+install-unix = []
+
+
 [build-dependencies]
-gl_generator = "0.14.0"
+gl_generator = { workspace = true }
 m64prs-native = { workspace = true }
 
-embed-manifest = "1.4.0"
+embed-manifest = { workspace = true }
