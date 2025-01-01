@@ -32,6 +32,7 @@ if not shutil.which("xtr"):
 
 # generate base .pot files
 
+
 def pot_gen(tmpdir: Path):
     rs_pot = tmpdir / "rs.pot"
     ui_pot = tmpdir / "ui.pot"
@@ -46,22 +47,29 @@ def pot_gen(tmpdir: Path):
 
     # Blueprint
     subp.run([
-        "xgettext", *
-        SRC_PATH.rglob("*.blp"), "--from-code=UTF-8", "--add-comments",
-             "--keyword=_", "--keyword=C_:1c,2", "-o", blp_pot
-             ]).check_returncode()
+        "xgettext", "-L", "C",
+        "--from-code=UTF-8", "--add-comments",
+        "--keyword=_", "--keyword=C_:1c,2",
+        "-o", blp_pot, "--",
+        *SRC_PATH.rglob("*.blp"),
+    ]).check_returncode()
 
     # merge
+    merge_cmd = ["xgettext", "-o", "-", "--", rs_pot, ui_pot, blp_pot]
     merge_proc = subp.Popen(
-        ["xgettext", rs_pot, ui_pot, blp_pot, "-o", "-"], stdout=subp.PIPE, encoding="utf-8")
+        merge_cmd, 
+        stdout=subp.PIPE, encoding="utf-8"
+    )
     with open(POT_PATH, "w") as out_file:
         for line in merge_proc.stdout:
             if line.startswith("\"Project-Id-Version"):
                 out_file.write("\"Project-Id-Version: m64prs 0.1.0\"\n")
             else:
                 out_file.write(line)
+    merge_proc_rc = merge_proc.wait()
 
-    pass
+    if merge_proc_rc != 0:
+        raise subp.CalledProcessError(merge_proc_rc, merge_cmd)
 
 
 tmpdir = None
