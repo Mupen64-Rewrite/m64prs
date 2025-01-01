@@ -19,7 +19,7 @@ fn get_install_dirs() -> InstallDirs {
 
     InstallDirs {
         core_dir: own_dir.to_owned(),
-        plugin_dir: own_dir.join("plugins"),
+        plugin_dir: own_dir.join("plugin"),
         data_dir: own_dir.join("data"),
         i18n_dir: own_dir.join("i18n"),
     }

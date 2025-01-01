@@ -304,6 +304,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let plugin_fut = async {
         gio::spawn_blocking(|| {
             let plugin_dir: &Path = &INSTALL_DIRS.plugin_dir;
+            println!("plugins: {}", plugin_dir.display());
 
             fn plugin_name(name: &str) -> String {
                 #[cfg(target_os = "windows")]
