@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from sys import argv, exit
+import sys
 from pathlib import Path
 import shutil
 import subprocess as subp
@@ -116,13 +116,13 @@ COMMAND_TABLE = {
 COMMAND_LIST = " | ".join(i for i in COMMAND_TABLE.keys())
 
 
-if len(argv) != 2:
-    print(f"Usage: {argv[0]} [{COMMAND_LIST}]")
-    exit(1)
+if len(sys.argv) != 2:
+    print(f"Usage: {sys.argv[0]} [{COMMAND_LIST}]")
+    sys.exit(1)
 
-command = COMMAND_TABLE.get(argv[1])
+command = COMMAND_TABLE.get(sys.argv[1])
 if command is None:
-    print(f"Usage: {argv[0]} [{COMMAND_LIST}]")
-    exit(1)
+    print(f"Usage: {sys.argv[0]} [{COMMAND_LIST}]")
+    sys.exit(1)
 
 command()

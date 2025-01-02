@@ -6,8 +6,6 @@ use std::{
 };
 
 mod dirs;
-#[cfg(windows)]
-mod msvc;
 
 pub fn setup_cargo_reruns() {
     fn emit(path: &Path) {
@@ -15,7 +13,7 @@ pub fn setup_cargo_reruns() {
     }
 
     println!("cargo::rerun-if-changed=build/");
-    println!("cargo::rerun-if-changed=m64prs-build-all.py");
+    println!("cargo::rerun-if-changed=m64prs-build-unix.py");
     #[cfg(windows)]
     println!("cargo::rerun-if-changed=m64prs-vs-deps.sln");
     // mupen64plus-core-tas
@@ -47,31 +45,19 @@ pub fn setup_cargo_reruns() {
 }
 
 #[cfg(windows)]
-fn compile_m64p_deps(out_dir: &Path) {
-    let (vs_env_arch, msbuild_platform) = match env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str()
-    {
-        "x86" => ("x86", "Win32"),
-        "x86_64" => ("amd64", "x64"),
-        _ => panic!("Target platform not supported!"),
-    };
-    let msbuild_config = match env::var("PROFILE").unwrap().as_str() {
-        "debug" => "Debug",
-        "release" => "Release",
-        _ => unreachable!(),
-    };
+fn compile_m64p_deps(_out_dir: &Path) {
+    use std::process::{Command, Stdio};
 
-    let vs_env = msvc::vs_dev_env(vs_env_arch);
+    let root_dir = PathBuf::from(dirs::ROOT_DIR);
 
-    let root_path = Path::new(dirs::ROOT_DIR);
-    let sln_file = root_path.join("m64prs-vs-deps.sln");
+    let cmd = Command::new("python3")
+        .arg(root_dir.join("m64prs-build-win.py"))
+        .arg("build")
+        .stdout(os_pipe::dup_stderr().unwrap())
+        .status()
+        .expect("script invoke failed");
 
-    msvc::msbuild(
-        &vs_env,
-        &sln_file,
-        out_dir,
-        msbuild_config,
-        msbuild_platform,
-    );
+    assert!(cmd.success());
 }
 
 #[cfg(unix)]
@@ -81,7 +67,7 @@ fn compile_m64p_deps(_out_dir: &Path) {
     let root_dir = PathBuf::from(dirs::ROOT_DIR);
 
     let cmd = Command::new("python3")
-        .arg(root_dir.join("m64prs-build-all.py"))
+        .arg(root_dir.join("m64prs-build-unix.py"))
         .arg("build")
         .stdout(os_pipe::dup_stderr().unwrap())
         .status()

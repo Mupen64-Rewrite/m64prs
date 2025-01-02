@@ -8,6 +8,8 @@ import os
 
 # COMPILATION STUFF
 # =====================
+
+
 def compile_po(src: Path, dst: Path, domain: str):
     for srcfile in src.glob("*.po"):
         dstdir = dst / srcfile.stem / "LC_MESSAGES"
@@ -127,6 +129,7 @@ def install_data(srcdir: Path, dstdir: Path):
 # CLEAN FUNCTIONS
 # ======================
 
+
 def yeet_dir(dir: Path):
     if dir.exists() and dir.is_dir():
         shutil.rmtree(dir)
@@ -137,7 +140,7 @@ def yeet_dir(dir: Path):
 
 def build(args: argparse.Namespace, extra: list[str]):
     project_dir = Path(__file__).parent
-    
+
     # setup directories
     install_root_dir = None
     target_dir = None
@@ -181,10 +184,7 @@ def build(args: argparse.Namespace, extra: list[str]):
         cwd=project_dir,
     ).check_returncode()
 
-
     compile_po(m64prs_i18n_dir, i18n_dir, "m64prs")
-
-
 
     # copy binaries
     install_exe(target_dir, bin_dir, "m64prs-gtk")
@@ -253,7 +253,7 @@ def run(args: argparse.Namespace, extra: list[str]):
         install_root_dir = project_dir.joinpath("install/release")
     else:
         install_root_dir = project_dir.joinpath("install/debug")
-    
+
     bin_dir = install_root_dir / INSTALL_DIRS[args.install_scheme]['bin']
 
     run_args = [bin_dir.joinpath(exe_name("m64prs-gtk"))]
@@ -270,11 +270,17 @@ def clean(args: argparse.Namespace, extra: list[str]):
     yeet_dir(root_dir.joinpath("install"))
 
     native_dir = root_dir.joinpath("m64prs/native")
+
+    build_script_name = \
+        "m64prs-build-win.py" \
+        if platform.system() == "Windows" \
+        else "m64prs-build-unix.py"
+
     if platform.system() == "Windows":
         yeet_dir(native_dir.joinpath("target"))
     else:
         subp.run([
-            "python3", native_dir.joinpath("m64prs-build-all.py"), "clean"
+            "python3", native_dir.joinpath(build_script_name), "clean"
         ]).check_returncode()
 
     pass
