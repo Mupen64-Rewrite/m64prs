@@ -1,0 +1,4 @@
+[env]
+# This should be correct if you used the default paths for gvsbuild. 
+X86_64_PC_WINDOWS_MSVC_GETTEXT_DIR = { value = "C:\\gtk-build\\gtk\\Release\\x64" }
+I686_PC_WINDOWS_MSVC_GETTEXT_DIR = { value = "C:\\gtk-build\\gtk\\Release\\Win32" }

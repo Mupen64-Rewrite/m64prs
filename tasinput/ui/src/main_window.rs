@@ -152,7 +152,8 @@ mod inner {
             self.parent_constructed();
             let obj = self.obj();
 
-            let ct_win_move = gtk::EventControllerLegacy::new();
+            {
+                let ct_win_move = gtk::EventControllerLegacy::new();
             ct_win_move.set_propagation_phase(gtk::PropagationPhase::Bubble);
             ct_win_move.connect_event({
                 let this = obj.downgrade();
@@ -169,7 +170,8 @@ mod inner {
                     if let Some(pointer_evt) = evt.downcast_ref::<gdk::ButtonEvent>() {
                         // Get the button, only allow left click
                         let button = pointer_evt.button();
-                        if button != gdk::BUTTON_PRIMARY {
+                        let mask = pointer_evt.modifier_state();
+                        if button != gdk::BUTTON_PRIMARY || !mask.contains(gdk::ModifierType::BUTTON1_MASK) {
                             return glib::Propagation::Proceed;
                         }
                         // gather other information
@@ -196,6 +198,7 @@ mod inner {
             });
 
             obj.add_controller(ct_win_move);
+            }
         }
 
         fn dispose(&self) {

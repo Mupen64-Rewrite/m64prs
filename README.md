@@ -40,6 +40,10 @@ pip install gvsbuild pyinstaller
 gvsbuild build --py-wheel --enable-gi gtk4 pygobject
 ```
 
+> Note: If you previously setup `gvsbuild` in a non-default directory (i.e. not `C:\gtk-build`), you will need to adjust 
+> the paths in `.cargo/config.toml`. This is needed to locate the `gettext` library that is built alongside the rest of 
+> the GNOME stack.
+
 In a separate directory, clone and package `blueprint-compiler`:
 ```powershell
 # You don't need to keep this directory around anyways.
