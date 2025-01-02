@@ -14,6 +14,35 @@ def compile_po(src: Path, dst: Path, domain: str):
         dstfile = dstdir / f"{domain}.mo"
         dstdir.mkdir(parents=True, exist_ok=True)
         subp.run(["msgfmt", srcfile, "-o", dstfile]).check_returncode()
+    
+def setup_windows_env():
+    # locate gobject-query.exe
+    test_exe = shutil.which("gobject-query.exe")
+    if test_exe is None:
+        raise FileNotFoundError(
+            "Failed to find gobject-query.exe (to detect gvsbuild).\n" +
+            "Check that you have set up the environment variables for gvsbuild."
+        )
+    test_exe = Path(test_exe)
+
+    gvsbuild_root = test_exe.parents[4]
+
+    if not (gvsbuild_root / "logs" / "gvsbuild-log.txt").exists():
+        raise FileNotFoundError(
+            "gobject-query does not come from a gvsbuild root (at least, probably not)!\n" +
+            "If you deleted the logs\\gvsbuild-log.txt from your gvsbuild folder, add it back.\n" +
+            "This is the only good way I can check for a path being the gvsbuild root."
+        )
+    
+    print(f"found gvsbuild at: {gvsbuild_root}")
+    
+    # if there's a better way to set this that works for 32-bit, please PR
+    os.environ["GETTEXT_BIN_DIR"] = str(gvsbuild_root / "gtk\\x64\\release\\bin")
+    os.environ["GETTEXT_LIB_DIR"] = str(gvsbuild_root / "gtk\\x64\\release\\lib")
+    os.environ["GETTEXT_INCLUDE_DIR"] = str(gvsbuild_root / "gtk\\x64\\release\\include")
+
+
+    pass
 
 
 # INSTALL FUNCTIONS
@@ -124,8 +153,12 @@ def install_data(srcdir: Path, dstdir: Path):
     for item in srcdir.iterdir():
         copy_if_newer(item, dstdir.joinpath(item.name))
 
-#
+# CLEAN FUNCTIONS
 # ======================
+
+def yeet_dir(dir: Path):
+    if dir.exists() and dir.is_dir():
+        shutil.rmtree(dir)
 
 # COMMANDS
 # ======================
@@ -134,6 +167,11 @@ def install_data(srcdir: Path, dstdir: Path):
 def build(args: argparse.Namespace, extra: list[str]):
     project_dir = Path(__file__).parent
 
+    # Windows: setup gettext environment based on location of gvsbuild.
+    # This assumes gvsbuild is setup properly.
+    if platform.system() == "Windows":
+        setup_windows_env()
+    
     # setup directories
     install_root_dir = None
     target_dir = None
@@ -174,7 +212,7 @@ def build(args: argparse.Namespace, extra: list[str]):
         cargo_args.extend(["-F", f"install-{args.install_scheme}"])
     subp.run(
         cargo_args,
-        cwd=project_dir
+        cwd=project_dir,
     ).check_returncode()
 
 
@@ -216,7 +254,7 @@ def build(args: argparse.Namespace, extra: list[str]):
         else:
             assert False
 
-        deps_dir = install_root_dir.joinpath(
+        deps_dir = project_dir.joinpath(
             "m64prs/native/mupen64plus-win32-deps")
 
         NATIVE_DEP_NAMES = [
@@ -262,12 +300,12 @@ def run(args: argparse.Namespace, extra: list[str]):
 
 def clean(args: argparse.Namespace, extra: list[str]):
     root_dir = Path(__file__).parent
-    shutil.rmtree(root_dir.joinpath("target"))
-    shutil.rmtree(root_dir.joinpath("install"))
+    yeet_dir(root_dir.joinpath("target"))
+    yeet_dir(root_dir.joinpath("install"))
 
     native_dir = root_dir.joinpath("m64prs/native")
     if platform.system() == "Windows":
-        shutil.rmtree(native_dir.joinpath("target"))
+        yeet_dir(native_dir.joinpath("target"))
     else:
         subp.run([
             "python3", native_dir.joinpath("m64prs-build-all.py"), "clean"
