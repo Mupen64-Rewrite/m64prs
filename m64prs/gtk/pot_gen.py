@@ -8,7 +8,7 @@ from tempfile import mkdtemp
 
 BASE_PATH = Path(__file__).parent
 SRC_PATH = BASE_PATH / "src"
-POT_PATH = BASE_PATH / "i18n" / "m64prs.pot"
+POT_PATH = BASE_PATH / "i18n"
 
 if len(sys.argv) == 2 and sys.argv[1] == "--help":
     print(f"Usage: {sys.argv[0]} [--help]")
@@ -57,10 +57,10 @@ def pot_gen(tmpdir: Path):
     # merge
     merge_cmd = ["xgettext", "-o", "-", "--", rs_pot, ui_pot, blp_pot]
     merge_proc = subp.Popen(
-        merge_cmd, 
+        merge_cmd,
         stdout=subp.PIPE, encoding="utf-8"
     )
-    with open(POT_PATH, "w") as out_file:
+    with open(POT_PATH / "m64prs.pot", "w") as out_file:
         for line in merge_proc.stdout:
             if line.startswith("\"Project-Id-Version"):
                 out_file.write("\"Project-Id-Version: m64prs 0.1.0\"\n")
@@ -78,3 +78,13 @@ try:
     pot_gen(tmpdir)
 finally:
     shutil.rmtree(tmpdir)
+
+
+# update existing .po files
+for file in POT_PATH.glob("*.po"):
+    backup = file.with_suffix(".po.bak")
+    shutil.move(file, backup)
+    with open(file, "w") as outfile:
+        subp.run([
+            "msgmerge", "-N", "--", backup, POT_PATH / "m64prs.pot"
+        ], stdout=outfile).check_returncode()

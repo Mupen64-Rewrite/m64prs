@@ -12,7 +12,7 @@ use m64prs_gtk_utils::{
 };
 use m64prs_vcr::{movie::M64File, VcrState};
 
-use crate::{ui::main_window::enums::MainEmuState, utils::dirs::INSTALL_DIRS};
+use crate::{ui::{main_window::enums::MainEmuState, settings_dialog::SettingsDialog}, utils::dirs::INSTALL_DIRS};
 
 use super::{CoreState, MainWindow};
 
@@ -29,6 +29,8 @@ pub(super) struct AppActions {
     open_rom: BaseAction,
     #[action(name = "file.close_rom")]
     close_rom: BaseAction,
+    #[action(name = "file.settings")]
+    settings: BaseAction,
 
     #[action(name = "emu.toggle_pause", default = false)]
     toggle_pause: StateAction<bool>,
@@ -158,6 +160,7 @@ impl AppActions {
 
         c!(open_rom, async open_rom_impl);
         c!(close_rom, async close_rom_impl);
+        c!(settings, async settings_impl);
 
         c!(toggle_pause, toggle_pause_impl);
         c!(frame_advance, frame_advance_impl);
@@ -242,8 +245,9 @@ impl AppActions {
             }};
         }
 
-        b!(open_rom."enabled" => emu_stopped);
+        // b!(open_rom."enabled" => emu_stopped);
         b!(close_rom."enabled" => emu_active);
+        b!(settings."enabled" => emu_stopped);
 
         b!(toggle_pause."enabled" => emu_active);
         b!(toggle_pause."state" => emu_paused_gvar);
@@ -337,6 +341,21 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let (rom_data, plugins) = futures::join!(rom_data_fut, plugin_fut);
     let (rom_data, plugins) = (rom_data?, plugins?);
 
+    // stop the core if it's not stopped
+    'stop_core: {
+        let mut core = main_window.borrow_core();
+        let running = match core.take() {
+            CoreState::Running(running_state) => running_state,
+            state => {
+                *core = state;
+                break 'stop_core;
+            }
+        };
+
+        let (ready, _) = running.stop_rom().await;
+        *core = CoreState::Ready(ready);
+    }
+
     // start the core
     {
         let mut core = main_window.borrow_core();
@@ -376,6 +395,17 @@ async fn close_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     if let Some(error) = error {
         return Err(error.into());
     }
+    Ok(())
+}
+
+async fn settings_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let settings = SettingsDialog::new();
+    settings.set_transient_for(Some(main_window));
+    settings.set_modal(true);
+
+    settings.present();
+
+
     Ok(())
 }
 
