@@ -6,7 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-01 12:05-0500\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-02 21:26-0500\n"
 "PO-Revision-Date: 2025-01-01 12:08-0500\n"
 "Last-Translator: Jacky Guo <j349guo@uwaterloo.ca>\n"
 "Language-Team: English\n"
@@ -16,161 +17,166 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:14
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:14
 msgctxt "main_menu"
 msgid "File"
 msgstr "File"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:16
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:17
 msgctxt "main_menu"
 msgid "Open ROM"
 msgstr "Open ROM"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:20
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:21
 msgctxt "main_menu"
 msgid "Close ROM"
 msgstr "Close ROM"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:25
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:27
+msgctxt "main_menu"
+msgid "Settings"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:33
 msgctxt "main_menu"
 msgid "Emulator"
 msgstr "Emulator"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:28
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:36
 msgctxt "main_menu"
 msgid "Pause/Resume"
 msgstr "Pause/Resume"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:32
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:40
 msgctxt "main_menu"
 msgid "Frame Advance"
 msgstr "Frame Advance"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:36
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:44
 msgctxt "main_menu"
 msgid "Reset ROM"
 msgstr "Reset ROM"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:42
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:50
 msgctxt "main_menu"
 msgid "Save State"
 msgstr "Save State"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:46
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:54
 msgctxt "main_menu"
 msgid "Load State"
 msgstr "Load State"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:50
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:58
 msgctxt "main_menu"
 msgid "Current Slot"
 msgstr "Current Slot"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:52
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:60
 msgctxt "main_menu"
 msgid "1"
 msgstr "1"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:57
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:65
 msgctxt "main_menu"
 msgid "2"
 msgstr "2"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:62
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:70
 msgctxt "main_menu"
 msgid "3"
 msgstr "3"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:67
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:75
 msgctxt "main_menu"
 msgid "4"
 msgstr "4"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:72
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:80
 msgctxt "main_menu"
 msgid "5"
 msgstr "5"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:77
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:85
 msgctxt "main_menu"
 msgid "6"
 msgstr "6"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:82
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:90
 msgctxt "main_menu"
 msgid "7"
 msgstr "7"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:87
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:95
 msgctxt "main_menu"
 msgid "8"
 msgstr "8"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:92
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:100
 msgctxt "main_menu"
 msgid "9"
 msgstr "9"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:100
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:108
 msgctxt "main_menu"
 msgid "Save State to..."
 msgstr "Save State to..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:104
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:112
 msgctxt "main_menu"
 msgid "Load State from..."
 msgstr "Load State from..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:110
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:118
 msgctxt "main_menu"
 msgid "Movie"
 msgstr "Movie"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:112
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:120
 msgctxt "main_menu"
 msgid "New Movie"
 msgstr "New Movie"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:116
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:124
 msgctxt "main_menu"
 msgid "Load Movie"
 msgstr "Load Movie"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:120
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:128
 msgctxt "main_menu"
 msgid "Save Movie"
 msgstr "Save Movie"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:124
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:132
 msgctxt "main_menu"
 msgid "Close Movie"
 msgstr "Close Movie"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/menu.ui:128
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:136
 msgctxt "main_menu"
 msgid "Read-only Mode"
 msgstr "Read-only Mode"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:6
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:6
 msgctxt "movie_dialog"
 msgid "New Movie..."
 msgstr "New Movie..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:7
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:7
 msgctxt "movie_dialog"
 msgid "Load Movie..."
 msgstr "Load Movie..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:33
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:33
 msgctxt "movie_dialog"
 msgid "Path: "
 msgstr "Path: "
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:54
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:54
 msgid "Browse..."
 msgstr "Browse..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:68
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:68
 msgctxt "movie_dialog"
 msgid ""
 "Author: \n"
@@ -179,7 +185,7 @@ msgstr ""
 "Author: \n"
 "(max 222 bytes)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:102
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:102
 msgctxt "movie_dialog"
 msgid ""
 "Description: \n"
@@ -188,51 +194,56 @@ msgstr ""
 "Description: \n"
 "(max 256 bytes)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:136
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:136
 msgctxt "movie_dialog"
 msgid "Start Type: "
 msgstr "Start Type: "
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:165
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:165
 msgctxt "movie_dialog"
 msgid "Reset"
 msgstr "Reset"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:178
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:178
 msgctxt "movie_dialog"
 msgid "Savestate"
 msgstr "Savestate"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:191
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:191
 msgctxt "movie_dialog"
 msgid "EEPROM"
 msgstr "EEPROM"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:203
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:203
 msgid "OK"
 msgstr "OK"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:208
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:208
 msgid "Cancel"
 msgstr "Cancel"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/movie_dialog/window.blp:220
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:220
 msgid "Mupen64 movie (*.m64)"
 msgstr "Mupen64 movie (*.m64)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:5
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.blp:4
+msgctxt "settings_dialog"
+msgid "Settings"
+msgstr "Settings"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:5
 msgid "m64prs"
 msgstr "m64prs"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:30
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:30
 msgid "Open ROM..."
 msgstr "Open ROM..."
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:33
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:33
 msgid "N64 ROM (*.n64, *.v64, *.z64)"
 msgstr "N64 ROM (*.n64, *.v64, *.z64)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:49
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/i18n/../src/ui/main_window/mod.blp:59
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:49
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:59
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
 msgstr "Mupen64Plus savestate (*.st, *.savestate)"
