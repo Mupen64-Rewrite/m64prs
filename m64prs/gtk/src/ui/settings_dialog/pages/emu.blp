@@ -1,0 +1,18 @@
+using Gtk 4.0;
+
+template $M64PRS_SettingsEmuPage : Gtk.Box {
+  orientation: vertical;
+
+  Frame {
+    label: C_("settings.emu", "Emulator type");
+    DropDown {
+      model: StringList {
+        strings: [
+          "Pure Interpreter", 
+          "Cached Interpreter", 
+          "Dynamic Recompiler"
+        ];
+      };
+    }
+  }
+}

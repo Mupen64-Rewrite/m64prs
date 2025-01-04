@@ -30,7 +30,7 @@ pub mod save;
 pub mod tas_callbacks;
 pub mod vidext;
 
-pub use config::ConfigSection;
+pub use config::ConfigSectionMut;
 pub use plugin::Plugin;
 
 slotmap::new_key_type! {

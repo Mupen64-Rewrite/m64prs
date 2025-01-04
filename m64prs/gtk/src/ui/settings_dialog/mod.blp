@@ -5,5 +5,38 @@ template $M64PRS_SettingsDialog : Gtk.Window {
   default-width: 500;
   default-height: 500;
 
-  
+  Notebook {
+    halign: fill;
+    hexpand: true;
+    valign: fill;
+    vexpand: true;
+
+    NotebookPage {
+      tab-expand: true;
+      tab: Label {
+        label: "one";
+      };
+      child: $M64PRS_SettingsEmuPage {};
+    }
+
+    NotebookPage {
+      tab-expand: true;
+      tab: Label {
+        label: "two";
+      };
+      child: Label {
+        label: "deux";
+      };
+    }
+
+    NotebookPage {
+      tab-expand: true;
+      tab: Label {
+        label: "three";
+      };
+      child: Label {
+        label: "trois";
+      };
+    }
+  }
 }

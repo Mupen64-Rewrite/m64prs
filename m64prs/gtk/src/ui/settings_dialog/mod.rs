@@ -1,5 +1,12 @@
+mod settings_page;
+mod pages;
+
+pub(self) use settings_page::SettingsPage;
+
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
+
+    use super::pages::EmuPage;
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "src/ui/settings_dialog/mod.blp")]
@@ -12,6 +19,15 @@ mod inner {
         const NAME: &'static str = "M64PRS_SettingsDialog";
         type Type = super::SettingsDialog;
         type ParentType = gtk::Window;
+
+        fn class_init(class: &mut Self::Class) {
+            EmuPage::ensure_type();
+            class.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
     }
 
     impl ObjectImpl for SettingsDialog {}

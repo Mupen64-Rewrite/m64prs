@@ -54,8 +54,9 @@ impl Core {
 
         Ok(())
     }
+    
     /// Opens the config section with the given name.
-    pub fn cfg_open(&mut self, name: &CStr) -> Result<ConfigSection, M64PError> {
+    pub fn cfg_open(&self, name: &CStr) -> Result<ConfigSection, M64PError> {
         let mut handle: m64prs_sys::Handle = null_mut();
         // SAFETY: the returned handle is guaranteed to be valid if the function
         // returns successfully.
@@ -72,20 +73,142 @@ impl Core {
         })
     }
 
+    /// Opens the config section with the given name.
+    pub fn cfg_open_mut(&mut self, name: &CStr) -> Result<ConfigSectionMut, M64PError> {
+        let mut handle: m64prs_sys::Handle = null_mut();
+        // SAFETY: the returned handle is guaranteed to be valid if the function
+        // returns successfully.
+        core_fn(unsafe {
+            (self.api.config.open_section)(name.as_ptr(), &mut handle as *mut m64prs_sys::Handle)
+        })?;
+
+        // SAFETY: the lifetime of a ConfigSection cannot exceed that of the core it
+        // references. This means that all functions should be callable during that time.
+        Ok(ConfigSectionMut {
+            core: self,
+            name: name.to_owned(),
+            handle,
+        })
+    }
+
     pub fn cfg_save_all(&mut self) -> Result<(), M64PError> {
         core_fn(unsafe { (self.api.config.save_file)() })
     }
 }
-/// Represents a handle to a configuration section.
+
+/// Represents a shared handle to a configuration section.
 ///
 /// Each configuration section contains a list of parameters with values of variable type.
 pub struct ConfigSection<'a> {
+    core: &'a Core,
+    name: CString,
+    handle: m64prs_sys::Handle,
+}
+
+/// Represents an exclusive handle to a configuration section.
+///
+/// Each configuration section contains a list of parameters with values of variable type.
+pub struct ConfigSectionMut<'a> {
     core: &'a mut Core,
     name: CString,
     handle: m64prs_sys::Handle,
 }
 
 impl ConfigSection<'_> {
+    /// Returns the section's name.
+    pub fn name(&self) -> &CStr {
+        &self.name
+    }
+
+    /// Runs the provided callback once for each parameter in the section.
+    /// The callback receives both the parameter's name and type.
+    pub fn for_each_param<F: FnMut(&CStr, ConfigType)>(
+        &self,
+        mut callback: F,
+    ) -> Result<(), M64PError> {
+        unsafe extern "C" fn for_each_param_trampoline<F: FnMut(&CStr, ConfigType)>(
+            context: *mut c_void,
+            name: *const c_char,
+            ptype: ConfigType,
+        ) {
+            let function: &mut F = &mut *(context as *mut F);
+            function(CStr::from_ptr(name), ptype);
+        }
+
+        // SAFETY: the callback is only used within list_parameters,
+        // it is not used after that.
+        core_fn(unsafe {
+            (self.core.api.config.list_parameters)(
+                self.handle,
+                &mut callback as *mut F as *mut c_void,
+                Some(for_each_param_trampoline::<F>),
+            )
+        })?;
+
+        Ok(())
+    }
+
+    /// Gets the type of a parameter.
+    pub fn get_type(&self, param: &CStr) -> Result<ConfigType, M64PError> {
+        let mut param_type = ConfigType::Int;
+        // SAFETY: the reference to the callback should only be used
+        // during the function, it is not stored.
+        core_fn(unsafe {
+            (self.core.api.config.get_parameter_type)(self.handle, param.as_ptr(), &mut param_type)
+        })?;
+
+        Ok(param_type)
+    }
+
+    /// Gets the help string for a parameter.
+    pub fn get_help(&self, param: &CStr) -> Result<CString, M64PError> {
+        unsafe {
+            // SAFETY: the CString passed here is only used within
+            // the function.
+            let help_ptr = (self.core.api.config.get_parameter_help)(self.handle, param.as_ptr());
+
+            if help_ptr.is_null() {
+                Err(M64PError::InputNotFound)
+            } else {
+                // SAFETY: the CString returned by Mupen should last
+                // as long as it isn't overwritten.
+                Ok(CStr::from_ptr(help_ptr).to_owned())
+            }
+        }
+    }
+
+    /// Gets the value of a parameter.
+    pub fn get(&self, param: &CStr) -> Result<ConfigValue, M64PError> {
+        let param_type = self.get_type(param)?;
+
+        match param_type {
+            ConfigType::Int => Ok(ConfigValue::Int(unsafe {
+                // SAFETY: No values are borrowed.
+                (self.core.api.config.get_param_int)(self.handle, param.as_ptr())
+            })),
+            ConfigType::Float => Ok(ConfigValue::Float(unsafe {
+                // SAFETY: No values are borrowed.
+                (self.core.api.config.get_param_float)(self.handle, param.as_ptr())
+            })),
+            ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
+                // SAFETY: No values are borrowed.
+                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
+            })),
+            ConfigType::String => Ok(ConfigValue::String(unsafe {
+                // SAFETY: the pointer returned by ConfigGetParamString
+                // is valid for an uncertain period of time. It is copied
+                // to ensure that it won't be freed in that time.
+                CStr::from_ptr((self.core.api.config.get_param_string)(
+                    self.handle,
+                    param.as_ptr(),
+                ))
+                .to_owned()
+            })),
+        }
+    }
+}
+
+impl ConfigSectionMut<'_> {
     /// Returns the section's name.
     pub fn name(&self) -> &CStr {
         &self.name

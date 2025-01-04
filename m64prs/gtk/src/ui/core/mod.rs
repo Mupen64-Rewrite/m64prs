@@ -31,19 +31,19 @@ mod threading;
 mod vidext;
 
 #[derive(Debug)]
-pub(super) enum CoreState {
+pub enum CoreState {
     Uninit,
     Ready(CoreReadyState),
     Running(CoreRunningState),
 }
 
 #[derive(Debug)]
-pub(super) struct CoreReadyState {
+pub struct CoreReadyState {
     core: Core,
     main_window_ref: SendWeakRef<MainWindow>,
 }
 #[derive(Debug)]
-pub(super) struct CoreRunningState {
+pub struct CoreRunningState {
     core: RunningCore,
     main_window_ref: SendWeakRef<MainWindow>,
     vcr_read_only: bool,
