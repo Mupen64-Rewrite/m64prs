@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0Report-Msgid-Bugs-To:\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-02 21:26-0500\n"
+"POT-Creation-Date: 2025-01-03 20:42-0500\n"
 "PO-Revision-Date: 2025-01-02 21:28-0500\n"
 "Last-Translator: Jacky Guo <j349guo@uwaterloo.ca>\n"
 "Language-Team: Chinese (simplified) <i18n-zh@googlegroups.com>\n"
@@ -17,166 +17,26 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.5\n"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:14
-msgctxt "main_menu"
-msgid "File"
-msgstr "文件"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:17
-msgctxt "main_menu"
-msgid "Open ROM"
-msgstr "打开ROM"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:21
-msgctxt "main_menu"
-msgid "Close ROM"
-msgstr "关闭ROM"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:27
-msgctxt "main_menu"
-msgid "Settings"
-msgstr "设定"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:33
-msgctxt "main_menu"
-msgid "Emulator"
-msgstr "仿真"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:36
-msgctxt "main_menu"
-msgid "Pause/Resume"
-msgstr "暂停/恢复"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:40
-msgctxt "main_menu"
-msgid "Frame Advance"
-msgstr "前进一帧"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:44
-msgctxt "main_menu"
-msgid "Reset ROM"
-msgstr "重启ROM"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:50
-msgctxt "main_menu"
-msgid "Save State"
-msgstr "保存状态"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:54
-msgctxt "main_menu"
-msgid "Load State"
-msgstr "加载状态"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:58
-msgctxt "main_menu"
-msgid "Current Slot"
-msgstr "当前存位"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:60
-msgctxt "main_menu"
-msgid "1"
-msgstr "1"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:65
-msgctxt "main_menu"
-msgid "2"
-msgstr "2"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:70
-msgctxt "main_menu"
-msgid "3"
-msgstr "3"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:75
-msgctxt "main_menu"
-msgid "4"
-msgstr "4"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:80
-msgctxt "main_menu"
-msgid "5"
-msgstr "5"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:85
-msgctxt "main_menu"
-msgid "6"
-msgstr "6"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:90
-msgctxt "main_menu"
-msgid "7"
-msgstr "7"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:95
-msgctxt "main_menu"
-msgid "8"
-msgstr "8"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:100
-msgctxt "main_menu"
-msgid "9"
-msgstr "9"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:108
-msgctxt "main_menu"
-msgid "Save State to..."
-msgstr "保存状态为⋯⋯"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:112
-msgctxt "main_menu"
-msgid "Load State from..."
-msgstr "加载状态于⋯⋯"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:118
-msgctxt "main_menu"
-msgid "Movie"
-msgstr "输入记录"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:120
-msgctxt "main_menu"
-msgid "New Movie"
-msgstr "新建输记"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:124
-msgctxt "main_menu"
-msgid "Load Movie"
-msgstr "加载输记"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:128
-msgctxt "main_menu"
-msgid "Save Movie"
-msgstr "保存输记"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:132
-msgctxt "main_menu"
-msgid "Close Movie"
-msgstr "丢弃输记"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:136
-msgctxt "main_menu"
-msgid "Read-only Mode"
-msgstr "只读模式"
-
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:6
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:23
 msgctxt "movie_dialog"
 msgid "New Movie..."
 msgstr "新建输记⋯⋯"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:7
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:24
 msgctxt "movie_dialog"
 msgid "Load Movie..."
 msgstr "加载输记⋯⋯"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:33
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:48
 msgctxt "movie_dialog"
 msgid "Path: "
 msgstr "路径"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:54
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:75
 msgid "Browse..."
 msgstr "浏览⋯⋯"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:68
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:89
 msgctxt "movie_dialog"
 msgid ""
 "Author: \n"
@@ -185,7 +45,7 @@ msgstr ""
 "作者： \n"
 "（最多222字节）"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:102
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:132
 msgctxt "movie_dialog"
 msgid ""
 "Description: \n"
@@ -194,56 +54,201 @@ msgstr ""
 "描述：\n"
 "（最多256字节）"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:136
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:175
 msgctxt "movie_dialog"
 msgid "Start Type: "
 msgstr "启动模式："
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:165
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:209
 msgctxt "movie_dialog"
 msgid "Reset"
 msgstr "完全启动"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:178
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:233
 msgctxt "movie_dialog"
 msgid "Savestate"
 msgstr "状态文件"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:191
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:251
 msgctxt "movie_dialog"
 msgid "EEPROM"
 msgstr "于EEPROM启动"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:203
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:266
 msgid "OK"
 msgstr "确定"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:208
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:273
 msgid "Cancel"
 msgstr "取消"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.blp:220
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:301
 msgid "Mupen64 movie (*.m64)"
 msgstr "Mupen64输入记录 (*.m64)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.blp:4
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:5
 msgctxt "settings_dialog"
 msgid "Settings"
 msgstr "设定"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:5
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:10
+msgctxt "main_menu"
+msgid "File"
+msgstr "文件"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:13
+msgctxt "main_menu"
+msgid "Open ROM"
+msgstr "打开ROM"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:17
+msgctxt "main_menu"
+msgid "Close ROM"
+msgstr "关闭ROM"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:23
+msgctxt "main_menu"
+msgid "Settings"
+msgstr "设定"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:29
+msgctxt "main_menu"
+msgid "Emulator"
+msgstr "仿真"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:32
+msgctxt "main_menu"
+msgid "Pause/Resume"
+msgstr "暂停/恢复"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:36
+msgctxt "main_menu"
+msgid "Frame Advance"
+msgstr "前进一帧"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:40
+msgctxt "main_menu"
+msgid "Reset ROM"
+msgstr "重启ROM"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:46
+msgctxt "main_menu"
+msgid "Save State"
+msgstr "保存状态"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:50
+msgctxt "main_menu"
+msgid "Load State"
+msgstr "加载状态"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:54
+msgctxt "main_menu"
+msgid "Current Slot"
+msgstr "当前存位"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:56
+msgctxt "main_menu"
+msgid "1"
+msgstr "1"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:61
+msgctxt "main_menu"
+msgid "2"
+msgstr "2"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:66
+msgctxt "main_menu"
+msgid "3"
+msgstr "3"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:71
+msgctxt "main_menu"
+msgid "4"
+msgstr "4"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:76
+msgctxt "main_menu"
+msgid "5"
+msgstr "5"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:81
+msgctxt "main_menu"
+msgid "6"
+msgstr "6"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:86
+msgctxt "main_menu"
+msgid "7"
+msgstr "7"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:91
+msgctxt "main_menu"
+msgid "8"
+msgstr "8"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:96
+msgctxt "main_menu"
+msgid "9"
+msgstr "9"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:104
+msgctxt "main_menu"
+msgid "Save State to..."
+msgstr "保存状态为⋯⋯"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:108
+msgctxt "main_menu"
+msgid "Load State from..."
+msgstr "加载状态于⋯⋯"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:114
+msgctxt "main_menu"
+msgid "Movie"
+msgstr "输入记录"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:116
+msgctxt "main_menu"
+msgid "New Movie"
+msgstr "新建输记"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:120
+msgctxt "main_menu"
+msgid "Load Movie"
+msgstr "加载输记"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:124
+msgctxt "main_menu"
+msgid "Save Movie"
+msgstr "保存输记"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:128
+msgctxt "main_menu"
+msgid "Close Movie"
+msgstr "丢弃输记"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.ui:132
+msgctxt "main_menu"
+msgid "Read-only Mode"
+msgstr "只读模式"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:5
 msgid "m64prs"
 msgstr "m64prs"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:30
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:37
 msgid "Open ROM..."
 msgstr "打开ROM⋯⋯"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:33
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:42
 msgid "N64 ROM (*.n64, *.v64, *.z64)"
 msgstr "任天堂64 ROM (*.n64, *.v64, *.z64)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:49
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.blp:59
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:66
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:82
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
 msgstr "Mupen64Plus 状态文件 (*.st, *.savestate)"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:12
+msgctxt "settings.emu"
+msgid "Emulator type"
+msgstr ""

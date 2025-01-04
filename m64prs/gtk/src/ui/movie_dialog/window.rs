@@ -18,7 +18,7 @@ mod inner {
     };
 
     #[derive(Default, gtk::CompositeTemplate, glib::Properties)]
-    #[template(file = "src/ui/movie_dialog/window.blp")]
+    #[template(file = "window.ui")]
     #[properties(wrapper_type = super::MovieDialogWindow)]
     pub struct MovieDialogWindow {
         #[template_child]

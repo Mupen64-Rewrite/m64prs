@@ -36,7 +36,6 @@ if not shutil.which("xtr"):
 def pot_gen(tmpdir: Path):
     rs_pot = tmpdir / "rs.pot"
     ui_pot = tmpdir / "ui.pot"
-    blp_pot = tmpdir / "blp.pot"
 
     # Rust
     subp.run(["xtr", SRC_PATH/"main.rs", "-o", rs_pot]).check_returncode()
@@ -45,17 +44,8 @@ def pot_gen(tmpdir: Path):
     subp.run(["xgettext", "-L", "glade", *SRC_PATH.rglob("*.ui"),
              "-o", ui_pot]).check_returncode()
 
-    # Blueprint
-    subp.run([
-        "xgettext", "-L", "C",
-        "--from-code=UTF-8", "--add-comments",
-        "--keyword=_", "--keyword=C_:1c,2",
-        "-o", blp_pot, "--",
-        *SRC_PATH.rglob("*.blp"),
-    ]).check_returncode()
-
     # merge
-    merge_cmd = ["xgettext", "-o", "-", "--", rs_pot, ui_pot, blp_pot]
+    merge_cmd = ["xgettext", "-o", "-", "--", rs_pot, ui_pot]
     merge_proc = subp.Popen(
         merge_cmd,
         stdout=subp.PIPE, encoding="utf-8"

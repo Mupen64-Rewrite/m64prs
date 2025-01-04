@@ -24,7 +24,7 @@ mod inner {
     use crate::{enums::GButtonFlags, joystick::Joystick};
 
     #[derive(Default, glib::Properties, gtk::CompositeTemplate)]
-    #[template(file = "assets/main_window.blp")]
+    #[template(file = "main_window.ui")]
     #[properties(wrapper_type = super::MainWindow)]
     pub struct MainWindow {
         #[property(

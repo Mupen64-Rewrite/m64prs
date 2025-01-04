@@ -14,7 +14,6 @@ MSRV (**M**inimum **S**upported **R**ust **V**ersion) is currently the latest st
 - zlib
 - GTK 4 (at least 4.14)
 - Python (at least 3.10)
-- `blueprint-compiler`
 
 Use **`./build.py run`** to compile and setup all files.
 
@@ -25,7 +24,7 @@ screens. I'd like to implement HiDPI properly, though GTK has yet to support fra
   specific circumstances in a mixed-DPI setup
 - [GTK issue !1036](https://gitlab.gnome.org/GNOME/gtk/-/issues/1036) &ndash; Support fractional scaling on Windows
 
-#### Setting up GTK4 and `blueprint-compiler`
+#### Setting up GTK4
 First things first:
 
 - Install Visual Studio 2022 *with a Windows 10 SDK* (preferably the latest one).
@@ -33,30 +32,12 @@ First things first:
 - Install Python ***SPECIFICALLY*** through the Microsoft Store, due to [a bug with GTK's build tooling](https://github.com/wingtk/gvsbuild/pull/1474).
   - If you installed Python via `winget` or the installer from the website, it *may not work* unless they fixed it. (UPDATE: they fixed it, but I haven't tested myself.)
 
-Install GTK and some Python dependencies:
+Install GTK:
 ```powershell
 # Install gvsbuild
-pip install gvsbuild pyinstaller
-gvsbuild build --py-wheel --enable-gi gtk4 pygobject
+pip install gvsbuild
+gvsbuild build gtk4
 ```
-
-> Note: If you previously setup `gvsbuild` in a non-default directory (i.e. not `C:\gtk-build`), you will need to adjust 
-> the paths in `.cargo/config.toml`. This is needed to locate the `gettext` library that is built alongside the rest of 
-> the GNOME stack.
-
-In a separate directory, clone and package `blueprint-compiler`:
-```powershell
-# You don't need to keep this directory around anyways.
-git clone --depth 1 -b v0.14.0 "https://gitlab.gnome.org/jwestman/blueprint-compiler.git"
-cd blueprint-compiler
-pyinstaller blueprint-compiler.py
-```
-
-Move the `pyinstaller` package generated in the `dist` folder to wherever you install
-local software. Add its folder to your `PATH` as well, since gtk-rs needs it there.
-
-> If you can find a way to avoid pyinstaller, please let me know or PR changes to these instructions.
-> You'll be saving some headache.
 
 Use **`./build.py run`** to compile and setup all files. Due to the aforementioned bugs, 
 Windows support will be limited until those bugs are fixed.

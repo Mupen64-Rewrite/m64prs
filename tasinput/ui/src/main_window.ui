@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="TasDiMainWindow" parent="GtkApplicationWindow">
+    <property name="resizable">false</property>
+    <child>
+      <object class="GtkBox">
+        <property name="halign">0</property>
+        <property name="hexpand">true</property>
+        <property name="valign">0</property>
+        <property name="vexpand">true</property>
+        <property name="margin-bottom">5</property>
+        <property name="margin-top">5</property>
+        <property name="margin-start">5</property>
+        <property name="margin-end">5</property>
+        <property name="orientation">1</property>
+        <property name="spacing">5</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">0</property>
+            <property name="spacing">10</property>
+            <child>
+              <object class="GtkAspectFrame">
+                <property name="halign">0</property>
+                <property name="hexpand">true</property>
+                <property name="valign">0</property>
+                <property name="vexpand">true</property>
+                <property name="ratio">1</property>
+                <child>
+                  <object class="TasDiJoystick">
+                    <property name="halign">fill</property>
+                    <property name="hexpand">true</property>
+                    <property name="valign">fill</property>
+                    <property name="vexpand">true</property>
+                    <property name="pos-x" bind-source="TasDiMainWindow" bind-property="joy-x" bind-flags="sync-create|bidirectional"/>
+                    <property name="pos-y" bind-source="TasDiMainWindow" bind-property="joy-y" bind-flags="sync-create|bidirectional"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkGrid">
+                <property name="halign">0</property>
+                <property name="hexpand">true</property>
+                <property name="valign">3</property>
+                <property name="vexpand">true</property>
+                <child>
+                  <object class="GtkLabel">
+                    <layout>
+                      <property name="column">0</property>
+                      <property name="row">0</property>
+                    </layout>
+                    <property name="label">X: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <layout>
+                      <property name="column">1</property>
+                      <property name="row">0</property>
+                    </layout>
+                    <property name="snap-to-ticks">true</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">-128</property>
+                        <property name="upper">127</property>
+                        <property name="step-increment">1</property>
+                        <property name="value" bind-source="TasDiMainWindow" bind-property="joy-x" bind-flags="sync-create|bidirectional"/>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <layout>
+                      <property name="column">0</property>
+                      <property name="row">1</property>
+                    </layout>
+                    <property name="label">Y: </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <layout>
+                      <property name="column">1</property>
+                      <property name="row">1</property>
+                    </layout>
+                    <property name="snap-to-ticks">true</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">-128</property>
+                        <property name="upper">127</property>
+                        <property name="step-increment">1</property>
+                        <property name="value" bind-source="TasDiMainWindow" bind-property="joy-y" bind-flags="sync-create|bidirectional"/>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkGrid">
+            <property name="halign">0</property>
+            <property name="hexpand">true</property>
+            <property name="valign">0</property>
+            <property name="vexpand">true</property>
+            <property name="row-spacing">3</property>
+            <property name="column-spacing">3</property>
+            <property name="row-homogeneous">true</property>
+            <property name="column-homogeneous">true</property>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">0</property>
+                  <property name="column-span">3</property>
+                </layout>
+                <property name="css-classes">pill</property>
+                <property name="label">L</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="l-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">3</property>
+                  <property name="row">0</property>
+                  <property name="column-span">3</property>
+                </layout>
+                <property name="css-classes">pill</property>
+                <property name="label">Z</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="z-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">6</property>
+                  <property name="row">0</property>
+                  <property name="column-span">3</property>
+                </layout>
+                <property name="css-classes">pill</property>
+                <property name="label">R</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="r-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">1</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-up</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="du-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">3</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-down</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="dd-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-previous</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="dl-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">2</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-next</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="dr-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="label">D</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">4</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="css-classes">circular
+btn-start</property>
+                <property name="label">S</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="start-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">5</property>
+                  <property name="row">3</property>
+                </layout>
+                <property name="css-classes">circular
+btn-b</property>
+                <property name="label">B</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="b-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">6</property>
+                  <property name="row">4</property>
+                </layout>
+                <property name="css-classes">circular
+btn-a</property>
+                <property name="label">A</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="a-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">7</property>
+                  <property name="row">1</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-up</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="cu-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">7</property>
+                  <property name="row">3</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-down</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="cd-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">6</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-previous</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="cl-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton">
+                <layout>
+                  <property name="column">8</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="css-classes">circular</property>
+                <property name="icon-name">go-next</property>
+                <property name="active" bind-source="TasDiMainWindow" bind-property="cr-pressed" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <layout>
+                  <property name="column">7</property>
+                  <property name="row">2</property>
+                </layout>
+                <property name="label">C</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
