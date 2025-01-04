@@ -78,3 +78,4 @@ for file in POT_PATH.glob("*.po"):
         subp.run([
             "msgmerge", "-N", "--", backup, POT_PATH / "m64prs.pot"
         ], stdout=outfile).check_returncode()
+    backup.unlink()

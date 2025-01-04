@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0Report-Msgid-Bugs-To:\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-03 20:42-0500\n"
+"POT-Creation-Date: 2025-01-04 10:02-0500\n"
 "PO-Revision-Date: 2025-01-02 21:28-0500\n"
 "Last-Translator: Jacky Guo <j349guo@uwaterloo.ca>\n"
 "Language-Team: Chinese (simplified) <i18n-zh@googlegroups.com>\n"
@@ -29,8 +29,8 @@ msgstr "加载输记⋯⋯"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:48
 msgctxt "movie_dialog"
-msgid "Path: "
-msgstr "路径"
+msgid "Path:"
+msgstr "路径："
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:75
 msgid "Browse..."
@@ -39,50 +39,52 @@ msgstr "浏览⋯⋯"
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:89
 msgctxt "movie_dialog"
 msgid ""
-"Author: \n"
+"Author:\n"
 "(max 222 bytes)"
 msgstr ""
-"作者： \n"
+"作者：\n"
 "（最多222字节）"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:132
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:131
 msgctxt "movie_dialog"
 msgid ""
-"Description: \n"
+"Description:\n"
 "(max 256 bytes)"
 msgstr ""
 "描述：\n"
 "（最多256字节）"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:175
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:173
 msgctxt "movie_dialog"
 msgid "Start Type: "
 msgstr "启动模式："
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:209
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:207
 msgctxt "movie_dialog"
 msgid "Reset"
 msgstr "完全启动"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:233
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:231
 msgctxt "movie_dialog"
 msgid "Savestate"
 msgstr "状态文件"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:251
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:249
 msgctxt "movie_dialog"
 msgid "EEPROM"
 msgstr "于EEPROM启动"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:266
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:264
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:44
 msgid "OK"
 msgstr "确定"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:273
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:271
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:51
 msgid "Cancel"
 msgstr "取消"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:301
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:299
 msgid "Mupen64 movie (*.m64)"
 msgstr "Mupen64输入记录 (*.m64)"
 
@@ -248,7 +250,36 @@ msgstr "任天堂64 ROM (*.n64, *.v64, *.z64)"
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
 msgstr "Mupen64Plus 状态文件 (*.st, *.savestate)"
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:12
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:16
 msgctxt "settings.emu"
-msgid "Emulator type"
+msgid "CPU emulation mode"
 msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:26
+msgctxt "settings.emu"
+msgid "Pure Interpreter"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:27
+msgctxt "settings.emu"
+msgid "Cached Interpreter"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:28
+msgctxt "settings.emu"
+msgid "Dynamic Recompiler"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:38
+msgctxt "settings.emu"
+msgid "Randomize interrupt timings"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:43
+msgctxt "settings.emu"
+msgid "Disable Expansion Pak memory"
+msgstr ""
+
+#~ msgctxt "movie_dialog"
+#~ msgid "Path: "
+#~ msgstr "路径"

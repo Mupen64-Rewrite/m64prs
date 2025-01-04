@@ -6,52 +6,52 @@
     <property name="default-width">500</property>
     <property name="default-height">500</property>
     <child>
-      <object class="GtkNotebook">
-        <property name="halign">0</property>
-        <property name="hexpand">true</property>
-        <property name="valign">0</property>
-        <property name="vexpand">true</property>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
         <child>
-          <object class="GtkNotebookPage">
-            <property name="tab-expand">true</property>
-            <property name="tab">
-              <object class="GtkLabel">
-                <property name="label">one</property>
+          <object class="GtkNotebook">
+            <property name="halign">fill</property>
+            <property name="hexpand">true</property>
+            <property name="valign">fill</property>
+            <property name="vexpand">true</property>
+            <child>
+              <object class="GtkNotebookPage">
+                <property name="tab-expand">true</property>
+                <property name="tab">
+                  <object class="GtkLabel">
+                    <property name="label" context="settings">Emulator</property>
+                  </object>
+                </property>
+                <property name="child">
+                  <object class="M64PRS_SettingsEmuPage"/>
+                </property>
               </object>
-            </property>
-            <property name="child">
-              <object class="M64PRS_SettingsEmuPage"></object>
-            </property>
+            </child>
           </object>
         </child>
         <child>
-          <object class="GtkNotebookPage">
-            <property name="tab-expand">true</property>
-            <property name="tab">
-              <object class="GtkLabel">
-                <property name="label">two</property>
+          <object class="GtkBox">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="orientation">horizontal</property>
+            <property name="spacing">10</property>
+            <property name="halign">end</property>
+            <child>
+              <object class="GtkButton">
+                <property name="width-request">100</property>
+                <property name="label" translatable="yes">OK</property>
+                <!-- <signal name="clicked" handler="ok_clicked" swapped="True"/> -->
               </object>
-            </property>
-            <property name="child">
-              <object class="GtkLabel">
-                <property name="label">deux</property>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="width-request">100</property>
+                <property name="label" translatable="yes">Cancel</property>
+                <!-- <signal name="clicked" handler="cancel_clicked" swapped="True"/> -->
               </object>
-            </property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkNotebookPage">
-            <property name="tab-expand">true</property>
-            <property name="tab">
-              <object class="GtkLabel">
-                <property name="label">three</property>
-              </object>
-            </property>
-            <property name="child">
-              <object class="GtkLabel">
-                <property name="label">trois</property>
-              </object>
-            </property>
+            </child>
           </object>
         </child>
       </object>

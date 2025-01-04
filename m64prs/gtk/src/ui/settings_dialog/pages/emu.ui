@@ -6,21 +6,41 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="M64PRS_SettingsEmuPage" parent="GtkBox">
-    <property name="orientation">1</property>
+    <property name="margin-top">5</property>
+    <property name="margin-bottom">5</property>
+    <property name="margin-start">5</property>
+    <property name="margin-end">5</property>
+    <property name="orientation">vertical</property>
     <child>
       <object class="GtkFrame">
-        <property name="label" translatable="yes" context="settings.emu">Emulator type</property>
+        <property name="label" translatable="yes" context="settings.emu">CPU emulation mode</property>
         <child>
           <object class="GtkDropDown">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
             <property name="model">
               <object class="GtkStringList">
-                <property name="strings">Pure Interpreter
-Cached Interpreter
-Dynamic Recompiler</property>
+                <items>
+                  <item translatable="yes" context="settings.emu">Pure Interpreter</item>
+                  <item translatable="yes" context="settings.emu">Cached Interpreter</item>
+                  <item translatable="yes" context="settings.emu">Dynamic Recompiler</item>
+                </items>
               </object>
             </property>
           </object>
         </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkCheckButton">
+        <property name="label" translatable="yes" context="settings.emu">Randomize interrupt timings</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkCheckButton">
+        <property name="label" translatable="yes" context="settings.emu">Disable Expansion Pak memory</property>
       </object>
     </child>
   </template>

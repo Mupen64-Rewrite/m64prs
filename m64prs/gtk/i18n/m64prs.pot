@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-03 20:42-0500\n"
+"POT-Creation-Date: 2025-01-04 10:02-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,7 +29,7 @@ msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:48
 msgctxt "movie_dialog"
-msgid "Path: "
+msgid "Path:"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:75
@@ -39,46 +39,48 @@ msgstr ""
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:89
 msgctxt "movie_dialog"
 msgid ""
-"Author: \n"
+"Author:\n"
 "(max 222 bytes)"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:132
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:131
 msgctxt "movie_dialog"
 msgid ""
-"Description: \n"
+"Description:\n"
 "(max 256 bytes)"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:175
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:173
 msgctxt "movie_dialog"
 msgid "Start Type: "
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:209
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:207
 msgctxt "movie_dialog"
 msgid "Reset"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:233
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:231
 msgctxt "movie_dialog"
 msgid "Savestate"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:251
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:249
 msgctxt "movie_dialog"
 msgid "EEPROM"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:266
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:264
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:44
 msgid "OK"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:273
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:271
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:51
 msgid "Cancel"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:301
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:299
 msgid "Mupen64 movie (*.m64)"
 msgstr ""
 
@@ -244,7 +246,32 @@ msgstr ""
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
 msgstr ""
 
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:12
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:16
 msgctxt "settings.emu"
-msgid "Emulator type"
+msgid "CPU emulation mode"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:26
+msgctxt "settings.emu"
+msgid "Pure Interpreter"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:27
+msgctxt "settings.emu"
+msgid "Cached Interpreter"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:28
+msgctxt "settings.emu"
+msgid "Dynamic Recompiler"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:38
+msgctxt "settings.emu"
+msgid "Randomize interrupt timings"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:43
+msgctxt "settings.emu"
+msgid "Disable Expansion Pak memory"
 msgstr ""
