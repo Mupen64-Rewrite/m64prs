@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="M64PRS_MainWindow" parent="GtkApplicationWindow">
+    <property name="title" translatable="yes">m64prs</property>
+    <property name="default-height">400</property>
+    <property name="default-width">400</property>
+    <child>
+      <object class="GtkStack">
+        <property name="visible-child-name" bind-source="M64PRS_MainWindow" bind-property="current-page" bind-flags="sync-create"/>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">rom-browser</property>
+            <property name="child">
+              <object class="GtkButton" id="rom_browser">
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">game-view</property>
+            <property name="child">
+              <object class="M64PRS_CompositorView" id="compositor">
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+  <object class="GtkFileDialog" id="open_rom_dialog">
+    <property name="title" translatable="yes">Open ROM...</property>
+    <property name="filters">
+      <object class="GListStore">
+        <child>
+          <object class="GtkFileFilter">
+            <property name="name" translatable="yes">N64 ROM (*.n64, *.v64, *.z64)</property>
+            <mime-types>
+              <mime-type>application/x-n64-rom</mime-type>
+            </mime-types>
+            <patterns>
+              <pattern>*.n64</pattern>
+              <pattern>*.v64</pattern>
+              <pattern>*.z64</pattern>
+            </patterns>
+          </object>
+        </child>
+      </object>
+    </property>
+  </object>
+  <object class="GtkAlertDialog" id="error_dialog">
+    <property name="modal">true</property>
+    <property name="buttons">OK</property>
+  </object>
+  <object class="GtkFileDialog" id="save_state_dialog">
+    <property name="title">Save State To...</property>
+    <property name="filters">
+      <object class="GListStore">
+        <child>
+          <object class="GtkFileFilter">
+            <property name="name" translatable="yes">Mupen64Plus savestate (*.st, *.savestate)</property>
+            <patterns>
+              <pattern>*.st</pattern>
+              <pattern>*.savestate</pattern>
+            </patterns>
+          </object>
+        </child>
+      </object>
+    </property>
+  </object>
+  <object class="GtkFileDialog" id="load_state_dialog">
+    <property name="title">Load State From...</property>
+    <property name="filters">
+      <object class="GListStore">
+        <child>
+          <object class="GtkFileFilter">
+            <property name="name" translatable="yes">Mupen64Plus savestate (*.st, *.savestate)</property>
+            <patterns>
+              <pattern>*.st</pattern>
+              <pattern>*.savestate</pattern>
+            </patterns>
+          </object>
+        </child>
+      </object>
+    </property>
+  </object>
+  <object class="M64PRS_MovieDialog" id="new_movie_dialog">
+    <property name="load">false</property>
+  </object>
+  <object class="M64PRS_MovieDialog" id="load_movie_dialog">
+    <property name="load">true</property>
+  </object>
+</interface>

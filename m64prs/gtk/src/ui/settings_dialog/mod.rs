@@ -9,7 +9,7 @@ mod inner {
     use super::pages::EmuPage;
 
     #[derive(Default, gtk::CompositeTemplate)]
-    #[template(file = "src/ui/settings_dialog/mod.blp")]
+    #[template(file = "mod.ui")]
     pub struct SettingsDialog {
 
     }

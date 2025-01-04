@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-The menu is currently specified as an XML file due to limitations in
-Blueprint (specifically, setting target types for menu items).
-
-I have a PR open on Blueprint to add this feature, but for now,
-we'll stick with XML. 
+I'd like to use Blueprint but it's missing this feature.
 https://gitlab.gnome.org/jwestman/blueprint-compiler/-/merge_requests/224
 -->
 <interface>

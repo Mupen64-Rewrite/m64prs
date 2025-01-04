@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+I'd like to use Blueprint but it's missing this feature.
+https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
+-->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="M64PRS_SettingsEmuPage" parent="GtkBox">
+    <property name="orientation">1</property>
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes" context="settings.emu">Emulator type</property>
+        <child>
+          <object class="GtkDropDown">
+            <property name="model">
+              <object class="GtkStringList">
+                <property name="strings">Pure Interpreter
+Cached Interpreter
+Dynamic Recompiler</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

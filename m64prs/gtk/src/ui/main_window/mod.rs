@@ -42,7 +42,7 @@ mod inner {
     };
 
     #[derive(Debug, Default, glib::Properties, gtk::CompositeTemplate)]
-    #[template(file = "src/ui/main_window/mod.blp")]
+    #[template(file = "mod.ui")]
     #[properties(wrapper_type = super::MainWindow)]
     pub struct MainWindow {
         // template children

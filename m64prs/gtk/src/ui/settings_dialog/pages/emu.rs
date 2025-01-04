@@ -7,7 +7,7 @@ mod inner {
     use crate::ui::{core::CoreReadyState, settings_dialog::{settings_page::SettingsPageImpl, SettingsPage}};
 
     #[derive(Default, gtk::CompositeTemplate)]
-    #[template(file = "src/ui/settings_dialog/pages/emu.blp")]
+    #[template(file = "emu.ui")]
     pub struct EmuPage {
 
     }
