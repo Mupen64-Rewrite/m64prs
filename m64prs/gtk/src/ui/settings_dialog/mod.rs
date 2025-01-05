@@ -1,17 +1,19 @@
 mod settings_page;
 mod pages;
+mod parts;
 
 pub(self) use settings_page::SettingsPage;
 
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use super::pages::EmuPage;
+    use super::pages::{self, EmuPage};
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "mod.ui")]
     pub struct SettingsDialog {
-
+        #[template_child]
+        tabs_nb: TemplateChild<gtk::Notebook>,
     }
 
     #[glib::object_subclass]
@@ -21,7 +23,7 @@ mod inner {
         type ParentType = gtk::Window;
 
         fn class_init(class: &mut Self::Class) {
-            EmuPage::ensure_type();
+            pages::init_pages();
             class.bind_template();
         }
 

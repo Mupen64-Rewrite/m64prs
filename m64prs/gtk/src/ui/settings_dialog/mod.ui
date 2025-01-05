@@ -9,7 +9,7 @@
       <object class="GtkBox">
         <property name="orientation">vertical</property>
         <child>
-          <object class="GtkNotebook">
+          <object class="GtkNotebook" id="tabs_nb">
             <property name="halign">fill</property>
             <property name="hexpand">true</property>
             <property name="valign">fill</property>
@@ -24,6 +24,32 @@
                 </property>
                 <property name="child">
                   <object class="M64PRS_SettingsEmuPage"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkNotebookPage">
+                <property name="tab-expand">true</property>
+                <property name="tab">
+                  <object class="GtkLabel">
+                    <property name="label" context="settings">Plugins</property>
+                  </object>
+                </property>
+                <property name="child">
+                  <object class="M64PRS_SettingsPluginsPage"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkNotebookPage">
+                <property name="tab-expand">true</property>
+                <property name="tab">
+                  <object class="GtkLabel">
+                    <property name="label" context="settings">Shortcuts</property>
+                  </object>
+                </property>
+                <property name="child">
+                  <object class="M64PRS_SettingsShortcutsPage"/>
                 </property>
               </object>
             </child>

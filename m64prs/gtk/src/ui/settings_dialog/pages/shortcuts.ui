@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+I'd like to use Blueprint but it's missing this feature.
+https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
+-->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="M64PRS_SettingsShortcutsPage" parent="GtkBox">
+    <property name="margin-top">5</property>
+    <property name="margin-bottom">5</property>
+    <property name="margin-start">5</property>
+    <property name="margin-end">5</property>
+    <property name="orientation">vertical</property>
+
+  </template>
+</interface>

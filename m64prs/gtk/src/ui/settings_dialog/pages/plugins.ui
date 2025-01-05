@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+I'd like to use Blueprint but it's missing this feature.
+https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
+-->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="M64PRS_SettingsPluginsPage" parent="GtkBox">
+    <property name="margin-top">5</property>
+    <property name="margin-bottom">5</property>
+    <property name="margin-start">5</property>
+    <property name="margin-end">5</property>
+    <property name="spacing">5</property>
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes" context="settings.plugins">Graphics plugin</property>
+        <child>
+          <object class="GtkDropDown">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item translatable="yes" context="settings.emu">...</item>
+                  <item translatable="yes" context="settings.emu">...</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes" context="settings.plugins">Audio plugin</property>
+        <child>
+          <object class="GtkDropDown">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item translatable="yes" context="settings.emu">...</item>
+                  <item translatable="yes" context="settings.emu">...</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes" context="settings.plugins">Input plugin</property>
+        <child>
+          <object class="GtkDropDown">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item translatable="yes" context="settings.emu">...</item>
+                  <item translatable="yes" context="settings.emu">...</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes" context="settings.plugins">RSP plugin</property>
+        <child>
+          <object class="GtkDropDown">
+            <property name="margin-top">5</property>
+            <property name="margin-bottom">5</property>
+            <property name="margin-start">5</property>
+            <property name="margin-end">5</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item translatable="yes" context="settings.emu">...</item>
+                  <item translatable="yes" context="settings.emu">...</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+
+  </template>
+</interface>
