@@ -4,7 +4,7 @@ use crate::ui::settings_dialog::SettingsPage;
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use crate::ui::{core::CoreReadyState, settings_dialog::{settings_page::SettingsPageImpl, SettingsPage}};
+    use crate::ui::{core::CoreReadyState, settings_dialog::{parts::PluginSelect, settings_page::SettingsPageImpl, SettingsPage}};
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "plugins.ui")]
@@ -20,6 +20,7 @@ mod inner {
         type Interfaces = (SettingsPage,);
 
         fn class_init(class: &mut Self::Class) {
+            PluginSelect::ensure_type();
             class.bind_template();
         }
 
