@@ -1,16 +1,17 @@
-use gtk::{prelude::*, subclass::prelude::*};
 use crate::ui::settings_dialog::SettingsPage;
+use gtk::{prelude::*, subclass::prelude::*};
 
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use crate::ui::{core::CoreReadyState, settings_dialog::{settings_page::SettingsPageImpl, SettingsPage}};
+    use crate::ui::{
+        core::CoreReadyState,
+        settings_dialog::{settings_page::SettingsPageImpl, SettingsPage},
+    };
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "shortcuts.ui")]
-    pub struct ShortcutsPage {
-
-    }
+    pub struct ShortcutsPage {}
 
     #[glib::object_subclass]
     impl ObjectSubclass for ShortcutsPage {
@@ -33,13 +34,9 @@ mod inner {
     impl BoxImpl for ShortcutsPage {}
 
     impl SettingsPageImpl for ShortcutsPage {
-        fn load_from_core(&self, state: &mut CoreReadyState) {
-            
-        }
-    
-        fn save_to_core(&self, state: &mut CoreReadyState) {
-            
-        }
+        fn load_from_core(&self, state: &mut CoreReadyState) {}
+
+        fn save_to_core(&self, state: &mut CoreReadyState) {}
     }
 }
 
@@ -54,4 +51,3 @@ glib::wrapper! {
             gtk::ConstraintTarget,
             SettingsPage;
 }
-

@@ -1,13 +1,13 @@
-mod settings_page;
 mod pages;
 mod parts;
+mod settings_page;
 
 pub(self) use settings_page::SettingsPage;
 
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use super::pages::{self, EmuPage};
+    use super::pages;
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "mod.ui")]
@@ -39,14 +39,14 @@ mod inner {
 
 glib::wrapper! {
     pub struct SettingsDialog(ObjectSubclass<inner::SettingsDialog>)
-        @extends 
-            gtk::Window, 
+        @extends
+            gtk::Window,
             gtk::Widget,
-        @implements 
-            gtk::Accessible, 
-            gtk::Buildable, 
-            gtk::ConstraintTarget, 
-            gtk::Native, 
+        @implements
+            gtk::Accessible,
+            gtk::Buildable,
+            gtk::ConstraintTarget,
+            gtk::Native,
             gtk::Root;
 }
 

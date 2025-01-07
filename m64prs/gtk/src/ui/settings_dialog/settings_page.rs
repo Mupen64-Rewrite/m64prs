@@ -3,7 +3,7 @@ use gtk::{prelude::*, subclass::prelude::*};
 use crate::ui::core::CoreReadyState;
 
 pub mod ffi {
-    use gtk::{prelude::*, subclass::prelude::*};
+    use gtk::subclass::prelude::*;
 
     use crate::ui::core::CoreReadyState;
     #[derive(Clone, Copy)]
@@ -21,7 +21,7 @@ pub mod ffi {
 }
 
 pub mod iface {
-    use gtk::{prelude::*, subclass::prelude::*};
+    use gtk::subclass::prelude::*;
 
     pub enum SettingsPage {}
 
@@ -32,8 +32,10 @@ pub mod iface {
         type Interface = super::ffi::SettingsPageInterface;
 
         fn interface_init(class: &mut Self::Interface) {
-            class.load_from_core = |_obj, _state| panic!("SettingsPage::load_from_core not implemented!");
-            class.save_to_core = |_obj, _state| panic!("SettingsPage::save_to_core not implemented!");
+            class.load_from_core =
+                |_obj, _state| panic!("SettingsPage::load_from_core not implemented!");
+            class.save_to_core =
+                |_obj, _state| panic!("SettingsPage::save_to_core not implemented!");
         }
     }
 }

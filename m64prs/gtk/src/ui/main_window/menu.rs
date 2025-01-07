@@ -12,7 +12,10 @@ use m64prs_gtk_utils::{
 };
 use m64prs_vcr::{movie::M64File, VcrState};
 
-use crate::{ui::{main_window::enums::MainEmuState, settings_dialog::SettingsDialog}, utils::dirs::INSTALL_DIRS};
+use crate::{
+    ui::{main_window::enums::MainEmuState, settings_dialog::SettingsDialog},
+    utils::dirs::INSTALL_DIRS,
+};
 
 use super::{CoreState, MainWindow};
 
@@ -404,7 +407,6 @@ async fn settings_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     settings.set_modal(true);
 
     settings.present();
-
 
     Ok(())
 }

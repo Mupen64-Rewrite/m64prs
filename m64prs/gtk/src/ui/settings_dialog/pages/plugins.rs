@@ -1,16 +1,17 @@
-use gtk::{prelude::*, subclass::prelude::*};
 use crate::ui::settings_dialog::SettingsPage;
+use gtk::{prelude::*, subclass::prelude::*};
 
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use crate::ui::{core::CoreReadyState, settings_dialog::{parts::PluginSelect, settings_page::SettingsPageImpl, SettingsPage}};
+    use crate::ui::{
+        core::CoreReadyState,
+        settings_dialog::{parts::PluginSelect, settings_page::SettingsPageImpl, SettingsPage},
+    };
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "plugins.ui")]
-    pub struct PluginsPage {
-
-    }
+    pub struct PluginsPage {}
 
     #[glib::object_subclass]
     impl ObjectSubclass for PluginsPage {
@@ -34,13 +35,9 @@ mod inner {
     impl BoxImpl for PluginsPage {}
 
     impl SettingsPageImpl for PluginsPage {
-        fn load_from_core(&self, state: &mut CoreReadyState) {
-            
-        }
-    
-        fn save_to_core(&self, state: &mut CoreReadyState) {
-            
-        }
+        fn load_from_core(&self, state: &mut CoreReadyState) {}
+
+        fn save_to_core(&self, state: &mut CoreReadyState) {}
     }
 }
 
@@ -55,4 +52,3 @@ glib::wrapper! {
             gtk::ConstraintTarget,
             SettingsPage;
 }
-

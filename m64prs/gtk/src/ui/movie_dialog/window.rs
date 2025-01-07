@@ -35,7 +35,7 @@ mod inner {
         file_dialog: TemplateChild<gtk::FileDialog>,
         #[template_child]
         error_dialog: TemplateChild<gtk::AlertDialog>,
-        
+
         #[property(get, set)]
         new_movie_title: OnceCell<String>,
         #[property(get, set)]

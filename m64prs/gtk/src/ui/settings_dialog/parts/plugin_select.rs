@@ -1,7 +1,7 @@
 mod inner {
     use std::{
         cell::{Cell, RefCell},
-        sync::{LazyLock, OnceLock},
+        sync::LazyLock,
     };
 
     use glib::subclass::Signal;
@@ -34,7 +34,8 @@ mod inner {
 
         #[template_callback]
         fn open_settings_btn(&self, btn: &gtk::Button) {
-            self.obj().emit(<Self as ObjectImpl>::signals()[0].signal_id(), &[])
+            self.obj()
+                .emit(<Self as ObjectImpl>::signals()[0].signal_id(), &[])
         }
     }
 
@@ -47,8 +48,12 @@ mod inner {
 
         fn new() -> Self {
             let plugins = gio::ListStore::new::<gio::File>();
-            plugins.append(&gio::File::for_path("/usr/lib/mupen64plus/mupen64plus-video-rice.so"));
-            plugins.append(&gio::File::for_path("/usr/lib/mupen64plus/mupen64plus-video-glide64mk2.so"));
+            plugins.append(&gio::File::for_path(
+                "/usr/lib/mupen64plus/mupen64plus-video-rice.so",
+            ));
+            plugins.append(&gio::File::for_path(
+                "/usr/lib/mupen64plus/mupen64plus-video-glide64mk2.so",
+            ));
             Self {
                 plugins: RefCell::new(plugins.upcast()),
                 settings_available: Cell::new(false),
