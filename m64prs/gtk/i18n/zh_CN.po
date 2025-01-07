@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0Report-Msgid-Bugs-To:\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-04 10:02-0500\n"
-"PO-Revision-Date: 2025-01-02 21:28-0500\n"
+"POT-Creation-Date: 2025-01-06 21:29-0500\n"
+"PO-Revision-Date: 2025-01-06 21:40-0500\n"
 "Last-Translator: Jacky Guo <j349guo@uwaterloo.ca>\n"
 "Language-Team: Chinese (simplified) <i18n-zh@googlegroups.com>\n"
 "Language: zh_CN\n"
@@ -75,12 +75,12 @@ msgid "EEPROM"
 msgstr "于EEPROM启动"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:264
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:44
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:70
 msgid "OK"
 msgstr "确定"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:271
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:51
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:77
 msgid "Cancel"
 msgstr "取消"
 
@@ -250,36 +250,57 @@ msgstr "任天堂64 ROM (*.n64, *.v64, *.z64)"
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
 msgstr "Mupen64Plus 状态文件 (*.st, *.savestate)"
 
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/parts/plugin_select.ui:31
+msgctxt "settings"
+msgid "Settings..."
+msgstr "设定⋯⋯"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:18
+msgctxt "settings.plugins"
+msgid "Graphics plugin"
+msgstr "显示插件"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:24
+msgctxt "settings.plugins"
+msgid "Audio plugin"
+msgstr "音响插件"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:30
+msgctxt "settings.plugins"
+msgid "Input plugin"
+msgstr "输入插件"
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:36
+msgctxt "settings.plugins"
+msgid "RSP plugin"
+msgstr "RSP插件"
+
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:16
 msgctxt "settings.emu"
 msgid "CPU emulation mode"
-msgstr ""
+msgstr "CPU仿真模式"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:26
 msgctxt "settings.emu"
 msgid "Pure Interpreter"
-msgstr ""
+msgstr "单纯直译"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:27
 msgctxt "settings.emu"
 msgid "Cached Interpreter"
-msgstr ""
+msgstr "记忆化直译"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:28
 msgctxt "settings.emu"
 msgid "Dynamic Recompiler"
-msgstr ""
+msgstr "即时编译"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:38
 msgctxt "settings.emu"
 msgid "Randomize interrupt timings"
-msgstr ""
+msgstr "中断时序随机化"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:43
 msgctxt "settings.emu"
 msgid "Disable Expansion Pak memory"
-msgstr ""
-
-#~ msgctxt "movie_dialog"
-#~ msgid "Path: "
-#~ msgstr "路径"
+msgstr "扩充套件停用"

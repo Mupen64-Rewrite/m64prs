@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: m64prs 0.1.0"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-04 10:02-0500\n"
+"POT-Creation-Date: 2025-01-06 21:29-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,12 +71,12 @@ msgid "EEPROM"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:264
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:44
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:70
 msgid "OK"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/movie_dialog/window.ui:271
-#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:51
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/mod.ui:77
 msgid "Cancel"
 msgstr ""
 
@@ -244,6 +244,31 @@ msgstr ""
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:66
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/mod.ui:82
 msgid "Mupen64Plus savestate (*.st, *.savestate)"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/parts/plugin_select.ui:31
+msgctxt "settings"
+msgid "Settings..."
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:18
+msgctxt "settings.plugins"
+msgid "Graphics plugin"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:24
+msgctxt "settings.plugins"
+msgid "Audio plugin"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:30
+msgctxt "settings.plugins"
+msgid "Input plugin"
+msgstr ""
+
+#: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/plugins.ui:36
+msgctxt "settings.plugins"
+msgid "RSP plugin"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/settings_dialog/pages/emu.ui:16
