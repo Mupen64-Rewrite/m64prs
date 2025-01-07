@@ -19,12 +19,19 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
             <property name="halign">fill</property>
             <property name="hexpand">true</property>
             <property name="model" bind-source="M64PRS_PluginSelect" bind-property="plugins" bind-flags="sync-create" />
+            <property name="expression">
+              <closure type="gchararray" function="path_to_string" />
+            </property>
+            <property name="selected" bind-source="M64PRS_PluginSelect" bind-property="current-index" bind-flags="bidirectional | sync-create" />
           </object>
         </child>
         <child>
           <object class="GtkButton">
             <property name="halign">fill</property>
             <property name="label" translatable="yes" context="settings">Settings...</property>
+
+            <signal name="clicked" handler="open_settings_btn" swapped="True" />
+            <property name="sensitive" bind-source="M64PRS_PluginSelect" bind-property="settings-available" bind-flags="sync-create" />
           </object>
         </child>
       </object>
