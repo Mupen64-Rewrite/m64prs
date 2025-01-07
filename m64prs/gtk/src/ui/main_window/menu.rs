@@ -471,6 +471,7 @@ fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn 
 }
 
 async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _guard = SaveOpGuard::new(main_window);
     let save_file = match main_window.show_save_state_dialog().await {
         Ok(file) => file,
         Err(err) => match err.kind::<gtk::DialogError>() {
@@ -497,6 +498,7 @@ async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _guard = SaveOpGuard::new(main_window);
     let save_file = match main_window.show_load_state_dialog().await {
         Ok(file) => file,
         Err(err) => match err.kind::<gtk::DialogError>() {
@@ -571,6 +573,7 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+    let _guard = SaveOpGuard::new(main_window);
     let movie_file = match main_window.show_load_movie_dialog().await {
         Some(file) => file,
         None => return Ok(()),
