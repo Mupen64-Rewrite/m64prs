@@ -1,9 +1,5 @@
 use std::{
-    borrow::Borrow,
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
-    sync::Arc,
+    borrow::Borrow, error::Error, ffi::CStr, fs, path::{Path, PathBuf}, sync::Arc
 };
 
 use futures::{executor::block_on, lock::Mutex};
@@ -11,11 +7,7 @@ use gdk::prelude::SurfaceExt;
 use glib::SendWeakRef;
 use gtk::prelude::NativeExt;
 use m64prs_core::{
-    error::{M64PError, PluginLoadError, SavestateError},
-    plugin::{PluginInfo, PluginSet, PluginType},
-    save::SavestateFormat,
-    tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
-    Core,
+    config::ConfigSection, error::{M64PError, PluginLoadError, SavestateError}, plugin::{PluginInfo, PluginSet, PluginType}, save::SavestateFormat, tas_callbacks::{FrameHandler, InputHandler, SaveHandler}, ConfigSectionMut, Core
 };
 use m64prs_sys::{CoreParam, EmuState, RomHeader, RomSettings};
 use m64prs_vcr::{movie::M64File, VcrState};
@@ -231,6 +223,14 @@ impl CoreReadyState {
             vcr_read_only: false,
             vcr_state,
         })
+    }
+
+    pub(super) fn cfg_open_mut(&mut self, name: &CStr) -> Result<ConfigSectionMut<'_>, M64PError> {
+        self.core.cfg_open_mut(name)
+    }
+
+    pub(super) fn cfg_open(&self, name: &CStr) -> Result<ConfigSection<'_>, M64PError> {
+        self.core.cfg_open(name)
     }
 }
 

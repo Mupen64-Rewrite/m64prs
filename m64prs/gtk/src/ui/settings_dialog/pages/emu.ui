@@ -29,6 +29,7 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
                 </items>
               </object>
             </property>
+            <property name="selected" bind-source="M64PRS_SettingsEmuPage" bind-property="r4300-emulator" bind-flags="sync-create|bidirectional"/>
           </object>
         </child>
       </object>
@@ -36,11 +37,13 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
     <child>
       <object class="GtkCheckButton">
         <property name="label" translatable="yes" context="settings.emu">Randomize interrupt timings</property>
+        <property name="active" bind-source="M64PRS_SettingsEmuPage" bind-property="randomize-interrupt-timings" bind-flags="sync-create|bidirectional"/>
       </object>
     </child>
     <child>
       <object class="GtkCheckButton">
         <property name="label" translatable="yes" context="settings.emu">Disable Expansion Pak memory</property>
+        <property name="active" bind-source="M64PRS_SettingsEmuPage" bind-property="disable-expansion-pak" bind-flags="sync-create|bidirectional"/>
       </object>
     </child>
   </template>

@@ -157,44 +157,44 @@ impl From<CString> for ConfigValue {
     }
 }
 
-impl TryInto<c_int> for ConfigValue {
+impl TryFrom<ConfigValue> for c_int {
     type Error = WrongConfigType;
 
-    fn try_into(self) -> Result<c_int, Self::Error> {
-        match self {
+    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
+        match value {
             ConfigValue::Int(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type())),
         }
     }
 }
 
-impl TryInto<c_float> for ConfigValue {
+impl TryFrom<ConfigValue> for c_float {
     type Error = WrongConfigType;
 
-    fn try_into(self) -> Result<c_float, Self::Error> {
-        match self {
+    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
+        match value {
             ConfigValue::Float(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::Float, other.cfg_type())),
         }
     }
 }
 
-impl TryInto<bool> for ConfigValue {
+impl TryFrom<ConfigValue> for bool {
     type Error = WrongConfigType;
 
-    fn try_into(self) -> Result<bool, Self::Error> {
-        match self {
+    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
+        match value {
             ConfigValue::Bool(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::Bool, other.cfg_type())),
         }
     }
 }
 
-impl TryInto<CString> for ConfigValue {
+impl TryFrom<ConfigValue> for CString {
     type Error = WrongConfigType;
 
-    fn try_into(self) -> Result<CString, Self::Error> {
-        match self {
+    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
+        match value {
             ConfigValue::String(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::String, other.cfg_type())),
         }

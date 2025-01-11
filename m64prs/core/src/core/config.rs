@@ -7,9 +7,12 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use m64prs_sys::{common::ConfigValue, ConfigType};
+use m64prs_sys::{
+    common::{ConfigValue, WrongConfigType},
+    ConfigType,
+};
 
-use crate::error::M64PError;
+use crate::error::{ConfigGetError, M64PError};
 
 use super::{core_fn, Core};
 
@@ -54,7 +57,7 @@ impl Core {
 
         Ok(())
     }
-    
+
     /// Opens the config section with the given name.
     pub fn cfg_open(&self, name: &CStr) -> Result<ConfigSection, M64PError> {
         let mut handle: m64prs_sys::Handle = null_mut();
@@ -206,6 +209,19 @@ impl ConfigSection<'_> {
             })),
         }
     }
+
+    /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
+    pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
+    where
+        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
+    {
+        match self.get(param) {
+            Ok(value) => value.try_into().map_err(Into::into),
+            Err(M64PError::InputNotFound) => Ok(default),
+            Err(err) => Err(err.into()),
+        }
+    }
+
 }
 
 impl ConfigSectionMut<'_> {
@@ -312,6 +328,18 @@ impl ConfigSectionMut<'_> {
                 ))
                 .to_owned()
             })),
+        }
+    }
+
+    /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
+    pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
+    where
+        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
+    {
+        match self.get(param) {
+            Ok(value) => value.try_into().map_err(Into::into),
+            Err(M64PError::InputNotFound) => Ok(default),
+            Err(err) => Err(err.into()),
         }
     }
 

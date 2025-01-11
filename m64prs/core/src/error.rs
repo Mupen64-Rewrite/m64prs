@@ -46,7 +46,9 @@ pub enum PluginLoadError {
     InvalidType(m64prs_sys::PluginType),
 }
 
-#[derive(Debug)]
+/// Error that occurs because the plugin is not the type expected when converting.
+#[derive(Debug, Error)]
+#[error("Plugin type is {actual} (expected {expected}")]
 pub struct WrongPluginType {
     expected: PluginType,
     actual: PluginType,
@@ -58,13 +60,22 @@ impl WrongPluginType {
     }
 }
 
-impl Display for WrongPluginType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "Plugin type is {} (expected {})",
-            self.actual, self.expected
-        ))
-    }
+#[derive(Debug, Error)]
+pub enum ConfigGetError {
+    /// An error occurred within Mupen64Plus or one of its plugins
+    #[error("M64+ error: {0}")]
+    M64P(#[source] M64PError),
+    #[error("{0}")]
+    WrongConfigType(#[source] WrongConfigType),
 }
 
-impl Error for WrongPluginType {}
+impl From<M64PError> for ConfigGetError {
+    fn from(value: M64PError) -> Self {
+        Self::M64P(value)
+    }
+}
+impl From<WrongConfigType> for ConfigGetError {
+    fn from(value: WrongConfigType) -> Self {
+        Self::WrongConfigType(value)
+    }
+}
