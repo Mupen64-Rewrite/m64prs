@@ -20,8 +20,13 @@ mod inner {
 
     impl SettingsDialog {
         fn main_window(&self) -> MainWindow {
-            let parent = self.obj().transient_for().expect("SettingsDialog should have a parent window");
-            parent.downcast().expect("parent window is not a MainWindow")
+            let parent = self
+                .obj()
+                .transient_for()
+                .expect("SettingsDialog should have a parent window");
+            parent
+                .downcast()
+                .expect("parent window is not a MainWindow")
         }
 
         fn load_pages(&self) {
@@ -31,7 +36,7 @@ mod inner {
 
             for page in &self.tabs_nb.pages() {
                 let page: gtk::NotebookPage = page.unwrap().downcast().unwrap();
-                
+
                 if let Some(settings_page) = page.child().dynamic_cast_ref::<SettingsPage>() {
                     settings_page.load_from_core(core_ready);
                 }
@@ -44,11 +49,30 @@ mod inner {
 
             for page in &self.tabs_nb.pages() {
                 let page: gtk::NotebookPage = page.unwrap().downcast().unwrap();
-                
+
                 if let Some(settings_page) = page.child().dynamic_cast_ref::<SettingsPage>() {
                     settings_page.save_to_core(core_ready);
                 }
             }
+        }
+    }
+
+    #[gtk::template_callbacks]
+    impl SettingsDialog {
+        #[template_callback]
+        fn ok_clicked(&self, _: &gtk::Button) {
+            self.save_pages();
+            self.obj().destroy();
+        }
+        
+        #[template_callback]
+        fn apply_clicked(&self, _: &gtk::Button) {
+            self.save_pages();
+        }
+        
+        #[template_callback]
+        fn cancel_clicked(&self, _: &gtk::Button) {
+            self.obj().destroy();
         }
     }
 
@@ -61,6 +85,7 @@ mod inner {
         fn class_init(class: &mut Self::Class) {
             pages::init_pages();
             class.bind_template();
+            class.bind_template_callbacks();
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {

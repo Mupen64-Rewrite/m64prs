@@ -67,15 +67,22 @@
             <child>
               <object class="GtkButton">
                 <property name="width-request">100</property>
+                <property name="label" translatable="yes">Apply</property>
+                <signal name="clicked" handler="apply_clicked" swapped="True"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="width-request">100</property>
                 <property name="label" translatable="yes">OK</property>
-                <!-- <signal name="clicked" handler="ok_clicked" swapped="True"/> -->
+                <signal name="clicked" handler="ok_clicked" swapped="True"/>
               </object>
             </child>
             <child>
               <object class="GtkButton">
                 <property name="width-request">100</property>
                 <property name="label" translatable="yes">Cancel</property>
-                <!-- <signal name="clicked" handler="cancel_clicked" swapped="True"/> -->
+                <signal name="clicked" handler="cancel_clicked" swapped="True"/>
               </object>
             </child>
           </object>

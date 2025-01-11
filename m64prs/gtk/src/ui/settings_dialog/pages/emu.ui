@@ -37,7 +37,7 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
     <child>
       <object class="GtkCheckButton">
         <property name="label" translatable="yes" context="settings.emu">Randomize interrupt timings</property>
-        <property name="active" bind-source="M64PRS_SettingsEmuPage" bind-property="randomize-interrupt-timings" bind-flags="sync-create|bidirectional"/>
+        <property name="active" bind-source="M64PRS_SettingsEmuPage" bind-property="randomize-interrupt" bind-flags="sync-create|bidirectional"/>
       </object>
     </child>
     <child>

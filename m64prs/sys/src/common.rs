@@ -2,7 +2,7 @@
 
 use std::{
     error::Error,
-    ffi::{c_float, c_int, c_void, CString},
+    ffi::{c_float, c_int, c_uint, c_void, CString},
     fmt::Display,
 };
 
@@ -105,9 +105,17 @@ impl Error for WrongConfigType {}
 #[derive(Debug, Clone)]
 #[repr(u32)]
 pub enum ConfigValue {
+    /// An integer value that fits in the C `int` type.
     Int(c_int) = ConfigType::Int as u32,
+    /// A floating-point value that fits in the C `float` type.
     Float(c_float) = ConfigType::Float as u32,
-    Bool(bool) = ConfigType::Bool as u32,
+    /// A boolean value, stored as a C `uint`; this is zero when false and nonzero when true.
+    /// 
+    /// # Notes
+    /// This value is stored as an integer since Mupen passes boolean 
+    /// parameters using `int` instead of using `bool` like modern C/C++ would.
+    Bool(c_uint) = ConfigType::Bool as u32,
+    /// A null-terminated string, typically exposed to C as `const char*`.
     String(CString) = ConfigType::String as u32,
 }
 
@@ -122,12 +130,12 @@ impl ConfigValue {
         }
     }
 
-    /// Obtains a pointer to this value's data.
+    /// Obtains a non-owning pointer to this value's data.
     pub unsafe fn as_ptr(&self) -> *const c_void {
         match self {
             ConfigValue::Int(value) => value as *const c_int as *const c_void,
             ConfigValue::Float(value) => value as *const c_float as *const c_void,
-            ConfigValue::Bool(value) => value as *const bool as *const c_void,
+            ConfigValue::Bool(value) => value as *const c_uint as *const c_void,
             ConfigValue::String(value) => value.as_ptr() as *const c_void,
         }
     }
@@ -147,7 +155,7 @@ impl From<c_float> for ConfigValue {
 
 impl From<bool> for ConfigValue {
     fn from(value: bool) -> Self {
-        Self::Bool(value)
+        Self::Bool(value as c_uint)
     }
 }
 
@@ -184,7 +192,7 @@ impl TryFrom<ConfigValue> for bool {
 
     fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
         match value {
-            ConfigValue::Bool(value) => Ok(value),
+            ConfigValue::Bool(value) => Ok(value != 0),
             other => Err(WrongConfigType::new(ConfigType::Bool, other.cfg_type())),
         }
     }

@@ -177,7 +177,7 @@ impl ConfigSection<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
+                ((self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0) as u32
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString

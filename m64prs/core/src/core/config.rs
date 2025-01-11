@@ -195,7 +195,7 @@ impl ConfigSection<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
+                ((self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0) as u32
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString
@@ -235,6 +235,7 @@ impl ConfigSectionMut<'_> {
         // SAFETY: the reference to the name should only be used
         // within the function, it is not stored.
         core_fn(unsafe { (self.core.api.config.save_section)(self.name.as_ptr()) })
+        // core_fn(unsafe {(self.core.api.config.save_file)()})
     }
 
     /// Reverts any unsaved changes in this section.
@@ -316,7 +317,7 @@ impl ConfigSectionMut<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
+                ((self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0) as u32
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString
