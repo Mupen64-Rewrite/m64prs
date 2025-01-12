@@ -35,9 +35,9 @@ mod inner {
     impl BoxImpl for PluginsPage {}
 
     impl SettingsPageImpl for PluginsPage {
-        fn load_from_core(&self, state: &mut CoreReadyState) {}
+        fn load_page(&self, state: &mut CoreReadyState) {}
 
-        fn save_to_core(&self, state: &mut CoreReadyState) {}
+        fn save_page(&self, state: &mut CoreReadyState) {}
     }
 }
 

@@ -48,7 +48,7 @@ mod inner {
     const SECTION_NAME: &CStr = c"Core";
 
     impl SettingsPageImpl for EmuPage {
-        fn load_from_core(&self, state: &mut CoreReadyState) {
+        fn load_page(&self, state: &mut CoreReadyState) {
             // TODO: proper error messages and whatnot
             let sect = state.cfg_open_mut(SECTION_NAME).expect("Failed to open config section");
             let this = self.obj();
@@ -59,7 +59,7 @@ mod inner {
 
         }
 
-        fn save_to_core(&self, state: &mut CoreReadyState) {
+        fn save_page(&self, state: &mut CoreReadyState) {
             // TODO: proper error messages and whatnot
             let mut sect = state.cfg_open_mut(SECTION_NAME).expect("Failed to open config section");
             let this = self.obj();

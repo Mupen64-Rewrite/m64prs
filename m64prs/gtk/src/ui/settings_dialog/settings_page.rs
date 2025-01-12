@@ -11,8 +11,8 @@ pub mod ffi {
     pub struct SettingsPageInterface {
         parent: glib::gobject_ffi::GTypeInterface,
 
-        pub(super) load_from_core: fn(&super::SettingsPage, &mut CoreReadyState),
-        pub(super) save_to_core: fn(&super::SettingsPage, &mut CoreReadyState),
+        pub(super) load_page: fn(&super::SettingsPage, &mut CoreReadyState),
+        pub(super) save_page: fn(&super::SettingsPage, &mut CoreReadyState),
     }
 
     unsafe impl InterfaceStruct for SettingsPageInterface {
@@ -32,9 +32,9 @@ pub mod iface {
         type Interface = super::ffi::SettingsPageInterface;
 
         fn interface_init(class: &mut Self::Interface) {
-            class.load_from_core =
+            class.load_page =
                 |_obj, _state| panic!("SettingsPage::load_from_core not implemented!");
-            class.save_to_core =
+            class.save_page =
                 |_obj, _state| panic!("SettingsPage::save_to_core not implemented!");
         }
     }
@@ -53,42 +53,42 @@ pub trait SettingsPageExt: IsA<SettingsPage> {
     fn load_from_core(&self, core_state: &mut CoreReadyState) {
         let this = self.upcast_ref::<SettingsPage>();
         let iface = this.interface::<SettingsPage>().unwrap();
-        (iface.as_ref().load_from_core)(this, core_state);
+        (iface.as_ref().load_page)(this, core_state);
     }
 
     fn save_to_core(&self, core_state: &mut CoreReadyState) {
         let this = self.upcast_ref::<SettingsPage>();
         let iface = this.interface::<SettingsPage>().unwrap();
-        (iface.as_ref().save_to_core)(this, core_state);
+        (iface.as_ref().save_page)(this, core_state);
     }
 }
 impl<T: IsA<SettingsPage>> SettingsPageExt for T {}
 
 pub trait SettingsPageImpl: WidgetImpl + ObjectSubclass<Type: IsA<SettingsPage>> {
-    fn load_from_core(&self, state: &mut CoreReadyState) {
-        self.parent_load_from_core(state)
+    fn load_page(&self, state: &mut CoreReadyState) {
+        self.parent_load_page(state)
     }
-    fn save_to_core(&self, state: &mut CoreReadyState) {
-        self.parent_save_to_core(state)
+    fn save_page(&self, state: &mut CoreReadyState) {
+        self.parent_save_page(state)
     }
 }
 
 pub trait SettingsPageImplExt: SettingsPageImpl {
-    fn parent_load_from_core(&self, state: &mut CoreReadyState) {
+    fn parent_load_page(&self, state: &mut CoreReadyState) {
         let data = Self::type_data();
         let parent_iface = unsafe {
             &*(data.as_ref().parent_interface::<SettingsPage>()
                 as *const ffi::SettingsPageInterface)
         };
-        (parent_iface.load_from_core)(unsafe { self.obj().unsafe_cast_ref() }, state)
+        (parent_iface.load_page)(unsafe { self.obj().unsafe_cast_ref() }, state)
     }
-    fn parent_save_to_core(&self, state: &mut CoreReadyState) {
+    fn parent_save_page(&self, state: &mut CoreReadyState) {
         let data = Self::type_data();
         let parent_iface = unsafe {
             &*(data.as_ref().parent_interface::<SettingsPage>()
                 as *const ffi::SettingsPageInterface)
         };
-        (parent_iface.save_to_core)(unsafe { self.obj().unsafe_cast_ref() }, state)
+        (parent_iface.save_page)(unsafe { self.obj().unsafe_cast_ref() }, state)
     }
 }
 impl<T: SettingsPageImpl> SettingsPageImplExt for T {}
@@ -97,13 +97,13 @@ unsafe impl<T: SettingsPageImpl> IsImplementable<T> for SettingsPage {
     fn interface_init(iface: &mut glib::Interface<Self>) {
         let class = iface.as_mut();
 
-        class.load_from_core = |obj, state| {
+        class.load_page = |obj, state| {
             let this = unsafe { obj.unsafe_cast_ref::<<T as ObjectSubclass>::Type>().imp() };
-            SettingsPageImpl::load_from_core(this, state);
+            SettingsPageImpl::load_page(this, state);
         };
-        class.save_to_core = |obj, state| {
+        class.save_page = |obj, state| {
             let this = unsafe { obj.unsafe_cast_ref::<<T as ObjectSubclass>::Type>().imp() };
-            SettingsPageImpl::save_to_core(this, state);
+            SettingsPageImpl::save_page(this, state);
         };
     }
 }
