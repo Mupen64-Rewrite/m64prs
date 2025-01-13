@@ -12,6 +12,7 @@ use super::t_option::{TNone, TOption, TSome};
 
 /// Type-safe wrapper around [`gio::SimpleAction`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct TypedAction<OS, OP>
 where
     OS: OptionVariantType,
