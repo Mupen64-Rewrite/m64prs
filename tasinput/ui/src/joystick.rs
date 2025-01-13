@@ -1,5 +1,5 @@
 mod inner {
-    use std::{cell::Cell, sync::LazyLock};
+    use std::{cell::{Cell, RefCell}, rc::Rc, sync::LazyLock};
 
     use graphene::Vec2;
     use gtk::{prelude::*, subclass::prelude::*};
@@ -31,9 +31,9 @@ mod inner {
     #[glib::derived_properties]
     impl ObjectImpl for Joystick {
         fn constructed(&self) {
-            let ct_drag = gtk::GestureDrag::new();
 
-            fn update_joy_pos(this: &super::Joystick, x: f64, y: f64) {
+            // let update_mod = ;
+            let update_joy_pos = move |this: &super::Joystick, x: f64, y: f64| {
                 // start + (x, y) = current pos
                 let pos = graphene::Point::from_vec2(
                     &this
@@ -58,8 +58,28 @@ mod inner {
 
                 this.set_pos_x(jx);
                 this.set_pos_y(jy);
-            }
+            };
+            let update_scroll = |this: &super::Joystick, ct: &gtk::EventController, dx: f64, dy: f64| {
+                const SENSITIVITY: f64 = 1.0;
 
+                let kmod = ct.current_event_state();
+                let ctrl = kmod.contains(gdk::ModifierType::CONTROL_MASK);
+                let shift = kmod.contains(gdk::ModifierType::SHIFT_MASK);
+
+                let (mut joy_x, mut joy_y) = (this.pos_x(), this.pos_y());
+                if ctrl && !shift {
+                    joy_x = joy_x.saturating_add((dy * SENSITIVITY) as i8);
+                }
+                else {
+                    joy_x = joy_x.saturating_add((dx * SENSITIVITY) as i8);
+                    joy_y = joy_y.saturating_add((-dy * SENSITIVITY) as i8);
+                }
+
+                this.set_pos_x(joy_x);
+                this.set_pos_y(joy_y);
+            };
+
+            let ct_drag = gtk::GestureDrag::new();
             ct_drag.set_button(gdk::BUTTON_PRIMARY);
             ct_drag.set_propagation_phase(gtk::PropagationPhase::Target);
             ct_drag.connect_drag_begin({
@@ -97,6 +117,23 @@ mod inner {
             });
             self.obj().add_controller(ct_drag);
 
+            let ct_scroll = gtk::EventControllerScroll::new(
+                gtk::EventControllerScrollFlags::BOTH_AXES |
+                gtk::EventControllerScrollFlags::DISCRETE,
+            );
+            ct_scroll.connect_scroll({
+                let this = self.obj().downgrade();
+                move |ct, dx, dy| {
+                    let this = match this.upgrade() {
+                        Some(this) => this,
+                        None => return glib::Propagation::Proceed,
+                    };
+                    update_scroll(&this, ct.upcast_ref(), dx, dy);
+                    glib::Propagation::Stop
+                }
+            });
+            self.obj().add_controller(ct_scroll);
+            
             self.obj().set_overflow(gtk::Overflow::Hidden);
         }
 

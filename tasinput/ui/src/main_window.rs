@@ -189,7 +189,7 @@ mod inner {
                         let timestamp = pointer_evt.time();
 
                         // request to move window
-                        toplevel.begin_move(&device, button as i32, x, y, timestamp);
+                        // toplevel.begin_move(&device, button as i32, x, y, timestamp);
 
                         return glib::Propagation::Stop;
                     }
