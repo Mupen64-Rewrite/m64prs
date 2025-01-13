@@ -4,7 +4,7 @@ use std::{
 };
 
 use gio::prelude::{ActionExt, FromVariant, ToVariant};
-use glib::SignalHandlerId;
+use glib::{GString, SignalHandlerId};
 
 use gio::prelude::*;
 
@@ -62,6 +62,10 @@ where
     /// **See also:** [`gio::SimpleAction::set_enabled`]
     pub fn set_enabled(&self, enabled: bool) {
         self.inner.set_enabled(enabled);
+    }
+
+    pub fn name(&self) -> GString {
+        self.inner.name()
     }
 }
 

@@ -1,5 +1,6 @@
 use std::{error::Error, io, path::Path};
 
+use gettextrs::gettext;
 use gtk::prelude::*;
 use m64prs_core::{
     error::PluginLoadError,
@@ -11,6 +12,7 @@ use m64prs_gtk_utils::{
     error::GlibErrorExt,
 };
 use m64prs_vcr::{movie::M64File, VcrState};
+use tr::tr;
 
 use crate::{
     ui::{main_window::enums::MainEmuState, settings_dialog::SettingsDialog},
@@ -19,11 +21,45 @@ use crate::{
 
 use super::{CoreState, MainWindow};
 
+#[rustfmt::skip]
 pub fn load_menu() -> gio::MenuModel {
-    const UI_XML: &str = include_str!("menu.ui");
-    gtk::Builder::from_string(UI_XML)
-        .object::<gio::MenuModel>("root")
-        .expect("menu.blp should contain object `root`")
+    use m64prs_gtk_utils::menu::*;
+    menu([
+        submenu(Some(&tr!("main_menu" => "File")), [
+            section(None, [
+                item(&tr!("main_menu" => "Open ROM"), "app.file.open_rom"),
+                item(&tr!("main_menu" => "Close ROM"), "app.file.close_rom"),
+            ]),
+            section(None, [
+                item(&tr!("main_menu" => "Settings"), "app.file.settings"),
+            ])
+        ]),
+        submenu(Some(&tr!("main_menu" => "Emulator")), [
+            section(None, [
+                item(&tr!("main_menu" => "Pause/Resume"), "app.emu.toggle_pause"),
+                item(&tr!("main_menu" => "Frame Advance"), "app.emu.frame_advance"),
+                item(&tr!("main_menu" => "Frame Advance"), "app.emu.frame_advance"),
+            ]),
+            section(None, [
+                item(&tr!("main_menu" => "Save State"), "app.emu.save_state"),
+                item(&tr!("main_menu" => "Load State"), "app.emu.load_state"),
+                submenu(Some(&tr!("main_menu" => "Current Slot")), {
+                    (1u8..=9u8).map(|i| item_p(&i.to_string(), "app.emu.set_save_slot", i))
+                }),
+            ]),
+            section(None, [
+                item(&tr!("main_menu" => "Save State to..."), "app.emu.save_file"),
+                item(&tr!("main_menu" => "Load State from..."), "app.emu.load_file"),
+            ])
+        ]),
+        submenu(Some(&tr!("main_menu" => "Movie")), [
+            item(&tr!("main_menu" => "New Movie"), "app.vcr.new_movie"),
+            item(&tr!("main_menu" => "Load Movie"), "app.vcr.load_movie"),
+            item(&tr!("main_menu" => "Save Movie"), "app.vcr.save_movie"),
+            item(&tr!("main_menu" => "Close Movie"), "app.vcr.close_movie"),
+            item(&tr!("main_menu" => "Read-only Mode"), "app.vcr.toggle_read_only"),
+        ]),
+    ]).upcast()
 }
 
 #[derive(Debug, TypedActionGroup)]
