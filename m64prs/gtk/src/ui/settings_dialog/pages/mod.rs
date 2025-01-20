@@ -2,8 +2,9 @@ mod emu;
 mod plugins;
 mod shortcuts;
 
-pub(super) use emu::EmuPage;
 use glib::types::StaticTypeExt;
+
+pub(super) use emu::EmuPage;
 pub(super) use plugins::PluginsPage;
 pub(super) use shortcuts::ShortcutsPage;
 

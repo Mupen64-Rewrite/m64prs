@@ -11,6 +11,7 @@ use x11rb::{
     },
     xcb_ffi::XCBConnection,
 };
+use m64prs_gtk_utils::quark;
 
 pub struct DisplayState {
     pub conn: XCBConnection,
@@ -136,11 +137,8 @@ pub trait X11DisplayExt: sealed::Sealed {
 impl sealed::Sealed for gdk_x11::X11Display {}
 impl X11DisplayExt for gdk_x11::X11Display {
     fn display_state(&self) -> Arc<DisplayState> {
-        static M64PRS_X11_DISPLAY_STATE: LazyLock<glib::Quark> = LazyLock::new(|| {
-            const QUARK_NAME: &glib::GStr =
-                glib::gstr!("io.github.jgcodes2020.m64prs.x11_display_state");
-            glib::Quark::from_static_str(QUARK_NAME)
-        });
+        static M64PRS_X11_DISPLAY_STATE: LazyLock<glib::Quark> =
+            quark!("io.github.jgcodes2020.m64prs.x11_display_state");
 
         // if the display already has globals set, then return then
         unsafe {

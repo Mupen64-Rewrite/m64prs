@@ -22,6 +22,7 @@ use wayland_client::{
     },
     Connection, Dispatch, EventQueue, Proxy, QueueHandle,
 };
+use m64prs_gtk_utils::quark;
 
 use super::macros::empty_dispatch;
 
@@ -93,11 +94,8 @@ pub trait WaylandDisplayExt: sealed::Sealed {
 impl sealed::Sealed for gdk_wayland::WaylandDisplay {}
 impl WaylandDisplayExt for gdk_wayland::WaylandDisplay {
     fn display_state(&self) -> Arc<DisplayState> {
-        static M64PRS_WAYLAND_DISPLAY_STATE: LazyLock<glib::Quark> = LazyLock::new(|| {
-            const QUARK_NAME: &glib::GStr =
-                glib::gstr!("io.github.jgcodes2020.m64prs.wayland_display_state");
-            glib::Quark::from_static_str(QUARK_NAME)
-        });
+        static M64PRS_WAYLAND_DISPLAY_STATE: LazyLock<glib::Quark> = 
+            quark!("io.github.jgcodes2020.m64prs.wayland_display_state");
 
         // if the display already has globals set, then return then
         unsafe {

@@ -15,7 +15,7 @@ use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
-use crate::utils::{dirs::INSTALL_DIRS, keyboard};
+use crate::utils::{dirs::{CONFIG_DIR, INSTALL_DIRS}, keyboard};
 
 use super::main_window::MainWindow;
 
@@ -107,13 +107,12 @@ impl CoreReadyState {
         let mupen_dll_path = INSTALL_DIRS.core_dir.join(MUPEN_FILENAME);
         let data_dir = &INSTALL_DIRS.data_dir;
 
-        let config_dir = dirs::config_dir().unwrap().join("m64prs");
-        let _ = fs::create_dir_all(&config_dir);
+        let _ = fs::create_dir_all(&*CONFIG_DIR);
 
         log::info!("Loading M64+ from {}", mupen_dll_path.display());
         log::info!("Data path is {}", data_dir.display());
 
-        let mut core = m64prs_core::Core::init(mupen_dll_path, Some(&config_dir), Some(&data_dir))
+        let mut core = m64prs_core::Core::init(mupen_dll_path, Some(&*CONFIG_DIR), Some(&data_dir))
             .expect("core startup should succeed");
 
         let vidext_params = VideoExtensionParameters::new(main_window_ref.clone());

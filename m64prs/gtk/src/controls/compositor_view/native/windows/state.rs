@@ -5,6 +5,7 @@ use std::{
 };
 
 use glib::object::ObjectExt;
+use m64prs_gtk_utils::quark;
 use windows::{
     core::{w, PCWSTR},
     Win32::{
@@ -41,11 +42,8 @@ pub const COMP_WINDOW_CLASS: PCWSTR = w!("m64prs_compositor");
 impl sealed::Sealed for gdk_win32::Win32Display {}
 impl Win32DisplayExt for gdk_win32::Win32Display {
     fn display_state(&self) -> Arc<DisplayState> {
-        static M64PRS_WIN32_DISPLAY_STATE: LazyLock<glib::Quark> = LazyLock::new(|| {
-            const QUARK_NAME: &glib::GStr =
-                glib::gstr!("io.github.jgcodes2020.m64prs.win32_display_state");
-            glib::Quark::from_static_str(QUARK_NAME)
-        });
+        static M64PRS_WIN32_DISPLAY_STATE: LazyLock<glib::Quark> = 
+            quark!("io.github.jgcodes2020.m64prs.win32_display_state");
 
         // if the display already has globals set, then return then
         unsafe {

@@ -24,3 +24,13 @@ macro_rules! glib_enum_display {
         }
     };
 }
+
+#[macro_export]
+macro_rules! quark {
+    ($str:literal) => {
+        ::std::sync::LazyLock::new(|| {
+            const VALUE: &'static ::glib::GStr = ::glib::gstr!($str);
+            glib::Quark::from_static_str(VALUE)
+        })
+    };
+}

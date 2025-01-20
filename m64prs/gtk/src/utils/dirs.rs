@@ -1,5 +1,7 @@
 use std::{path::PathBuf, sync::LazyLock};
 
+use futures::future::Lazy;
+
 pub struct InstallDirs {
     // system installation
     pub core_dir: PathBuf,
@@ -39,3 +41,7 @@ fn get_install_dirs() -> InstallDirs {
         i18n_dir: own_path.join("share/locale"),
     }
 }
+
+pub static CONFIG_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
+    dirs::config_dir().unwrap().join("m64prs")
+});

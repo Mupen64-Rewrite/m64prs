@@ -4,10 +4,10 @@ use gtk::{prelude::*, subclass::prelude::*};
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
-    use crate::ui::{
+    use crate::{ui::{
         core::CoreReadyState,
         settings_dialog::{parts::PluginSelect, settings_page::SettingsPageImpl, SettingsPage},
-    };
+    }, utils::dirs::CONFIG_DIR};
 
     #[derive(Default, gtk::CompositeTemplate)]
     #[template(file = "plugins.ui")]
@@ -35,9 +35,13 @@ mod inner {
     impl BoxImpl for PluginsPage {}
 
     impl SettingsPageImpl for PluginsPage {
-        fn load_page(&self, state: &mut CoreReadyState) {}
+        fn load_page(&self, state: &mut CoreReadyState) {
+            
+        }
 
-        fn save_page(&self, state: &mut CoreReadyState) {}
+        fn save_page(&self, state: &mut CoreReadyState) {
+
+        }
     }
 }
 
