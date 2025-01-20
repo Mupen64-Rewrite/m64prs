@@ -38,7 +38,7 @@ pub fn load_menu() -> gio::MenuModel {
             section(None, [
                 item(&tr!("main_menu" => "Pause/Resume"), "app.emu.toggle_pause"),
                 item(&tr!("main_menu" => "Frame Advance"), "app.emu.frame_advance"),
-                item(&tr!("main_menu" => "Frame Advance"), "app.emu.frame_advance"),
+                item(&tr!("main_menu" => "Reset ROM"), "app.emu.reset_rom"),
             ]),
             section(None, [
                 item(&tr!("main_menu" => "Save State"), "app.emu.save_state"),
