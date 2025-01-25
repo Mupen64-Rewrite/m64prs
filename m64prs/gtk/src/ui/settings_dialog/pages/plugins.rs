@@ -1,6 +1,8 @@
 use crate::ui::settings_dialog::SettingsPage;
 use gtk::{prelude::*, subclass::prelude::*};
 
+mod utils;
+
 mod inner {
     use gtk::{prelude::*, subclass::prelude::*};
 
@@ -35,14 +37,16 @@ mod inner {
     impl BoxImpl for PluginsPage {}
 
     impl SettingsPageImpl for PluginsPage {
-        fn load_page(&self, state: &mut CoreReadyState) {
+        async fn load_page(&self, state: &mut CoreReadyState) {
             
         }
 
-        fn save_page(&self, state: &mut CoreReadyState) {
+        async fn save_page(&self, state: &mut CoreReadyState) {
 
         }
     }
+
+    
 }
 
 glib::wrapper! {

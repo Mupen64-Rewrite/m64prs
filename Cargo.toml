@@ -121,6 +121,7 @@ thiserror = "2.0.3"
 tracker = "0.2.2"
 
 # Misc. stuff
+chrono = "0.4.39"
 dirs = "5.0.1"
 rand = "0.8.5"
 slotmap = "1.0.7"

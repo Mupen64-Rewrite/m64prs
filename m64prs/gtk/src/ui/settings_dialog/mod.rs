@@ -29,7 +29,7 @@ mod inner {
                 .expect("parent window is not a MainWindow")
         }
 
-        fn load_pages(&self) {
+        async fn load_pages(&self) {
             let main_window = self.main_window();
             let mut core = main_window.borrow_core();
             let core_ready = core.borrow_ready().expect("Core should not be running");
@@ -42,7 +42,7 @@ mod inner {
                 }
             }
         }
-        fn save_pages(&self) {
+        async fn save_pages(&self) {
             let main_window = self.main_window();
             let mut core = main_window.borrow_core();
             let core_ready = core.borrow_ready().expect("Core should not be running");
@@ -61,13 +61,23 @@ mod inner {
     impl SettingsDialog {
         #[template_callback]
         fn ok_clicked(&self, _: &gtk::Button) {
-            self.save_pages();
-            self.obj().destroy();
+            glib::spawn_future_local({
+                let this = (&*self.obj()).clone();
+                async move {
+                    this.imp().save_pages().await;
+                    this.destroy();
+                }
+            });
         }
         
         #[template_callback]
         fn apply_clicked(&self, _: &gtk::Button) {
-            self.save_pages();
+            glib::spawn_future_local({
+                let this = (&*self.obj()).clone();
+                async move {
+                    this.imp().save_pages().await;
+                }
+            });
         }
         
         #[template_callback]
@@ -97,7 +107,12 @@ mod inner {
     impl WidgetImpl for SettingsDialog {
         fn map(&self) {
             self.parent_map();
-            self.load_pages();
+            glib::spawn_future_local({
+                let this = (&*self.obj()).clone();
+                async move {
+                    this.imp().load_pages().await;
+                }
+            });
         }
     }
     impl WindowImpl for SettingsDialog {

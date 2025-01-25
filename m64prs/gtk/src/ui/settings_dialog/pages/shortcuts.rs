@@ -34,9 +34,9 @@ mod inner {
     impl BoxImpl for ShortcutsPage {}
 
     impl SettingsPageImpl for ShortcutsPage {
-        fn load_page(&self, state: &mut CoreReadyState) {}
+        async fn load_page(&self, state: &mut CoreReadyState) {}
 
-        fn save_page(&self, state: &mut CoreReadyState) {}
+        async fn save_page(&self, state: &mut CoreReadyState) {}
     }
 }
 
