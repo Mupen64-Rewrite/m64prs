@@ -145,16 +145,15 @@ impl ConfigValue {
     }
 }
 
-trait ConfigValueType: TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue> {
+pub trait ConfigValueType: TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue> {
     fn cfg_type() -> ConfigType;
-    unsafe fn as_ptr(&self) -> *const c_void;
     unsafe fn set_default(
         &self,
         config: &crate::api::CoreConfigApi,
         handle: crate::Handle,
         key: &CStr,
         help: &CStr,
-    );
+    ) -> crate::Error;
 }
 
 impl From<c_int> for ConfigValue {
@@ -177,18 +176,14 @@ impl ConfigValueType for c_int {
         ConfigType::Int
     }
 
-    unsafe fn as_ptr(&self) -> *const c_void {
-        self as *const c_int as *const c_void
-    }
-
     unsafe fn set_default(
         &self,
         config: &crate::api::CoreConfigApi,
         handle: crate::Handle,
         key: &CStr,
         help: &CStr,
-    ) {
-        todo!()
+    ) -> crate::Error {
+        (config.set_default_int)(handle, key.as_ptr(), *self, help.as_ptr())
     }
 }
 
@@ -197,19 +192,6 @@ impl From<c_float> for ConfigValue {
         Self::Float(value)
     }
 }
-
-impl From<bool> for ConfigValue {
-    fn from(value: bool) -> Self {
-        Self::Bool(value as c_uint)
-    }
-}
-
-impl From<CString> for ConfigValue {
-    fn from(value: CString) -> Self {
-        Self::String(value)
-    }
-}
-
 impl TryFrom<ConfigValue> for c_float {
     type Error = WrongConfigType;
 
@@ -220,7 +202,27 @@ impl TryFrom<ConfigValue> for c_float {
         }
     }
 }
+impl ConfigValueType for c_float {
+    fn cfg_type() -> ConfigType {
+        ConfigType::Float
+    }
 
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_float)(handle, key.as_ptr(), *self, help.as_ptr())
+    }
+}
+
+impl From<bool> for ConfigValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value as c_uint)
+    }
+}
 impl TryFrom<ConfigValue> for bool {
     type Error = WrongConfigType;
 
@@ -231,7 +233,27 @@ impl TryFrom<ConfigValue> for bool {
         }
     }
 }
+impl ConfigValueType for bool {
+    fn cfg_type() -> ConfigType {
+        ConfigType::Bool
+    }
 
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_bool)(handle, key.as_ptr(), *self as i32, help.as_ptr())
+    }
+}
+
+impl From<CString> for ConfigValue {
+    fn from(value: CString) -> Self {
+        Self::String(value)
+    }
+}
 impl TryFrom<ConfigValue> for CString {
     type Error = WrongConfigType;
 
@@ -240,5 +262,20 @@ impl TryFrom<ConfigValue> for CString {
             ConfigValue::String(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::String, other.cfg_type())),
         }
+    }
+}
+impl ConfigValueType for CString {
+    fn cfg_type() -> ConfigType {
+        ConfigType::Bool
+    }
+
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_string)(handle, key.as_ptr(), self.as_ptr(), help.as_ptr())
     }
 }

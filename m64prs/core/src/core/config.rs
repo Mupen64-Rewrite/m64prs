@@ -8,7 +8,7 @@ use std::{
 };
 
 use m64prs_sys::{
-    common::{ConfigValue, WrongConfigType},
+    common::{ConfigValue, ConfigValueType, WrongConfigType},
     ConfigType,
 };
 
@@ -213,7 +213,7 @@ impl ConfigSection<'_> {
     /// Gets the value of a parameter and casts it to the specified type.
     pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>, 
+        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -232,7 +232,6 @@ impl ConfigSection<'_> {
             Err(err) => Err(err.into()),
         }
     }
-
 }
 
 impl ConfigSectionMut<'_> {
@@ -346,7 +345,7 @@ impl ConfigSectionMut<'_> {
     /// Gets the value of a parameter and casts it to the specified type.
     pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>, 
+        D: ConfigValueType,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -357,7 +356,7 @@ impl ConfigSectionMut<'_> {
     /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
     pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
+        D: ConfigValueType,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -398,6 +397,17 @@ impl ConfigSectionMut<'_> {
                 param.as_ptr(),
                 help.map(|help| help.as_ptr()).unwrap_or(null()),
             )
+        })
+    }
+
+    /// Sets a default value and help text for a parameter if one hasn't been
+    /// set
+    pub fn set_default<D>(&mut self, param: &CStr, value: &D, help: &CStr) -> Result<(), M64PError>
+    where
+        D: ConfigValueType,
+    {
+        core_fn(unsafe {
+            D::set_default(&value, &self.core.api.config, self.handle, &param, &help)
         })
     }
 }

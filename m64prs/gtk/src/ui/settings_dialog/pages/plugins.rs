@@ -4,15 +4,18 @@ use gtk::{prelude::*, subclass::prelude::*};
 mod utils;
 
 mod inner {
+    use core::str;
     use std::{
         cell::Cell,
-        ffi::OsStr,
-        fs,
-        path::{Path, PathBuf},
+        ffi::{CStr, CString},
     };
 
+    use gio::ffi::G_FILE_ATTRIBUTE_STANDARD_NAME;
     use gtk::{prelude::*, subclass::prelude::*};
-    use m64prs_core::plugin::{AnyPlugin, PluginType};
+    use m64prs_core::{
+        plugin::{AnyPlugin, PluginType},
+        ConfigSectionMut,
+    };
 
     use crate::{
         ui::{
@@ -21,6 +24,12 @@ mod inner {
         },
         utils::paths::{is_shared_library, CONFIG_DIR, INSTALL_DIRS},
     };
+
+    const CFG_SECTION_KEY: &CStr = c"M64PRS-Plugins";
+    const CFG_GRAPHICS: &CStr = c"Graphics";
+    const CFG_AUDIO: &CStr = c"Audio";
+    const CFG_INPUT: &CStr = c"Input";
+    const CFG_RSP: &CStr = c"RSP";
 
     #[derive(glib::Properties, gtk::CompositeTemplate)]
     #[properties(wrapper_type = super::PluginsPage)]
@@ -78,9 +87,12 @@ mod inner {
 
     impl ObjectImpl for PluginsPage {
         fn constructed(&self) {
-            self.dd_graphics_plugins.set_plugins(self.graphics_plugins.clone());
-            self.dd_audio_plugins.set_plugins(self.audio_plugins.clone());
-            self.dd_input_plugins.set_plugins(self.input_plugins.clone());
+            self.dd_graphics_plugins
+                .set_plugins(self.graphics_plugins.clone());
+            self.dd_audio_plugins
+                .set_plugins(self.audio_plugins.clone());
+            self.dd_input_plugins
+                .set_plugins(self.input_plugins.clone());
             self.dd_rsp_plugins.set_plugins(self.rsp_plugins.clone());
         }
     }
@@ -90,9 +102,9 @@ mod inner {
     impl PluginsPage {
         async fn check_plugins(&self) {
             let plugin_dir = gio::File::for_path(&INSTALL_DIRS.plugin_dir);
-            let e = plugin_dir
+            let plugin_dir_iter = plugin_dir
                 .enumerate_children_future(
-                    "",
+                    "standard::name",
                     gio::FileQueryInfoFlags::NONE,
                     glib::Priority::DEFAULT,
                 )
@@ -105,17 +117,17 @@ mod inner {
                 self.rsp_plugins.remove_all();
             }
 
-            while let Some(file) = e
+            while let Some(file) = plugin_dir_iter
                 .next_files_future(1, glib::Priority::DEFAULT)
                 .await
                 .unwrap()
                 .into_iter()
                 .next()
             {
+                debug_assert!(file.has_attribute("G_FILE_ATTRIBUTE_STANDARD_NAME"));
                 // check that it's a valid shared library
                 let file_name = file.name();
-                if !is_shared_library(&file_name)
-                {
+                if !is_shared_library(&file_name) {
                     continue;
                 }
 
@@ -150,16 +162,136 @@ mod inner {
             }
             self.init.set(true);
         }
+
+        fn set_default_one(
+            model: &gio::ListStore,
+            sect: &mut ConfigSectionMut<'_>,
+            key: &CStr,
+            help: &CStr,
+        ) {
+            let file = model.item(0).and_downcast::<gio::File>().unwrap();
+            let cfg_value =
+                CString::new(file.basename().unwrap().to_string_lossy().as_bytes()).unwrap();
+            sect.set_default(key, &cfg_value, help).unwrap();
+        }
+
+        fn load_value_one(
+            model: &gio::ListStore,
+            sect: &mut ConfigSectionMut<'_>,
+            key: &CStr,
+            select: &PluginSelect,
+        ) {
+            let name_str = sect
+                .get_cast::<CString>(key)
+                .unwrap_or_else(|_| c"".to_owned())
+                .to_string_lossy()
+                .to_string();
+            let path = INSTALL_DIRS.plugin_dir.join(&name_str);
+            let index = model
+                .iter::<gio::File>()
+                .position(|x| x.unwrap().peek_path().is_some_and(|cur| &cur == &path));
+            if let Some(index) = index {
+                select.set_current_index(index as u32);
+            }
+        }
+
+        fn save_value_one(
+            model: &gio::ListStore,
+            sect: &mut ConfigSectionMut<'_>,
+            key: &CStr,
+            select: &PluginSelect,
+        ) {
+            let index = match select.current_index() {
+                gtk::INVALID_LIST_POSITION => 0,
+                value => value,
+            };
+
+            let gio_path = model.item(index).and_downcast::<gio::File>().unwrap();
+            let name_cstr = gio_path
+                .basename()
+                .map(|path| CString::new(path.to_string_lossy().as_bytes()))
+                .unwrap()
+                .unwrap();
+
+            sect.set(key, name_cstr).unwrap();
+        }
     }
 
     impl SettingsPageImpl for PluginsPage {
         async fn load_page(&self, state: &mut CoreReadyState) {
             self.check_plugins().await;
-
-            let mut sect = state.cfg_open_mut(c"M64PRS-Plugins");
+            // TODO proper error handling
+            let mut sect = state.cfg_open_mut(CFG_SECTION_KEY).unwrap();
+            // default values
+            Self::set_default_one(
+                &self.graphics_plugins,
+                &mut sect,
+                CFG_GRAPHICS,
+                c"The graphics plugin used by m64prs.",
+            );
+            Self::set_default_one(
+                &self.audio_plugins,
+                &mut sect,
+                CFG_AUDIO,
+                c"The audio plugin used by m64prs.",
+            );
+            Self::set_default_one(
+                &self.input_plugins,
+                &mut sect,
+                CFG_INPUT,
+                c"The input plugin used by m64prs.",
+            );
+            Self::set_default_one(
+                &self.rsp_plugins,
+                &mut sect,
+                CFG_RSP,
+                c"The RSP plugin used by m64prs.",
+            );
+            // load values
+            Self::load_value_one(
+                &self.graphics_plugins,
+                &mut sect,
+                CFG_GRAPHICS,
+                &self.dd_graphics_plugins,
+            );
+            Self::load_value_one(
+                &self.audio_plugins,
+                &mut sect,
+                CFG_AUDIO,
+                &self.dd_audio_plugins,
+            );
+            Self::load_value_one(
+                &self.input_plugins,
+                &mut sect,
+                CFG_INPUT,
+                &self.dd_input_plugins,
+            );
+            Self::load_value_one(&self.rsp_plugins, &mut sect, CFG_RSP, &self.dd_rsp_plugins);
         }
 
         async fn save_page(&self, state: &mut CoreReadyState) {
+            // TODO proper error handling
+            let mut sect = state.cfg_open_mut(CFG_SECTION_KEY).unwrap();
+
+            Self::save_value_one(
+                &self.graphics_plugins,
+                &mut sect,
+                CFG_GRAPHICS,
+                &self.dd_graphics_plugins,
+            );
+            Self::save_value_one(
+                &self.audio_plugins,
+                &mut sect,
+                CFG_AUDIO,
+                &self.dd_audio_plugins,
+            );
+            Self::save_value_one(
+                &self.input_plugins,
+                &mut sect,
+                CFG_INPUT,
+                &self.dd_input_plugins,
+            );
+            Self::save_value_one(&self.rsp_plugins, &mut sect, CFG_RSP, &self.dd_rsp_plugins);
 
         }
     }
