@@ -210,6 +210,17 @@ impl ConfigSection<'_> {
         }
     }
 
+    /// Gets the value of a parameter and casts it to the specified type.
+    pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
+    where
+        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>, 
+    {
+        match self.get(param) {
+            Ok(value) => value.try_into().map_err(Into::into),
+            Err(err) => Err(err.into()),
+        }
+    }
+
     /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
     pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
     where
@@ -329,6 +340,17 @@ impl ConfigSectionMut<'_> {
                 ))
                 .to_owned()
             })),
+        }
+    }
+
+    /// Gets the value of a parameter and casts it to the specified type.
+    pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
+    where
+        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>, 
+    {
+        match self.get(param) {
+            Ok(value) => value.try_into().map_err(Into::into),
+            Err(err) => Err(err.into()),
         }
     }
 

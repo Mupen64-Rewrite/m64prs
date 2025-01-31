@@ -18,7 +18,7 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
           <object class="GtkDropDown">
             <property name="halign">fill</property>
             <property name="hexpand">true</property>
-            <property name="model" bind-source="M64PRS_PluginSelect" bind-property="plugins" bind-flags="sync-create" />
+            <property name="model" bind-source="M64PRS_PluginSelect" bind-property="plugins" bind-flags="bidirectional | sync-create" />
             <property name="expression">
               <closure type="gchararray" function="path_to_string" />
             </property>

@@ -15,7 +15,7 @@ use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
-use crate::utils::{dirs::{CONFIG_DIR, INSTALL_DIRS}, keyboard};
+use crate::utils::{paths::{CONFIG_DIR, INSTALL_DIRS}, keyboard};
 
 use super::main_window::MainWindow;
 

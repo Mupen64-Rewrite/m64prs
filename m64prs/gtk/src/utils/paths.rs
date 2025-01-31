@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::LazyLock};
+use std::{path::{Path, PathBuf}, sync::LazyLock};
 
 use futures::future::Lazy;
 
@@ -45,3 +45,12 @@ fn get_install_dirs() -> InstallDirs {
 pub static CONFIG_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
     dirs::config_dir().unwrap().join("m64prs")
 });
+
+pub fn is_shared_library(path: &Path) -> bool {
+    #[cfg(target_os = "windows")]
+    return path.extension().is_some_and(|ext| ext == "dll");
+    #[cfg(target_os = "macos")]
+    return path.extension().is_some_and(|ext| ext == "dylib");
+    #[cfg(target_os = "linux")]
+    return path.extension().is_some_and(|ext| ext == "so");
+}

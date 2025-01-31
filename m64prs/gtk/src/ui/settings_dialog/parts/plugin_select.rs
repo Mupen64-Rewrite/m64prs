@@ -48,12 +48,12 @@ mod inner {
 
         fn new() -> Self {
             let plugins = gio::ListStore::new::<gio::File>();
-            plugins.append(&gio::File::for_path(
-                "/usr/lib/mupen64plus/mupen64plus-video-rice.so",
-            ));
-            plugins.append(&gio::File::for_path(
-                "/usr/lib/mupen64plus/mupen64plus-video-glide64mk2.so",
-            ));
+            // plugins.append(&gio::File::for_path(
+            //     "/usr/lib/mupen64plus/mupen64plus-video-rice.so",
+            // ));
+            // plugins.append(&gio::File::for_path(
+            //     "/usr/lib/mupen64plus/mupen64plus-video-glide64mk2.so",
+            // ));
             Self {
                 plugins: RefCell::new(plugins.upcast()),
                 settings_available: Cell::new(false),

@@ -16,7 +16,7 @@ use tr::tr;
 
 use crate::{
     ui::{main_window::enums::MainEmuState, settings_dialog::SettingsDialog},
-    utils::dirs::INSTALL_DIRS,
+    utils::paths::INSTALL_DIRS,
 };
 
 use super::{CoreState, MainWindow};

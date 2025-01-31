@@ -15,28 +15,30 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
 
     <child>
       <object class="M64PRS_PluginSelect">
+        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="graphics-plugins" bind-flags="sync-create" />
         <property name="label" translatable="yes" context="settings.plugins">Graphics plugin</property>
       </object>
     </child>
 
     <child>
       <object class="M64PRS_PluginSelect">
+        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="audio-plugins" bind-flags="sync-create" />
         <property name="label" translatable="yes" context="settings.plugins">Audio plugin</property>
       </object>
     </child>
 
     <child>
       <object class="M64PRS_PluginSelect">
+        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="input-plugins" bind-flags="sync-create" />
         <property name="label" translatable="yes" context="settings.plugins">Input plugin</property>
       </object>
     </child>
 
     <child>
       <object class="M64PRS_PluginSelect">
+        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="rsp-plugins" bind-flags="sync-create" />
         <property name="label" translatable="yes" context="settings.plugins">RSP plugin</property>
       </object>
     </child>
-
-
   </template>
 </interface>

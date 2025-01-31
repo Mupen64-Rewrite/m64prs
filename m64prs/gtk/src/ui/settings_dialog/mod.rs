@@ -38,7 +38,7 @@ mod inner {
                 let page: gtk::NotebookPage = page.unwrap().downcast().unwrap();
 
                 if let Some(settings_page) = page.child().dynamic_cast_ref::<SettingsPage>() {
-                    settings_page.load_from_core(core_ready);
+                    settings_page.load_from_core(core_ready).await;
                 }
             }
         }
@@ -51,7 +51,7 @@ mod inner {
                 let page: gtk::NotebookPage = page.unwrap().downcast().unwrap();
 
                 if let Some(settings_page) = page.child().dynamic_cast_ref::<SettingsPage>() {
-                    settings_page.save_to_core(core_ready);
+                    settings_page.save_to_core(core_ready).await;
                 }
             }
         }

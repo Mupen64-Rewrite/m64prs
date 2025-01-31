@@ -1,4 +1,4 @@
-pub mod dirs;
+pub mod paths;
 pub mod dpi_conv;
 pub mod keyboard;
 
