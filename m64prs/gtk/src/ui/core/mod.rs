@@ -106,6 +106,14 @@ impl CoreState {
             _ => None,
         }
     }
+
+    pub(super) fn cfg_open(&self, name: &CStr) -> Result<ConfigSection<'_>, M64PError> {
+        match self {
+            CoreState::Uninit => panic!("Core is not initialized"),
+            CoreState::Ready(ready_state) => ready_state.cfg_open(name),
+            CoreState::Running(running_state) => running_state.cfg_open(name),
+        }
+    }
 }
 
 impl CoreReadyState {
@@ -404,6 +412,10 @@ impl CoreRunningState {
 
     pub(super) fn plugin_info(&self, ptype: PluginType) -> PluginInfo {
         self.core.plugin_info(ptype).unwrap().unwrap()
+    }
+
+    pub(super) fn cfg_open(&self, name: &CStr) -> Result<ConfigSection<'_>, M64PError> {
+        self.core.cfg_open(name)
     }
 }
 

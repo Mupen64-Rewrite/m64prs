@@ -1,4 +1,4 @@
-use std::{error::Error, io, path::Path};
+use std::{error::Error, ffi::CString, io, path::Path};
 
 use gtk::prelude::*;
 use m64prs_core::{
@@ -340,11 +340,31 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
         },
     };
 
+    // query core for plugin paths
+    let (graphics_plugin_path, audio_plugin_path, input_plugin_path, rsp_plugin_path) = {
+        let core = main_window.borrow_core();
+        let sect = core.cfg_open(c"M64PRS-Plugins").unwrap();
+        
+        let (graphics_val, audio_val, input_val, rsp_val) = (
+            sect.get_cast::<CString>(c"Graphics").unwrap(),
+            sect.get_cast::<CString>(c"Audio").unwrap(),
+            sect.get_cast::<CString>(c"Input").unwrap(),
+            sect.get_cast::<CString>(c"RSP").unwrap(),
+        );
+
+        (
+            INSTALL_DIRS.plugin_dir.join(graphics_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS.plugin_dir.join(audio_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS.plugin_dir.join(input_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS.plugin_dir.join(rsp_val.to_string_lossy().as_ref()),
+        )
+    };
+
     // setup futures for loading ROM data and plugins
     let rom_data_fut =
         async move { Ok::<_, glib::Error>(rom_file.load_contents_future().await?.0) };
-    let plugin_fut = async {
-        gio::spawn_blocking(|| {
+    let plugin_fut = async move {
+        gio::spawn_blocking(move || {
             let plugin_dir: &Path = &INSTALL_DIRS.plugin_dir;
             println!("plugins: {}", plugin_dir.display());
 
@@ -365,10 +385,10 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
             // TODO: allow user to configure plugins
             Ok::<_, PluginLoadError>(PluginSet {
-                graphics: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-video-rice")))?,
-                audio: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-audio-sdl")))?,
-                input: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-input-tasinput")))?,
-                rsp: Plugin::load(plugin_dir.join(plugin_name("mupen64plus-rsp-hle")))?,
+                graphics: Plugin::load(graphics_plugin_path)?,
+                audio: Plugin::load(audio_plugin_path)?,
+                input: Plugin::load(input_plugin_path)?,
+                rsp: Plugin::load(rsp_plugin_path)?,
             })
         })
         .await

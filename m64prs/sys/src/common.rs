@@ -292,12 +292,12 @@ impl ConfigSettable for bool {
         handle: crate::Handle,
         key: &CStr,
     ) -> crate::Error {
-        let value_i32 = *self as i32;
+        let value_i32 = *self as c_int;
         (config.set_parameter)(
             handle,
             key.as_ptr(),
             ConfigType::Bool,
-            value_i32 as *const c_int as *const c_void,
+            &value_i32 as *const c_int as *const c_void,
         )
     }
     unsafe fn set_default(
