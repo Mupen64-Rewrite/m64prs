@@ -26,7 +26,14 @@ mod inner {
     #[properties(wrapper_type = super::PluginsPage)]
     #[template(file = "plugins.ui")]
     pub struct PluginsPage {
-        init: Cell<bool>,
+        #[template_child]
+        dd_graphics_plugins: gtk::TemplateChild<PluginSelect>,
+        #[template_child]
+        dd_audio_plugins: gtk::TemplateChild<PluginSelect>,
+        #[template_child]
+        dd_input_plugins: gtk::TemplateChild<PluginSelect>,
+        #[template_child]
+        dd_rsp_plugins: gtk::TemplateChild<PluginSelect>,
         #[property(get)]
         graphics_plugins: gio::ListStore,
         #[property(get)]
@@ -35,6 +42,7 @@ mod inner {
         input_plugins: gio::ListStore,
         #[property(get)]
         rsp_plugins: gio::ListStore,
+        init: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -51,11 +59,15 @@ mod inner {
 
         fn new() -> Self {
             Self {
-                init: Cell::new(false),
+                dd_graphics_plugins: Default::default(),
+                dd_audio_plugins: Default::default(),
+                dd_input_plugins: Default::default(),
+                dd_rsp_plugins: Default::default(),
                 graphics_plugins: gio::ListStore::new::<gio::File>(),
                 audio_plugins: gio::ListStore::new::<gio::File>(),
                 input_plugins: gio::ListStore::new::<gio::File>(),
                 rsp_plugins: gio::ListStore::new::<gio::File>(),
+                init: Cell::new(false),
             }
         }
 
@@ -64,12 +76,19 @@ mod inner {
         }
     }
 
-    impl ObjectImpl for PluginsPage {}
+    impl ObjectImpl for PluginsPage {
+        fn constructed(&self) {
+            self.dd_graphics_plugins.set_plugins(self.graphics_plugins.clone());
+            self.dd_audio_plugins.set_plugins(self.audio_plugins.clone());
+            self.dd_input_plugins.set_plugins(self.input_plugins.clone());
+            self.dd_rsp_plugins.set_plugins(self.rsp_plugins.clone());
+        }
+    }
     impl WidgetImpl for PluginsPage {}
     impl BoxImpl for PluginsPage {}
 
-    impl SettingsPageImpl for PluginsPage {
-        async fn load_page(&self, state: &mut CoreReadyState) {
+    impl PluginsPage {
+        async fn check_plugins(&self) {
             let plugin_dir = gio::File::for_path(&INSTALL_DIRS.plugin_dir);
             let e = plugin_dir
                 .enumerate_children_future(
@@ -99,7 +118,6 @@ mod inner {
                 {
                     continue;
                 }
-                println!("found {}", file_name.display());
 
                 // try to open it as a plugin
                 let plugin_path = INSTALL_DIRS.plugin_dir.join(&file_name);
@@ -132,8 +150,18 @@ mod inner {
             }
             self.init.set(true);
         }
+    }
 
-        async fn save_page(&self, state: &mut CoreReadyState) {}
+    impl SettingsPageImpl for PluginsPage {
+        async fn load_page(&self, state: &mut CoreReadyState) {
+            self.check_plugins().await;
+
+            let mut sect = state.cfg_open_mut(c"M64PRS-Plugins");
+        }
+
+        async fn save_page(&self, state: &mut CoreReadyState) {
+
+        }
     }
 }
 

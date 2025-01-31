@@ -2,14 +2,18 @@
 
 use std::{
     error::Error,
-    ffi::{c_float, c_int, c_uint, c_void, CString},
+    ffi::{c_float, c_int, c_uint, c_void, CStr, CString},
     fmt::Display,
 };
 
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
-use crate::ConfigType;
+use crate::{api::CoreConfigApi, ConfigType};
+
+mod sealed {
+    trait Sealed {}
+}
 
 /// Safer representation of a Mupen64Plus error which always represents an error state.
 #[repr(u32)]
@@ -110,9 +114,9 @@ pub enum ConfigValue {
     /// A floating-point value that fits in the C `float` type.
     Float(c_float) = ConfigType::Float as u32,
     /// A boolean value, stored as a C `uint`; this is zero when false and nonzero when true.
-    /// 
+    ///
     /// # Notes
-    /// This value is stored as an integer since Mupen passes boolean 
+    /// This value is stored as an integer since Mupen passes boolean
     /// parameters using `int` instead of using `bool` like modern C/C++ would.
     Bool(c_uint) = ConfigType::Bool as u32,
     /// A null-terminated string, typically exposed to C as `const char*`.
@@ -141,9 +145,50 @@ impl ConfigValue {
     }
 }
 
+trait ConfigValueType: TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue> {
+    fn cfg_type() -> ConfigType;
+    unsafe fn as_ptr(&self) -> *const c_void;
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    );
+}
+
 impl From<c_int> for ConfigValue {
     fn from(value: c_int) -> Self {
         Self::Int(value)
+    }
+}
+impl TryFrom<ConfigValue> for c_int {
+    type Error = WrongConfigType;
+
+    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
+        match value {
+            ConfigValue::Int(value) => Ok(value),
+            other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type())),
+        }
+    }
+}
+impl ConfigValueType for c_int {
+    fn cfg_type() -> ConfigType {
+        ConfigType::Int
+    }
+
+    unsafe fn as_ptr(&self) -> *const c_void {
+        self as *const c_int as *const c_void
+    }
+
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) {
+        todo!()
     }
 }
 
@@ -162,17 +207,6 @@ impl From<bool> for ConfigValue {
 impl From<CString> for ConfigValue {
     fn from(value: CString) -> Self {
         Self::String(value)
-    }
-}
-
-impl TryFrom<ConfigValue> for c_int {
-    type Error = WrongConfigType;
-
-    fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
-        match value {
-            ConfigValue::Int(value) => Ok(value),
-            other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type())),
-        }
     }
 }
 

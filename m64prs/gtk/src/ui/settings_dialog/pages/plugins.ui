@@ -14,29 +14,25 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
     <property name="orientation">vertical</property>
 
     <child>
-      <object class="M64PRS_PluginSelect">
-        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="graphics-plugins" bind-flags="sync-create" />
+      <object class="M64PRS_PluginSelect" id="dd_graphics_plugins">
         <property name="label" translatable="yes" context="settings.plugins">Graphics plugin</property>
       </object>
     </child>
 
     <child>
-      <object class="M64PRS_PluginSelect">
-        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="audio-plugins" bind-flags="sync-create" />
+      <object class="M64PRS_PluginSelect" id="dd_audio_plugins">
         <property name="label" translatable="yes" context="settings.plugins">Audio plugin</property>
       </object>
     </child>
 
     <child>
-      <object class="M64PRS_PluginSelect">
-        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="input-plugins" bind-flags="sync-create" />
+      <object class="M64PRS_PluginSelect" id="dd_input_plugins">
         <property name="label" translatable="yes" context="settings.plugins">Input plugin</property>
       </object>
     </child>
 
     <child>
-      <object class="M64PRS_PluginSelect">
-        <property name="plugins" bind-source="M64PRS_SettingsPluginPage" bind-property="rsp-plugins" bind-flags="sync-create" />
+      <object class="M64PRS_PluginSelect" id="dd_rsp_plugins">
         <property name="label" translatable="yes" context="settings.plugins">RSP plugin</property>
       </object>
     </child>

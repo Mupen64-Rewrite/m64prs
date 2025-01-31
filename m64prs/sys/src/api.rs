@@ -91,6 +91,17 @@ pub struct CoreConfigApi {
     pub set_parameter: non_null!(ptr_ConfigSetParameter),
     #[symbol = "ConfigSetParameterHelp"]
     pub set_parameter_help: non_null!(ptr_ConfigSetParameterHelp),
+
+    // DEFAULT SETTERS
+    // ==============
+    #[symbol = "ConfigSetDefaultInt"]
+    pub set_default_int: non_null!(ptr_ConfigSetDefaultInt),
+    #[symbol = "ConfigSetDefaultFloat"]
+    pub set_default_float: non_null!(ptr_ConfigSetDefaultFloat),
+    #[symbol = "ConfigSetDefaultBool"]
+    pub set_default_bool: non_null!(ptr_ConfigSetDefaultBool),
+    #[symbol = "ConfigSetDefaultString"]
+    pub set_default_string: non_null!(ptr_ConfigSetDefaultString),
 }
 
 #[derive(SymbolGroup)]
