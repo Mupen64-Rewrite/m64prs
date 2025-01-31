@@ -211,7 +211,7 @@ mod inner {
                 .unwrap()
                 .unwrap();
 
-            sect.set(key, name_cstr).unwrap();
+            sect.set(key, &name_cstr).unwrap();
         }
     }
 
@@ -220,31 +220,6 @@ mod inner {
             self.check_plugins().await;
             // TODO proper error handling
             let mut sect = state.cfg_open_mut(CFG_SECTION_KEY).unwrap();
-            // default values
-            Self::set_default_one(
-                &self.graphics_plugins,
-                &mut sect,
-                CFG_GRAPHICS,
-                c"The graphics plugin used by m64prs.",
-            );
-            Self::set_default_one(
-                &self.audio_plugins,
-                &mut sect,
-                CFG_AUDIO,
-                c"The audio plugin used by m64prs.",
-            );
-            Self::set_default_one(
-                &self.input_plugins,
-                &mut sect,
-                CFG_INPUT,
-                c"The input plugin used by m64prs.",
-            );
-            Self::set_default_one(
-                &self.rsp_plugins,
-                &mut sect,
-                CFG_RSP,
-                c"The RSP plugin used by m64prs.",
-            );
             // load values
             Self::load_value_one(
                 &self.graphics_plugins,

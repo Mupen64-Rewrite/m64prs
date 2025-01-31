@@ -1,8 +1,8 @@
 use std::{
     borrow::Borrow,
     error::Error,
-    ffi::CStr,
-    fs,
+    ffi::{CStr, CString},
+    fs, io,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,7 +14,7 @@ use gtk::prelude::NativeExt;
 use m64prs_core::{
     config::ConfigSection,
     error::{M64PError, PluginLoadError, SavestateError},
-    plugin::{PluginInfo, PluginSet, PluginType},
+    plugin::{AnyPlugin, PluginInfo, PluginSet, PluginType},
     save::SavestateFormat,
     tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
     ConfigSectionMut, Core,
@@ -27,7 +27,7 @@ use vidext::{VideoExtensionParameters, VideoExtensionState};
 
 use crate::utils::{
     keyboard,
-    paths::{CONFIG_DIR, INSTALL_DIRS},
+    paths::{add_lib_ext, CONFIG_DIR, INSTALL_DIRS},
 };
 
 use super::main_window::MainWindow;
@@ -125,14 +125,17 @@ impl CoreReadyState {
         log::info!("Loading M64+ from {}", mupen_dll_path.display());
         log::info!("Data path is {}", data_dir.display());
 
+        // Load the core
         let mut core = m64prs_core::Core::init(mupen_dll_path, Some(&*CONFIG_DIR), Some(&data_dir))
             .expect("core startup should succeed");
 
+        // Override the video functions to use the window compositor.
         let vidext_params = VideoExtensionParameters::new(main_window_ref.clone());
         core.override_vidext::<VideoExtensionState, _>(vidext_params)
             .expect("vidext override should succeed");
 
         {
+            // Feed core events back to the GUI where needed.
             let main_window_ref = main_window_ref.clone();
             core.listen_state(move |param, value| match param {
                 CoreParam::EmuState => {
@@ -158,6 +161,9 @@ impl CoreReadyState {
                 _ => (),
             });
         }
+
+        // Apply the default config.
+        default_config(&mut core);
 
         {
             let main_window_ref = main_window_ref.clone();
@@ -400,6 +406,38 @@ impl CoreRunningState {
         self.core.plugin_info(ptype).unwrap().unwrap()
     }
 }
+
+fn default_config(core: &mut Core) {
+    // Plugins
+    {
+        let mut sect = core.cfg_open_mut(c"M64PRS-Plugins").unwrap();
+        sect.set_default(
+            c"Graphics",
+            CString::new(add_lib_ext("mupen64plus-video-rice")).unwrap(),
+            c"The graphics plugin to use with m64prs",
+        )
+        .unwrap();
+        sect.set_default(
+            c"Audio",
+            CString::new(add_lib_ext("mupen64plus-audio-sdl")).unwrap(),
+            c"The audio plugin to use with m64prs",
+        )
+        .unwrap();
+        sect.set_default(
+            c"Input",
+            CString::new(add_lib_ext("mupen64plus-input-tasinput")).unwrap(),
+            c"The input plugin to use with m64prs",
+        )
+        .unwrap();
+        sect.set_default(
+            c"RSP",
+            CString::new(add_lib_ext("mupen64plus-rsp-hle")).unwrap(),
+            c"The RSP plugin to use with m64prs",
+        )
+        .unwrap();
+    }
+}
+
 impl CoreInputHandler {
     fn notify_main_window<F: FnOnce(&MainWindow) + Send + 'static>(&self, f: F) {
         let main_window_ref = self.main_window_ref.clone();

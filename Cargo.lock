@@ -1250,9 +1250,17 @@ dependencies = [
 name = "m64prs-plugin-core"
 version = "0.1.0"
 dependencies = [
+ "ash",
+ "bindgen 0.69.5",
+ "bitflags 2.6.0",
  "decan",
+ "futures",
+ "heck 0.4.1",
  "log",
  "m64prs-sys",
+ "num_enum",
+ "slotmap",
+ "thiserror 2.0.9",
 ]
 
 [[package]]

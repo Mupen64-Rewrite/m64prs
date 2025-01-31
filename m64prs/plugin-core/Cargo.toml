@@ -4,7 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-decan = { workspace = true }
 m64prs-sys = { workspace = true }
 
+decan = { workspace = true }
+ash = { workspace = true }
+
+num_enum = { workspace = true }
+thiserror = { workspace = true }
+bitflags = { workspace = true }
 log = { workspace = true }
+
+futures = { workspace = true }
+slotmap = { workspace = true }
+
+[features]
+
+[build-dependencies]
+
+bindgen = "0.69.2"
+heck = "0.4.1"

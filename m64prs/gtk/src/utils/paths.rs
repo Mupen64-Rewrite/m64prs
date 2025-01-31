@@ -54,3 +54,12 @@ pub fn is_shared_library(path: &Path) -> bool {
     #[cfg(target_os = "linux")]
     return path.extension().is_some_and(|ext| ext == "so");
 }
+
+pub fn add_lib_ext(name: &str) -> String {
+    #[cfg(target_os = "windows")]
+    return format!("{}.dll", name);
+    #[cfg(target_os = "macos")]
+    return format!("{}.dylib", name);
+    #[cfg(target_os = "linux")]
+    return format!("{}.so", name);
+}

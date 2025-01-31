@@ -118,7 +118,7 @@ pub enum ConfigValue {
     /// # Notes
     /// This value is stored as an integer since Mupen passes boolean
     /// parameters using `int` instead of using `bool` like modern C/C++ would.
-    Bool(c_uint) = ConfigType::Bool as u32,
+    Bool(bool) = ConfigType::Bool as u32,
     /// A null-terminated string, typically exposed to C as `const char*`.
     String(CString) = ConfigType::String as u32,
 }
@@ -133,22 +133,15 @@ impl ConfigValue {
             ConfigValue::String(_) => ConfigType::String,
         }
     }
-
-    /// Obtains a non-owning pointer to this value's data.
-    pub unsafe fn as_ptr(&self) -> *const c_void {
-        match self {
-            ConfigValue::Int(value) => value as *const c_int as *const c_void,
-            ConfigValue::Float(value) => value as *const c_float as *const c_void,
-            ConfigValue::Bool(value) => value as *const c_uint as *const c_void,
-            ConfigValue::String(value) => value.as_ptr() as *const c_void,
-        }
-    }
 }
 
-pub trait ConfigValueType:
-    sealed::Sealed + TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue>
-{
-    fn cfg_type() -> ConfigType;
+pub trait ConfigSettable {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error;
     unsafe fn set_default(
         &self,
         config: &crate::api::CoreConfigApi,
@@ -163,6 +156,22 @@ impl From<c_int> for ConfigValue {
         Self::Int(value)
     }
 }
+impl From<c_float> for ConfigValue {
+    fn from(value: c_float) -> Self {
+        Self::Float(value)
+    }
+}
+impl From<bool> for ConfigValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+impl From<CString> for ConfigValue {
+    fn from(value: CString) -> Self {
+        Self::String(value)
+    }
+}
+
 impl TryFrom<ConfigValue> for c_int {
     type Error = WrongConfigType;
 
@@ -171,28 +180,6 @@ impl TryFrom<ConfigValue> for c_int {
             ConfigValue::Int(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::Int, other.cfg_type())),
         }
-    }
-}
-impl sealed::Sealed for c_int {}
-impl ConfigValueType for c_int {
-    fn cfg_type() -> ConfigType {
-        ConfigType::Int
-    }
-
-    unsafe fn set_default(
-        &self,
-        config: &crate::api::CoreConfigApi,
-        handle: crate::Handle,
-        key: &CStr,
-        help: &CStr,
-    ) -> crate::Error {
-        (config.set_default_int)(handle, key.as_ptr(), *self, help.as_ptr())
-    }
-}
-
-impl From<c_float> for ConfigValue {
-    fn from(value: c_float) -> Self {
-        Self::Float(value)
     }
 }
 impl TryFrom<ConfigValue> for c_float {
@@ -205,58 +192,14 @@ impl TryFrom<ConfigValue> for c_float {
         }
     }
 }
-impl sealed::Sealed for c_float {}
-impl ConfigValueType for c_float {
-    fn cfg_type() -> ConfigType {
-        ConfigType::Float
-    }
-
-    unsafe fn set_default(
-        &self,
-        config: &crate::api::CoreConfigApi,
-        handle: crate::Handle,
-        key: &CStr,
-        help: &CStr,
-    ) -> crate::Error {
-        (config.set_default_float)(handle, key.as_ptr(), *self, help.as_ptr())
-    }
-}
-
-impl From<bool> for ConfigValue {
-    fn from(value: bool) -> Self {
-        Self::Bool(value as c_uint)
-    }
-}
 impl TryFrom<ConfigValue> for bool {
     type Error = WrongConfigType;
 
     fn try_from(value: ConfigValue) -> Result<Self, Self::Error> {
         match value {
-            ConfigValue::Bool(value) => Ok(value != 0),
+            ConfigValue::Bool(value) => Ok(value),
             other => Err(WrongConfigType::new(ConfigType::Bool, other.cfg_type())),
         }
-    }
-}
-impl sealed::Sealed for bool {}
-impl ConfigValueType for bool {
-    fn cfg_type() -> ConfigType {
-        ConfigType::Bool
-    }
-
-    unsafe fn set_default(
-        &self,
-        config: &crate::api::CoreConfigApi,
-        handle: crate::Handle,
-        key: &CStr,
-        help: &CStr,
-    ) -> crate::Error {
-        (config.set_default_bool)(handle, key.as_ptr(), *self as i32, help.as_ptr())
-    }
-}
-
-impl From<CString> for ConfigValue {
-    fn from(value: CString) -> Self {
-        Self::String(value)
     }
 }
 impl TryFrom<ConfigValue> for CString {
@@ -269,10 +212,18 @@ impl TryFrom<ConfigValue> for CString {
         }
     }
 }
-impl sealed::Sealed for CString {}
-impl ConfigValueType for CString {
-    fn cfg_type() -> ConfigType {
-        ConfigType::Bool
+
+impl<T> ConfigSettable for &T
+where
+    T: ConfigSettable,
+{
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        T::set(*self, config, handle, key)
     }
 
     unsafe fn set_default(
@@ -282,6 +233,157 @@ impl ConfigValueType for CString {
         key: &CStr,
         help: &CStr,
     ) -> crate::Error {
+        T::set_default(*self, config, handle, key, help)
+    }
+}
+
+impl ConfigSettable for c_int {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        (config.set_parameter)(
+            handle,
+            key.as_ptr(),
+            ConfigType::Int,
+            self as *const c_int as *const c_void,
+        )
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_int)(handle, key.as_ptr(), *self, help.as_ptr())
+    }
+}
+impl ConfigSettable for c_float {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        (config.set_parameter)(
+            handle,
+            key.as_ptr(),
+            ConfigType::Float,
+            self as *const c_float as *const c_void,
+        )
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_float)(handle, key.as_ptr(), *self, help.as_ptr())
+    }
+}
+impl ConfigSettable for bool {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        let value_i32 = *self as i32;
+        (config.set_parameter)(
+            handle,
+            key.as_ptr(),
+            ConfigType::Bool,
+            value_i32 as *const c_int as *const c_void,
+        )
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_bool)(handle, key.as_ptr(), *self as i32, help.as_ptr())
+    }
+}
+impl ConfigSettable for CString {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        (config.set_parameter)(
+            handle,
+            key.as_ptr(),
+            ConfigType::String,
+            self.as_ptr() as *const c_void,
+        )
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
         (config.set_default_string)(handle, key.as_ptr(), self.as_ptr(), help.as_ptr())
+    }
+}
+impl ConfigSettable for CStr {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        (config.set_parameter)(
+            handle,
+            key.as_ptr(),
+            ConfigType::String,
+            self.as_ptr() as *const c_void,
+        )
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        (config.set_default_string)(handle, key.as_ptr(), self.as_ptr(), help.as_ptr())
+    }
+}
+impl ConfigSettable for ConfigValue {
+    unsafe fn set(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+    ) -> crate::Error {
+        match self {
+            ConfigValue::Int(value) => value.set(config, handle, key),
+            ConfigValue::Float(value) => value.set(config, handle, key),
+            ConfigValue::Bool(value) => value.set(config, handle, key),
+            ConfigValue::String(value) => value.set(config, handle, key),
+        }
+    }
+    unsafe fn set_default(
+        &self,
+        config: &crate::api::CoreConfigApi,
+        handle: crate::Handle,
+        key: &CStr,
+        help: &CStr,
+    ) -> crate::Error {
+        match self {
+            ConfigValue::Int(value) => value.set_default(config, handle, key, help),
+            ConfigValue::Float(value) => value.set_default(config, handle, key, help),
+            ConfigValue::Bool(value) => value.set_default(config, handle, key, help),
+            ConfigValue::String(value) => value.set_default(config, handle, key, help),
+        }
     }
 }

@@ -2,13 +2,14 @@
 // ===================
 
 use std::{
+    borrow::Borrow,
     ffi::{c_char, c_void, CStr, CString},
     path::PathBuf,
     ptr::{null, null_mut},
 };
 
 use m64prs_sys::{
-    common::{ConfigValue, ConfigValueType, WrongConfigType},
+    common::{ConfigSettable, ConfigValue, WrongConfigType},
     ConfigType,
 };
 
@@ -195,7 +196,7 @@ impl ConfigSection<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                ((self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0) as u32
+                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString
@@ -213,7 +214,7 @@ impl ConfigSection<'_> {
     /// Gets the value of a parameter and casts it to the specified type.
     pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
+        D: TryFrom<ConfigValue, Error = WrongConfigType>,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -224,7 +225,7 @@ impl ConfigSection<'_> {
     /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
     pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: Into<ConfigValue> + TryFrom<ConfigValue, Error = WrongConfigType>,
+        D: TryFrom<ConfigValue, Error = WrongConfigType>,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -327,7 +328,7 @@ impl ConfigSectionMut<'_> {
             })),
             ConfigType::Bool => Ok(ConfigValue::Bool(unsafe {
                 // SAFETY: No values are borrowed.
-                ((self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0) as u32
+                (self.core.api.config.get_param_bool)(self.handle, param.as_ptr()) != 0
             })),
             ConfigType::String => Ok(ConfigValue::String(unsafe {
                 // SAFETY: the pointer returned by ConfigGetParamString
@@ -345,7 +346,7 @@ impl ConfigSectionMut<'_> {
     /// Gets the value of a parameter and casts it to the specified type.
     pub fn get_cast<D>(&self, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: ConfigValueType,
+        D: TryFrom<ConfigValue, Error = WrongConfigType>,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -356,7 +357,7 @@ impl ConfigSectionMut<'_> {
     /// Gets the value of a parameter and casts it to the specified type. If not present, returns the current default.
     pub fn get_cast_or<D>(&self, default: D, param: &CStr) -> Result<D, ConfigGetError>
     where
-        D: ConfigValueType,
+        D: TryFrom<ConfigValue, Error = WrongConfigType>,
     {
         match self.get(param) {
             Ok(value) => value.try_into().map_err(Into::into),
@@ -367,24 +368,13 @@ impl ConfigSectionMut<'_> {
 
     /// Sets the value of a parameter. For convenience, you may pass in a value
     /// convertible to [`ConfigValue`].
-    pub fn set<T: Into<ConfigValue>>(&mut self, param: &CStr, value: T) -> Result<(), M64PError> {
-        let cfg_value: ConfigValue = value.into();
-
-        unsafe {
-            let param_type = cfg_value.cfg_type();
-            let param_value = cfg_value.as_ptr();
-
-            // SAFETY: the parameter value pointer is valid during this call,
-            // it should also point to a valid value of cfg_type.
-            core_fn((self.core.api.config.set_parameter)(
-                self.handle,
-                param.as_ptr(),
-                param_type,
-                param_value,
-            ))?;
-        }
-
-        Ok(())
+    pub fn set<D>(&mut self, param: &CStr, value: D) -> Result<(), M64PError>
+    where
+        D: ConfigSettable,
+    {
+        core_fn(unsafe {
+            D::set(&value, &self.core.api.config, self.handle, param)
+        })
     }
 
     /// Sets or unsets the help text of a parameter.
@@ -402,9 +392,9 @@ impl ConfigSectionMut<'_> {
 
     /// Sets a default value and help text for a parameter if one hasn't been
     /// set
-    pub fn set_default<D>(&mut self, param: &CStr, value: &D, help: &CStr) -> Result<(), M64PError>
+    pub fn set_default<D>(&mut self, param: &CStr, value: D, help: &CStr) -> Result<(), M64PError>
     where
-        D: ConfigValueType,
+        D: ConfigSettable,
     {
         core_fn(unsafe {
             D::set_default(&value, &self.core.api.config, self.handle, &param, &help)
