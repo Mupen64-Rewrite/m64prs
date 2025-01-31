@@ -124,9 +124,8 @@ mod inner {
                 .into_iter()
                 .next()
             {
-                debug_assert!(file.has_attribute("G_FILE_ATTRIBUTE_STANDARD_NAME"));
                 // check that it's a valid shared library
-                let file_name = file.name();
+                let file_name = plugin_dir_iter.child(&file).basename().unwrap();
                 if !is_shared_library(&file_name) {
                     continue;
                 }
