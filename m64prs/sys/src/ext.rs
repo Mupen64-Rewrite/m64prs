@@ -5,13 +5,13 @@ use std::{
     ptr::null_mut,
 };
 
-/// Plugin interface provided by m64prs-compatible frontends. A plugin 
-/// may obtain this interface struct from the frontend by exposing the 
+/// Plugin interface provided by m64prs-compatible frontends. A plugin
+/// may obtain this interface struct from the frontend by exposing the
 /// following function:
 /// ```c
 /// void M64PRS_UseFrontendInterface(struct FrontendInterfaceFFI* ffi);
 /// ```
-/// 
+///
 /// The passed pointer acts as a `&'static FrontendInterfaceFFI`: it
 /// will outlive the plugin in its entirety. It is also guaranteed to
 /// be implemented in a thread-safe manner. This may result in some blocking
@@ -61,5 +61,5 @@ unsafe impl Sync for FrontendInterfaceFFI {}
 // ========================
 
 #[allow(non_camel_case_types)]
-pub type ptr_M64PRS_UseFrontendHandle = 
+pub type ptr_M64PRS_UseFrontendHandle =
     Option<unsafe extern "C" fn(ffi: *const FrontendInterfaceFFI)>;

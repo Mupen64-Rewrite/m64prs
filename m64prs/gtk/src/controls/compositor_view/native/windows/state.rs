@@ -12,7 +12,7 @@ use windows::{
         Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
         UI::WindowsAndMessaging::{
             DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW,
-            IDC_ARROW, WM_NCHITTEST, WNDCLASSEXW,
+            IDC_ARROW, WNDCLASSEXW,
         },
     },
 };
@@ -42,7 +42,7 @@ pub const COMP_WINDOW_CLASS: PCWSTR = w!("m64prs_compositor");
 impl sealed::Sealed for gdk_win32::Win32Display {}
 impl Win32DisplayExt for gdk_win32::Win32Display {
     fn display_state(&self) -> Arc<DisplayState> {
-        static M64PRS_WIN32_DISPLAY_STATE: LazyLock<glib::Quark> = 
+        static M64PRS_WIN32_DISPLAY_STATE: LazyLock<glib::Quark> =
             quark!("io.github.jgcodes2020.m64prs.win32_display_state");
 
         // if the display already has globals set, then return then

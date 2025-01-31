@@ -154,9 +154,7 @@ impl PluginState {
 
 impl Drop for PluginState {
     fn drop(&mut self) {
-        let _ = self
-            .endpoint
-            .post_request_blocking(HostRequest::Close);
+        let _ = self.endpoint.post_request_blocking(HostRequest::Close);
         match self
             .ui_host
             .wait_timeout(Duration::from_millis(250))

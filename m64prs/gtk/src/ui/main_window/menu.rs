@@ -1,6 +1,5 @@
 use std::{error::Error, io, path::Path};
 
-use gettextrs::gettext;
 use gtk::prelude::*;
 use m64prs_core::{
     error::PluginLoadError,

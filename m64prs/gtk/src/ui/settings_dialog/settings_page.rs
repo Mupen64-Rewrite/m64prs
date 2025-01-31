@@ -76,16 +76,10 @@ pub trait SettingsPageExt: IsA<SettingsPage> {
 impl<T: IsA<SettingsPage>> SettingsPageExt for T {}
 
 pub trait SettingsPageImpl: WidgetImpl + ObjectSubclass<Type: IsA<SettingsPage>> {
-    fn load_page(
-        &self,
-        state: &mut CoreReadyState,
-    ) -> impl Future<Output = ()> {
+    fn load_page(&self, state: &mut CoreReadyState) -> impl Future<Output = ()> {
         self.parent_load_page(state)
     }
-    fn save_page(
-        &self,
-        state: &mut CoreReadyState,
-    ) -> impl Future<Output = ()> {
+    fn save_page(&self, state: &mut CoreReadyState) -> impl Future<Output = ()> {
         self.parent_save_page(state)
     }
 }

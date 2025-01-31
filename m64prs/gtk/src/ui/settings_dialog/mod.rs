@@ -69,7 +69,7 @@ mod inner {
                 }
             });
         }
-        
+
         #[template_callback]
         fn apply_clicked(&self, _: &gtk::Button) {
             glib::spawn_future_local({
@@ -79,7 +79,7 @@ mod inner {
                 }
             });
         }
-        
+
         #[template_callback]
         fn cancel_clicked(&self, _: &gtk::Button) {
             self.obj().destroy();

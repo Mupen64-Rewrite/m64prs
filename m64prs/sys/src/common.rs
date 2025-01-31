@@ -9,10 +9,10 @@ use std::{
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
-use crate::{api::CoreConfigApi, ConfigType};
+use crate::ConfigType;
 
 mod sealed {
-    trait Sealed {}
+    pub trait Sealed {}
 }
 
 /// Safer representation of a Mupen64Plus error which always represents an error state.
@@ -145,7 +145,9 @@ impl ConfigValue {
     }
 }
 
-pub trait ConfigValueType: TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue> {
+pub trait ConfigValueType:
+    sealed::Sealed + TryFrom<ConfigValue, Error = WrongConfigType> + Into<ConfigValue>
+{
     fn cfg_type() -> ConfigType;
     unsafe fn set_default(
         &self,
@@ -171,6 +173,7 @@ impl TryFrom<ConfigValue> for c_int {
         }
     }
 }
+impl sealed::Sealed for c_int {}
 impl ConfigValueType for c_int {
     fn cfg_type() -> ConfigType {
         ConfigType::Int
@@ -202,6 +205,7 @@ impl TryFrom<ConfigValue> for c_float {
         }
     }
 }
+impl sealed::Sealed for c_float {}
 impl ConfigValueType for c_float {
     fn cfg_type() -> ConfigType {
         ConfigType::Float
@@ -233,6 +237,7 @@ impl TryFrom<ConfigValue> for bool {
         }
     }
 }
+impl sealed::Sealed for bool {}
 impl ConfigValueType for bool {
     fn cfg_type() -> ConfigType {
         ConfigType::Bool
@@ -264,6 +269,7 @@ impl TryFrom<ConfigValue> for CString {
         }
     }
 }
+impl sealed::Sealed for CString {}
 impl ConfigValueType for CString {
     fn cfg_type() -> ConfigType {
         ConfigType::Bool

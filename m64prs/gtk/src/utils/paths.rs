@@ -1,6 +1,7 @@
-use std::{path::{Path, PathBuf}, sync::LazyLock};
-
-use futures::future::Lazy;
+use std::{
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 pub struct InstallDirs {
     // system installation
@@ -42,9 +43,8 @@ fn get_install_dirs() -> InstallDirs {
     }
 }
 
-pub static CONFIG_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-    dirs::config_dir().unwrap().join("m64prs")
-});
+pub static CONFIG_DIR: LazyLock<PathBuf> =
+    LazyLock::new(|| dirs::config_dir().unwrap().join("m64prs"));
 
 pub fn is_shared_library(path: &Path) -> bool {
     #[cfg(target_os = "windows")]

@@ -10,7 +10,7 @@ use state::{DisplayState, Win32DisplayExt};
 use windows::{
     core::{w, IUnknown, Interface},
     Win32::{
-        Foundation::{BOOL, COLORREF, HMODULE, HWND, POINT, RECT},
+        Foundation::{BOOL, COLORREF, HMODULE, HWND, POINT},
         Graphics::{
             Direct3D::D3D_DRIVER_TYPE_UNKNOWN,
             Direct3D11::{
@@ -33,9 +33,9 @@ use windows::{
             Gdi::{self, CreateRectRgn},
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DestroyWindow, GetWindowRect, SetWindowPos, ShowWindow, HMENU,
-            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE,
-            SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WS_CHILD, WS_DISABLED, WS_EX_TOOLWINDOW, WS_POPUP,
+            CreateWindowExW, DestroyWindow, SetWindowPos, ShowWindow, HMENU, SWP_NOACTIVATE,
+            SWP_NOMOVE, SWP_NOREPOSITION, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE,
+            WINDOW_EX_STYLE, WS_CHILD, WS_DISABLED, WS_EX_TOOLWINDOW, WS_POPUP,
         },
     },
 };

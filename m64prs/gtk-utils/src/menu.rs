@@ -10,7 +10,10 @@ pub fn item_p<P: ToVariant + FromVariant>(label: &str, action: &str, param: P) -
     item
 }
 
-pub fn section<I: IntoIterator<Item = gio::MenuItem>>(label: Option<&str>, items: I) -> gio::MenuItem {
+pub fn section<I: IntoIterator<Item = gio::MenuItem>>(
+    label: Option<&str>,
+    items: I,
+) -> gio::MenuItem {
     let menu = gio::Menu::new();
     for item in items {
         menu.append_item(&item);
@@ -19,7 +22,10 @@ pub fn section<I: IntoIterator<Item = gio::MenuItem>>(label: Option<&str>, items
     gio::MenuItem::new_section(label, &menu)
 }
 
-pub fn submenu<I: IntoIterator<Item = gio::MenuItem>>(label: Option<&str>, items: I) -> gio::MenuItem {
+pub fn submenu<I: IntoIterator<Item = gio::MenuItem>>(
+    label: Option<&str>,
+    items: I,
+) -> gio::MenuItem {
     let menu = gio::Menu::new();
     for item in items {
         menu.append_item(&item);

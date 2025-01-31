@@ -1,5 +1,10 @@
 use std::{
-    borrow::Borrow, error::Error, ffi::CStr, fs, path::{Path, PathBuf}, sync::Arc
+    borrow::Borrow,
+    error::Error,
+    ffi::CStr,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use futures::{executor::block_on, lock::Mutex};
@@ -7,7 +12,12 @@ use gdk::prelude::SurfaceExt;
 use glib::SendWeakRef;
 use gtk::prelude::NativeExt;
 use m64prs_core::{
-    config::ConfigSection, error::{M64PError, PluginLoadError, SavestateError}, plugin::{PluginInfo, PluginSet, PluginType}, save::SavestateFormat, tas_callbacks::{FrameHandler, InputHandler, SaveHandler}, ConfigSectionMut, Core
+    config::ConfigSection,
+    error::{M64PError, PluginLoadError, SavestateError},
+    plugin::{PluginInfo, PluginSet, PluginType},
+    save::SavestateFormat,
+    tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
+    ConfigSectionMut, Core,
 };
 use m64prs_sys::{CoreParam, EmuState, RomHeader, RomSettings};
 use m64prs_vcr::{movie::M64File, VcrState};
@@ -15,7 +25,10 @@ use num_enum::TryFromPrimitive;
 use threading::RunningCore;
 use vidext::{VideoExtensionParameters, VideoExtensionState};
 
-use crate::utils::{paths::{CONFIG_DIR, INSTALL_DIRS}, keyboard};
+use crate::utils::{
+    keyboard,
+    paths::{CONFIG_DIR, INSTALL_DIRS},
+};
 
 use super::main_window::MainWindow;
 

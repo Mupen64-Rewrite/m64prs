@@ -154,50 +154,52 @@ mod inner {
 
             {
                 let ct_win_move = gtk::EventControllerLegacy::new();
-            ct_win_move.set_propagation_phase(gtk::PropagationPhase::Bubble);
-            ct_win_move.connect_event({
-                let this = obj.downgrade();
-                move |_, evt: &gdk::Event| {
-                    let this = match this.upgrade() {
-                        Some(this) => this,
-                        None => return glib::Propagation::Proceed,
-                    };
-                    let toplevel = match this.surface().unwrap().downcast::<gdk::Toplevel>() {
-                        Ok(toplevel) => toplevel,
-                        Err(_) => return glib::Propagation::Proceed,
-                    };
-
-                    if let Some(pointer_evt) = evt.downcast_ref::<gdk::ButtonEvent>() {
-                        // Get the button, only allow left click
-                        let button = pointer_evt.button();
-                        let mask = pointer_evt.modifier_state();
-                        if button != gdk::BUTTON_PRIMARY || !mask.contains(gdk::ModifierType::BUTTON1_MASK) {
-                            return glib::Propagation::Proceed;
-                        }
-                        // gather other information
-                        let device = match pointer_evt.device() {
-                            Some(device) => device,
+                ct_win_move.set_propagation_phase(gtk::PropagationPhase::Bubble);
+                ct_win_move.connect_event({
+                    let this = obj.downgrade();
+                    move |_, evt: &gdk::Event| {
+                        let this = match this.upgrade() {
+                            Some(this) => this,
                             None => return glib::Propagation::Proceed,
                         };
-                        let (x, y) = pointer_evt.position().unwrap();
-                        if !this
-                            .pick(x, y, gtk::PickFlags::INSENSITIVE)
-                            .is_some_and(|w| w.first_child().is_some())
-                        {
-                            return glib::Propagation::Proceed;
+                        let toplevel = match this.surface().unwrap().downcast::<gdk::Toplevel>() {
+                            Ok(toplevel) => toplevel,
+                            Err(_) => return glib::Propagation::Proceed,
+                        };
+
+                        if let Some(pointer_evt) = evt.downcast_ref::<gdk::ButtonEvent>() {
+                            // Get the button, only allow left click
+                            let button = pointer_evt.button();
+                            let mask = pointer_evt.modifier_state();
+                            if button != gdk::BUTTON_PRIMARY
+                                || !mask.contains(gdk::ModifierType::BUTTON1_MASK)
+                            {
+                                return glib::Propagation::Proceed;
+                            }
+                            // gather other information
+                            let device = match pointer_evt.device() {
+                                Some(device) => device,
+                                None => return glib::Propagation::Proceed,
+                            };
+                            let (x, y) = pointer_evt.position().unwrap();
+                            if !this
+                                .pick(x, y, gtk::PickFlags::INSENSITIVE)
+                                .is_some_and(|w| w.first_child().is_some())
+                            {
+                                return glib::Propagation::Proceed;
+                            }
+                            let timestamp = pointer_evt.time();
+
+                            // request to move window
+                            // toplevel.begin_move(&device, button as i32, x, y, timestamp);
+
+                            return glib::Propagation::Stop;
                         }
-                        let timestamp = pointer_evt.time();
-
-                        // request to move window
-                        // toplevel.begin_move(&device, button as i32, x, y, timestamp);
-
-                        return glib::Propagation::Stop;
+                        glib::Propagation::Proceed
                     }
-                    glib::Propagation::Proceed
-                }
-            });
+                });
 
-            obj.add_controller(ct_win_move);
+                obj.add_controller(ct_win_move);
             }
         }
 

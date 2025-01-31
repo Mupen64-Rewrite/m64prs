@@ -1,6 +1,7 @@
 use std::sync::{Arc, LazyLock, OnceLock};
 
 use gtk::prelude::*;
+use m64prs_gtk_utils::quark;
 use x11rb::{
     connection::Connection,
     cookie::{Cookie, VoidCookie},
@@ -11,7 +12,6 @@ use x11rb::{
     },
     xcb_ffi::XCBConnection,
 };
-use m64prs_gtk_utils::quark;
 
 pub struct DisplayState {
     pub conn: XCBConnection,

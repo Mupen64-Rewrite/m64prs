@@ -21,8 +21,7 @@ fn main() {
 
     for i in 0..10 {
         println!("ping {}", i);
-        let _ = server
-            .post_request_blocking(HostRequest::Ping);
+        let _ = server.post_request_blocking(HostRequest::Ping);
         println!("pong {}", i);
     }
 
@@ -33,7 +32,6 @@ fn main() {
     }
 
     println!("closing...");
-    let _ = server
-        .post_request_blocking(HostRequest::Close);
+    let _ = server.post_request_blocking(HostRequest::Close);
     println!("closed...");
 }

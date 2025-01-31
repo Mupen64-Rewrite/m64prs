@@ -10,7 +10,6 @@ mod inner {
         ffi::{CStr, CString},
     };
 
-    use gio::ffi::G_FILE_ATTRIBUTE_STANDARD_NAME;
     use gtk::{prelude::*, subclass::prelude::*};
     use m64prs_core::{
         plugin::{AnyPlugin, PluginType},
@@ -22,7 +21,7 @@ mod inner {
             core::CoreReadyState,
             settings_dialog::{parts::PluginSelect, settings_page::SettingsPageImpl, SettingsPage},
         },
-        utils::paths::{is_shared_library, CONFIG_DIR, INSTALL_DIRS},
+        utils::paths::{is_shared_library, INSTALL_DIRS},
     };
 
     const CFG_SECTION_KEY: &CStr = c"M64PRS-Plugins";
@@ -291,7 +290,6 @@ mod inner {
                 &self.dd_input_plugins,
             );
             Self::save_value_one(&self.rsp_plugins, &mut sect, CFG_RSP, &self.dd_rsp_plugins);
-
         }
     }
 }

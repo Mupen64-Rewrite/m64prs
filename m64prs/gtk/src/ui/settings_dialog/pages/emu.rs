@@ -2,10 +2,9 @@ use crate::ui::settings_dialog::SettingsPage;
 use gtk::{prelude::*, subclass::prelude::*};
 
 mod inner {
-    use std::{cell::Cell, ffi::{c_int, CStr}};
+    use std::{cell::Cell, ffi::CStr};
 
     use gtk::{prelude::*, subclass::prelude::*};
-    use m64prs_sys::common::ConfigValue;
 
     use crate::ui::{
         core::CoreReadyState,
@@ -50,25 +49,31 @@ mod inner {
     impl SettingsPageImpl for EmuPage {
         async fn load_page(&self, state: &mut CoreReadyState) {
             // TODO: proper error messages and whatnot
-            let sect = state.cfg_open_mut(SECTION_NAME).expect("Failed to open config section");
+            let sect = state
+                .cfg_open_mut(SECTION_NAME)
+                .expect("Failed to open config section");
             let this = self.obj();
 
             println!("hello");
-            
+
             this.set_r4300_emulator(sect.get_cast_or(2, c"R4300Emulator").unwrap() as u32);
             this.set_randomize_interrupt(sect.get_cast_or(true, c"RandomizeInterrupt").unwrap());
             this.set_disable_expansion_pak(sect.get_cast_or(false, c"DisableExtraMem").unwrap());
-
         }
 
         async fn save_page(&self, state: &mut CoreReadyState) {
             // TODO: proper error messages and whatnot
-            let mut sect = state.cfg_open_mut(SECTION_NAME).expect("Failed to open config section");
+            let mut sect = state
+                .cfg_open_mut(SECTION_NAME)
+                .expect("Failed to open config section");
             let this = self.obj();
 
-            sect.set(c"R4300Emulator", this.r4300_emulator() as i32).unwrap();
-            sect.set(c"RandomizeInterrupt", this.randomize_interrupt()).unwrap();
-            sect.set(c"DisableExtraMem", this.disable_expansion_pak()).unwrap();
+            sect.set(c"R4300Emulator", this.r4300_emulator() as i32)
+                .unwrap();
+            sect.set(c"RandomizeInterrupt", this.randomize_interrupt())
+                .unwrap();
+            sect.set(c"DisableExtraMem", this.disable_expansion_pak())
+                .unwrap();
 
             sect.save().unwrap();
         }
