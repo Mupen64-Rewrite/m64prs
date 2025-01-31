@@ -1,4 +1,4 @@
-use std::{borrow::Cow, env, fs, io::Write, path::Path};
+use std::{env, fs, io::Write, path::Path};
 
 fn main() {
     gen_version_info();

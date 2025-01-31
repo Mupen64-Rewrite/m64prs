@@ -9,7 +9,7 @@ use m64prs_gtk_utils::quark;
 use windows::{
     core::{w, PCWSTR},
     Win32::{
-        Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
+        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
         UI::WindowsAndMessaging::{
             DefWindowProcW, LoadCursorW, RegisterClassExW, CS_HREDRAW, CS_OWNDC, CS_VREDRAW,
             IDC_ARROW, WNDCLASSEXW,
@@ -18,13 +18,6 @@ use windows::{
 };
 
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
-
-// GDI RGB macro
-#[inline]
-const fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
-    COLORREF((r as u32) | ((g as u32) << 8) | ((b as u32) << 16))
-}
-
 pub struct DisplayState {
     pub hinstance: HINSTANCE,
 }

@@ -29,7 +29,7 @@ impl Core {
         debug_callback: ptr_DebugCallback,
     ) -> Result<Self, M64PError> {
         let api = NonOwningCan::wrap_raw(mem::transmute::<_, decan::raw::Handle>(core_handle))
-            .map_err(|err| M64PError::SystemFail)?;
+            .map_err(|_| M64PError::SystemFail)?;
 
         Ok(Self {
             debug_ctx,

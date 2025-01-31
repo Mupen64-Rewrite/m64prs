@@ -1,4 +1,3 @@
-use glib::prelude::*;
 use m64prs_gtk_utils::glib_enum_display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, glib::Enum)]

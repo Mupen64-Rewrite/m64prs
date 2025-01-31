@@ -33,7 +33,7 @@ mod inner {
         }
 
         #[template_callback]
-        fn open_settings_btn(&self, btn: &gtk::Button) {
+        fn open_settings_btn(&self, _: &gtk::Button) {
             self.obj()
                 .emit(<Self as ObjectImpl>::signals()[0].signal_id(), &[])
         }

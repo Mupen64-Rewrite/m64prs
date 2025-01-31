@@ -47,7 +47,7 @@ pub fn setup_cargo_reruns() {
 
 #[cfg(windows)]
 fn compile_m64p_deps(_out_dir: &Path) {
-    use std::process::{Command, Stdio};
+    use std::process::Command;
 
     let root_dir = PathBuf::from(dirs::ROOT_DIR);
 
@@ -63,7 +63,7 @@ fn compile_m64p_deps(_out_dir: &Path) {
 
 #[cfg(unix)]
 fn compile_m64p_deps(_out_dir: &Path) {
-    use std::process::{Command, Stdio};
+    use std::process::Command;
 
     let root_dir = PathBuf::from(dirs::ROOT_DIR);
 

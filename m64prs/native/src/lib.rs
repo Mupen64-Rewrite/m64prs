@@ -1,6 +1,13 @@
-use std::{borrow::Borrow, env};
+use std::{borrow::Borrow, env, fs, path::PathBuf};
 
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/build/dirs.rs"));
+
+pub const WIN32_DEPS_DIR: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    path_sep!(),
+    "mupen64plus-win32-deps"
+);
+
 
 pub fn link_sdl_win32() {
     let win32_deps_dir = PathBuf::from(WIN32_DEPS_DIR);

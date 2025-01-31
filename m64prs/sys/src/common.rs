@@ -2,7 +2,7 @@
 
 use std::{
     error::Error,
-    ffi::{c_float, c_int, c_uint, c_void, CStr, CString},
+    ffi::{c_float, c_int, c_void, CStr, CString},
     fmt::Display,
 };
 
@@ -10,10 +10,6 @@ use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
 use crate::ConfigType;
-
-mod sealed {
-    pub trait Sealed {}
-}
 
 /// Safer representation of a Mupen64Plus error which always represents an error state.
 #[repr(u32)]

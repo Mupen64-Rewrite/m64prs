@@ -2,7 +2,6 @@
 // ===================
 
 use std::{
-    borrow::Borrow,
     ffi::{c_char, c_void, CStr, CString},
     path::PathBuf,
     ptr::{null, null_mut},

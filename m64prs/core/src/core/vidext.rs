@@ -64,7 +64,7 @@ pub trait VideoExtension: Sized + 'static {
     unsafe fn init_with_render_mode(mode: RenderMode, context: &mut dyn Any) -> VidextResult<Self>;
 
     /// Performs any cleanup necessary with the context before shutting down.
-    unsafe fn quit(self, context: &mut dyn Any) -> VidextResult<()> {
+    unsafe fn quit(self, _context: &mut dyn Any) -> VidextResult<()> {
         Ok(())
     }
 

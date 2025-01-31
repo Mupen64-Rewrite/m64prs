@@ -45,6 +45,7 @@ use super::{NativeCompositor, NativeView, NativeViewKey};
 mod state;
 mod util;
 
+#[allow(unused)]
 pub(super) struct WindowsCompositor {
     display_state: Arc<DisplayState>,
     views: DenseSlotMap<NativeViewKey, WindowsView>,
@@ -69,6 +70,7 @@ pub(super) struct WindowsCompositor {
     bg_transform: IDCompositionScaleTransform,
 }
 
+#[allow(unused)]
 struct WindowsView {
     window: HWND,
 
@@ -311,7 +313,7 @@ impl NativeCompositor for WindowsCompositor {
         self.recompute_bounds();
     }
 
-    fn restack_view(&mut self, view_key: super::NativeViewKey, stack_order: super::StackOrder) {
+    fn restack_view(&mut self, _view_key: super::NativeViewKey, _stack_order: super::StackOrder) {
         log::warn!("Restacking not implemented on Windows yet");
     }
 

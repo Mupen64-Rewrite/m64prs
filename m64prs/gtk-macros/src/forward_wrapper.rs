@@ -6,18 +6,21 @@ pub(crate) mod kw {
     syn::custom_keyword!(vis);
 }
 
+#[allow(unused)]
 pub(crate) struct Args {
     ty: syn::Type,
     comma: Option<syn::Token![,]>,
     extra_args: Punctuated<ArgsNameValue, syn::Token![,]>,
 }
 
+#[allow(unused)]
 pub(crate) struct MetaVis {
     vis_token: kw::vis,
     equals_token: syn::Token![=],
     vis: syn::Visibility,
 }
 
+#[allow(unused)]
 pub(crate) enum ArgsNameValue {
     Vis(MetaVis),
     NameValue(syn::MetaNameValue),

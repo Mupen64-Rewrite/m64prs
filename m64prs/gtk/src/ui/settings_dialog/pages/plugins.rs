@@ -1,5 +1,4 @@
 use crate::ui::settings_dialog::SettingsPage;
-use gtk::{prelude::*, subclass::prelude::*};
 
 mod utils;
 
@@ -159,18 +158,6 @@ mod inner {
                 }
             }
             self.init.set(true);
-        }
-
-        fn set_default_one(
-            model: &gio::ListStore,
-            sect: &mut ConfigSectionMut<'_>,
-            key: &CStr,
-            help: &CStr,
-        ) {
-            let file = model.item(0).and_downcast::<gio::File>().unwrap();
-            let cfg_value =
-                CString::new(file.basename().unwrap().to_string_lossy().as_bytes()).unwrap();
-            sect.set_default(key, &cfg_value, help).unwrap();
         }
 
         fn load_value_one(

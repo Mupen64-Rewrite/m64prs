@@ -368,21 +368,6 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
             let plugin_dir: &Path = &INSTALL_DIRS.plugin_dir;
             println!("plugins: {}", plugin_dir.display());
 
-            fn plugin_name(name: &str) -> String {
-                #[cfg(target_os = "windows")]
-                {
-                    format!("{}.dll", name)
-                }
-                #[cfg(target_os = "macos")]
-                {
-                    format!("{}.dylib", name)
-                }
-                #[cfg(target_os = "linux")]
-                {
-                    format!("{}.so", name)
-                }
-            }
-
             // TODO: allow user to configure plugins
             Ok::<_, PluginLoadError>(PluginSet {
                 graphics: Plugin::load(graphics_plugin_path)?,

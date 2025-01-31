@@ -74,7 +74,7 @@ pub unsafe extern "C" fn PluginGetVersion(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ControllerCommand(control: c_int, command: *mut c_uchar) {}
+pub unsafe extern "C" fn ControllerCommand(_control: c_int, _command: *mut c_uchar) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn GetKeys(control: c_int, keys: *mut Buttons) {
@@ -91,7 +91,7 @@ pub unsafe extern "C" fn InitiateControllers(info: ControlInfo) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ReadController(control: c_int, command: *mut c_uchar) {}
+pub unsafe extern "C" fn ReadController(_control: c_int, _command: *mut c_uchar) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn RomOpen() -> c_int {
@@ -109,13 +109,13 @@ pub unsafe extern "C" fn RomClosed() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn SDL_KeyDown(sdl_mod: c_int, sdl_key: c_int) {}
+pub unsafe extern "C" fn SDL_KeyDown(_sdl_mod: c_int, _sdl_key: c_int) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn SDL_KeyUp(sdl_mod: c_int, sdl_key: c_int) {}
+pub unsafe extern "C" fn SDL_KeyUp(_sdl_mod: c_int, _sdl_key: c_int) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn M64PRS_UseFrontendInterface(pointer: *const FrontendInterfaceFFI) {
+pub unsafe extern "C" fn M64PRS_UseFrontendInterface(_pointer: *const FrontendInterfaceFFI) {
     // *FRONTEND.lock().unwrap() = Some((&*pointer).clone());
 }
 

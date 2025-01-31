@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub fn into_dpi_position(point: graphene::Point) -> dpi::LogicalPosition<f32> {
     dpi::LogicalPosition::new(point.x(), point.y())
 }

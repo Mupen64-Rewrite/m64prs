@@ -1,5 +1,4 @@
 use crate::ui::settings_dialog::SettingsPage;
-use gtk::{prelude::*, subclass::prelude::*};
 
 mod inner {
     use std::{cell::Cell, ffi::CStr};

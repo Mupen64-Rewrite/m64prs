@@ -2,7 +2,7 @@ use std::{
     borrow::Borrow,
     error::Error,
     ffi::{CStr, CString},
-    fs, io,
+    fs,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,7 +14,7 @@ use gtk::prelude::NativeExt;
 use m64prs_core::{
     config::ConfigSection,
     error::{M64PError, PluginLoadError, SavestateError},
-    plugin::{AnyPlugin, PluginInfo, PluginSet, PluginType},
+    plugin::{PluginInfo, PluginSet, PluginType},
     save::SavestateFormat,
     tas_callbacks::{FrameHandler, InputHandler, SaveHandler},
     ConfigSectionMut, Core,
