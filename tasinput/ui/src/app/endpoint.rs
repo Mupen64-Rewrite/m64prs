@@ -48,7 +48,9 @@ impl RequestHandler<UiMessage, HostMessage> for UiRequestHandler {
                         let mut windows = app.imp().windows.borrow_mut();
                         for i in 0..4 {
                             if (bits & (1 << i)) != 0 {
-                                windows[i] = Some(MainWindow::new(&app))
+                                let window = MainWindow::new(&app);
+                                window.set_title(Some(&format!("tasinput-ui [{}]", i + 1)));
+                                windows[i] = Some(window);
                             }
                         }
                     }

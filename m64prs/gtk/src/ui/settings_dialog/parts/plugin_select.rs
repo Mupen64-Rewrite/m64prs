@@ -17,6 +17,8 @@ mod inner {
         }, type = gio::ListModel)]
         plugins: RefCell<gio::ListModel>,
         #[property(get, set)]
+        label: RefCell<String>,
+        #[property(get, set)]
         settings_available: Cell<bool>,
         #[property(get, set)]
         current_index: Cell<u32>,
@@ -44,7 +46,7 @@ mod inner {
         const NAME: &'static str = "M64PRS_PluginSelect";
 
         type Type = super::PluginSelect;
-        type ParentType = gtk::Frame;
+        type ParentType = gtk::Box;
 
         fn new() -> Self {
             let plugins = gio::ListStore::new::<gio::File>();
@@ -56,6 +58,7 @@ mod inner {
             // ));
             Self {
                 plugins: RefCell::new(plugins.upcast()),
+                label: RefCell::new("".to_owned()),
                 settings_available: Cell::new(false),
                 current_index: Cell::new(gtk::INVALID_LIST_POSITION),
             }
@@ -80,7 +83,7 @@ mod inner {
         }
     }
     impl WidgetImpl for PluginSelect {}
-    impl FrameImpl for PluginSelect {}
+    impl BoxImpl for PluginSelect {}
 }
 
 glib::wrapper! {
