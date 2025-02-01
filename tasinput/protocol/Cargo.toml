@@ -3,6 +3,9 @@ name = "tasinput-protocol"
 version = "0.1.0"
 edition = "2021"
 
+license.workspace = true
+license-file.workspace = true
+
 [dependencies]
 m64prs-sys = { workspace = true }
 

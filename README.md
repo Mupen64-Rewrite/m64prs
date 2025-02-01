@@ -3,6 +3,9 @@ A WIP TASing emulator based on Mupen64Plus and written in Rust. This is my attem
 of [M64RPFW](https://github.com/Mupen64-Rewrite/M64RPFW) and simplify the core integration so that we can keep up with
 features and fixes added to Mupen64Plus.
 
+## License
+This project is licensed under the GNU General Public License, version 3.0 or later. See `LICENSE.md` for details.
+
 ## Building
 MSRV (**M**inimum **S**upported **R**ust **V**ersion) is currently the latest stable release of Rust.
 
