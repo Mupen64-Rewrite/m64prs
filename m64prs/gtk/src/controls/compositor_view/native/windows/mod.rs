@@ -313,8 +313,33 @@ impl NativeCompositor for WindowsCompositor {
         self.recompute_bounds();
     }
 
-    fn restack_view(&mut self, _view_key: super::NativeViewKey, _stack_order: super::StackOrder) {
-        log::warn!("Restacking not implemented on Windows yet");
+    fn restack_view(&mut self, view_key: super::NativeViewKey, stack_order: super::StackOrder) {
+        let view = self
+            .views
+            .get(view_key)
+            .expect("set_view_bounds requires a valid key");
+        match stack_order {
+            super::StackOrder::StackAbove(ref_view_key) => {
+                let ref_view = self
+                    .views
+                    .get(ref_view_key)
+                    .expect("set_view_bounds requires a valid key");
+                unsafe {
+                    self.root_visual.RemoveVisual(&view.visual).unwrap();
+                    self.root_visual.AddVisual(&view.visual, true, &ref_view.visual).unwrap();
+                }
+            },
+            super::StackOrder::StackBelow(ref_view_key) => {
+                let ref_view = self
+                    .views
+                    .get(ref_view_key)
+                    .expect("set_view_bounds requires a valid key");
+                unsafe {
+                    self.root_visual.RemoveVisual(&view.visual).unwrap();
+                    self.root_visual.AddVisual(&view.visual, false, &ref_view.visual).unwrap();
+                }
+            },
+        }
     }
 
     fn total_bounds(&self) -> dpi::PhysicalSize<u32> {
