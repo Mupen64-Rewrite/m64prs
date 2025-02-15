@@ -1,15 +1,54 @@
 use crate::ui::settings_dialog::SettingsPage;
 mod inner {
-    use gtk::subclass::prelude::*;
+    use std::{ffi::{CStr, CString}, sync::LazyLock};
 
-    use crate::ui::{
-        core::CoreReadyState,
-        settings_dialog::{settings_page::SettingsPageImpl, SettingsPage},
+    use glib::types::StaticTypeExt;
+    use gtk::subclass::prelude::*;
+    use m64prs_core::Core;
+    use tr::tr;
+
+    use crate::{
+        controls,
+        ui::{
+            core::CoreReadyState,
+            settings_dialog::{parts::AccelModel, settings_page::SettingsPageImpl, SettingsPage},
+        },
     };
 
-    #[derive(Default, gtk::CompositeTemplate)]
+    static ACTION_TABLE: LazyLock<[(String, &'static str); 15]> = LazyLock::new(|| {
+        [
+            (tr!("main_act" => "Open ROM"), "app.file.open_rom"),
+            (tr!("main_act" => "Close ROM"), "app.file.close_rom"),
+            (tr!("main_act" => "Settings"), "app.file.settings"),
+            (tr!("main_act" => "Pause/Resume"), "app.emu.toggle_pause"),
+            (tr!("main_act" => "Frame Advance"), "app.emu.frame_advance"),
+            (tr!("main_act" => "Reset ROM"), "app.emu.reset_rom"),
+            (tr!("main_act" => "Save State"), "app.emu.save_state"),
+            (tr!("main_act" => "Load State"), "app.emu.load_state"),
+            (tr!("main_act" => "Save State to..."), "app.emu.save_file"),
+            (tr!("main_act" => "Load State from..."), "app.emu.load_file"),
+            (tr!("main_act" => "New Movie"), "app.vcr.new_movie"),
+            (tr!("main_act" => "Load Movie"), "app.vcr.load_movie"),
+            (tr!("main_act" => "Save Movie"), "app.vcr.save_movie"),
+            (tr!("main_act" => "Close Movie"), "app.vcr.close_movie"),
+            (
+                tr!("main_act" => "Read-only Mode"),
+                "app.vcr.toggle_read_only",
+            ),
+        ]
+    });
+
+    #[derive(gtk::CompositeTemplate)]
     #[template(file = "shortcuts.ui")]
-    pub struct ShortcutsPage {}
+    pub struct ShortcutsPage {
+        #[template_child]
+        en_search: TemplateChild<gtk::Entry>,
+        #[template_child]
+        lv_settings: TemplateChild<gtk::ListView>,
+        filter: gtk::StringFilter,
+        rows: gio::ListStore,
+        rows_sel: gtk::SingleSelection,
+    }
 
     #[glib::object_subclass]
     impl ObjectSubclass for ShortcutsPage {
@@ -18,7 +57,24 @@ mod inner {
         type ParentType = gtk::Box;
         type Interfaces = (SettingsPage,);
 
+        fn new() -> Self {
+            let filter = gtk::StringFilter::new(None::<gtk::Expression>);
+
+            let rows = gio::ListStore::new::<AccelModel>();
+            let rows_filt = gtk::FilterListModel::new(Some(rows.clone()), Some(filter.clone()));
+            let rows_sel = gtk::SingleSelection::new(Some(rows_filt));
+
+            Self {
+                en_search: Default::default(),
+                lv_settings: Default::default(),
+                filter,
+                rows,
+                rows_sel,
+            }
+        }
+
         fn class_init(class: &mut Self::Class) {
+            AccelModel::ensure_type();
             class.bind_template();
         }
 
@@ -27,15 +83,51 @@ mod inner {
         }
     }
 
-    impl ObjectImpl for ShortcutsPage {}
+    // #[glib::derived_properties]
+    impl ObjectImpl for ShortcutsPage {
+        fn constructed(&self) {
+            static ROW_TEMPLATE: LazyLock<glib::Bytes> = LazyLock::new(|| {
+                glib::Bytes::from_static(include_bytes!("shortcuts_row.ui"))
+            });
+
+            // populate rows
+            for (name, action) in &*ACTION_TABLE {
+                self.rows.append(&AccelModel::new(&name, action));
+            }
+            self.lv_settings.set_model(Some(&self.rows_sel));
+            
+            let row_factory = gtk::BuilderListItemFactory::from_bytes(None::<&gtk::BuilderScope>, &ROW_TEMPLATE);
+            self.lv_settings.set_factory(Some(&row_factory));
+        }
+    }
     impl WidgetImpl for ShortcutsPage {}
     impl BoxImpl for ShortcutsPage {}
 
+    const CFG_SECTION_KEY: &CStr = c"M64PRS-Shortcuts";
+
     impl SettingsPageImpl for ShortcutsPage {
-        async fn load_page(&self, _state: &mut CoreReadyState) {}
+        async fn load_page(&self, state: &mut CoreReadyState) {
+            let sect = state
+                .cfg_open_mut(CFG_SECTION_KEY)
+                .expect("Failed to open config section");
+
+            
+        }
 
         async fn save_page(&self, _state: &mut CoreReadyState) {}
     }
+
+    /// Set the default config for this page.
+    pub(in super::super) fn default_config(core: &mut Core) {
+        let mut sect = core
+            .cfg_open_mut(CFG_SECTION_KEY)
+            .expect("Failed to open config section");
+        for (_, action) in &*ACTION_TABLE {
+            let action_cstr = CString::new(action.as_bytes()).unwrap();
+            sect.set_default(&action_cstr, c"", c"action help (auto-generated)").unwrap();
+        }
+    }
+    
 }
 
 glib::wrapper! {
@@ -49,3 +141,5 @@ glib::wrapper! {
             gtk::ConstraintTarget,
             SettingsPage;
 }
+
+pub(super) use inner::default_config;

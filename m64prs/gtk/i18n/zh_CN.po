@@ -18,97 +18,97 @@ msgstr ""
 "X-Generator: Poedit 3.5\n"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:28
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "File"
 msgstr "文件"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:30
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Open ROM"
 msgstr "打开ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:31
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Close ROM"
 msgstr "关闭ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:34
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Settings"
 msgstr "设定"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:37
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Emulator"
 msgstr "仿真"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:39
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Pause/Resume"
 msgstr "暂停/恢复"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:40
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Frame Advance"
 msgstr "前进一帧"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:41
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Reset ROM"
 msgstr "重启ROM"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:44
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save State"
 msgstr "保存状态"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:45
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load State"
 msgstr "加载状态"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:46
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Current Slot"
 msgstr "当前存位"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:51
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save State to..."
 msgstr "保存状态为⋯⋯"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:52
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load State from..."
 msgstr "加载状态于⋯⋯"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:55
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Movie"
 msgstr "输入记录"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:56
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "New Movie"
 msgstr "新建输记"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:57
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load Movie"
 msgstr "加载输记"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:58
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save Movie"
 msgstr "保存输记"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:59
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Close Movie"
 msgstr "丢弃输记"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:60
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Read-only Mode"
 msgstr "只读模式"
 
@@ -264,38 +264,38 @@ msgctxt "settings.emu"
 msgid "Disable Expansion Pak memory"
 msgstr "扩充套件停用"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "1"
 #~ msgstr "1"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "2"
 #~ msgstr "2"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "3"
 #~ msgstr "3"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "4"
 #~ msgstr "4"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "5"
 #~ msgstr "5"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "6"
 #~ msgstr "6"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "7"
 #~ msgstr "7"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "8"
 #~ msgstr "8"
 
-#~ msgctxt "main_menu"
+#~ msgctxt "main_act"
 #~ msgid "9"
 #~ msgstr "9"

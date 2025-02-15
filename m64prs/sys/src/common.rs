@@ -211,7 +211,7 @@ impl TryFrom<ConfigValue> for CString {
 
 impl<T> ConfigSettable for &T
 where
-    T: ConfigSettable,
+    T: ConfigSettable + ?Sized,
 {
     unsafe fn set(
         &self,

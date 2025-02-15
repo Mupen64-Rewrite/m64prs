@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+I'd like to use Blueprint but it's missing this feature.
+https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
+-->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="halign">fill</property>
+        <property name="hexpand">true</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="halign">start</property>
+            <property name="hexpand">true</property>
+            <binding name="label">
+              <lookup type="M64PRS_AccelModel" name="name">
+                <lookup name="item">GtkListItem</lookup>
+              </lookup>
+            </binding>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="halign">end</property>
+            <property name="hexpand">true</property>
+            <binding name="label">
+              <lookup type="M64PRS_AccelModel" name="label">
+                <lookup name="item">GtkListItem</lookup>
+              </lookup>
+            </binding>
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>

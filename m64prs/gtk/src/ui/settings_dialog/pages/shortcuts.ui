@@ -6,11 +6,27 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="M64PRS_SettingsShortcutsPage" parent="GtkBox">
-    <property name="margin-top">5</property>
-    <property name="margin-bottom">5</property>
-    <property name="margin-start">5</property>
-    <property name="margin-end">5</property>
     <property name="orientation">vertical</property>
-
+    
+    <child>
+      <object class="GtkEntry" id="en_search">
+        <property name="margin-top">5</property>
+        <property name="margin-bottom">5</property>
+        <property name="margin-start">5</property>
+        <property name="margin-end">5</property>
+        <property name="halign">fill</property>
+        <property name="hexpand">true</property>
+        <property name="valign">fill</property>
+        <property name="vexpand">false</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkListView" id="lv_settings">
+        <property name="halign">fill</property>
+        <property name="hexpand">true</property>
+        <property name="valign">fill</property>
+        <property name="vexpand">true</property>
+      </object>
+    </child>
   </template>
 </interface>

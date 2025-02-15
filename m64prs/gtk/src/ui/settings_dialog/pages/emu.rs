@@ -53,8 +53,6 @@ mod inner {
                 .expect("Failed to open config section");
             let this = self.obj();
 
-            println!("hello");
-
             this.set_r4300_emulator(sect.get_cast_or(2, c"R4300Emulator").unwrap() as u32);
             this.set_randomize_interrupt(sect.get_cast_or(true, c"RandomizeInterrupt").unwrap());
             this.set_disable_expansion_pak(sect.get_cast_or(false, c"DisableExtraMem").unwrap());

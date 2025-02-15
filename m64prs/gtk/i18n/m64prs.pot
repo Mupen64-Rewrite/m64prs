@@ -18,97 +18,97 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:28
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "File"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:30
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Open ROM"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:31
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Close ROM"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:34
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Settings"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:37
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Emulator"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:39
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Pause/Resume"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:40
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Frame Advance"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:41
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Reset ROM"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:44
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save State"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:45
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load State"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:46
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Current Slot"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:51
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save State to..."
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:52
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load State from..."
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:55
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Movie"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:56
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "New Movie"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:57
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Load Movie"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:58
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Save Movie"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:59
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Close Movie"
 msgstr ""
 
 #: /home/jgcodes/Documents/Code/Rust/m64prs/m64prs/gtk/src/ui/main_window/menu.rs:60
-msgctxt "main_menu"
+msgctxt "main_act"
 msgid "Read-only Mode"
 msgstr ""
 

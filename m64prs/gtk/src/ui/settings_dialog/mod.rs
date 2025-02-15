@@ -93,7 +93,7 @@ mod inner {
         type ParentType = gtk::Window;
 
         fn class_init(class: &mut Self::Class) {
-            pages::init_pages();
+            pages::ensure_types();
             class.bind_template();
             class.bind_template_callbacks();
         }
@@ -140,3 +140,5 @@ impl SettingsDialog {
         glib::Object::new::<SettingsDialog>()
     }
 }
+
+pub use pages::default_config;

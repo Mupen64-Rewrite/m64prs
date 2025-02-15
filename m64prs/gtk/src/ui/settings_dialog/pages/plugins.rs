@@ -1,4 +1,8 @@
-use crate::ui::settings_dialog::SettingsPage;
+use std::ffi::CString;
+
+use m64prs_core::Core;
+
+use crate::{ui::settings_dialog::SettingsPage, utils::paths::add_lib_ext};
 
 mod utils;
 
@@ -266,4 +270,33 @@ glib::wrapper! {
             gtk::Buildable,
             gtk::ConstraintTarget,
             SettingsPage;
+}
+
+/// Set the default config for this page.
+pub(super) fn default_config(core: &mut Core) {
+    let mut sect = core.cfg_open_mut(c"M64PRS-Plugins").unwrap();
+    sect.set_default(
+        c"Graphics",
+        CString::new(add_lib_ext("mupen64plus-video-rice")).unwrap(),
+        c"The graphics plugin to use with m64prs",
+    )
+    .unwrap();
+    sect.set_default(
+        c"Audio",
+        CString::new(add_lib_ext("mupen64plus-audio-sdl")).unwrap(),
+        c"The audio plugin to use with m64prs",
+    )
+    .unwrap();
+    sect.set_default(
+        c"Input",
+        CString::new(add_lib_ext("mupen64plus-input-tasinput")).unwrap(),
+        c"The input plugin to use with m64prs",
+    )
+    .unwrap();
+    sect.set_default(
+        c"RSP",
+        CString::new(add_lib_ext("mupen64plus-rsp-hle")).unwrap(),
+        c"The RSP plugin to use with m64prs",
+    )
+    .unwrap();
 }
