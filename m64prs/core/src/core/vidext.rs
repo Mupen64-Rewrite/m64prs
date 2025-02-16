@@ -504,28 +504,28 @@ mod ffi {
 
     /// Helper macro for implementing FFI-facing functions.
     macro_rules! extern_c_fn {
-    ( | $($param:ident : $ptype:ty),* $(,)? | $(-> $rtype:ty)? { $($code:tt)* } ) => {
-        {
+        ( | $($param:ident : $ptype:ty),* $(,)? | $(-> $rtype:ty)? { $($code:tt)* } ) => {
             {
-                unsafe extern "C" fn f($($param: $ptype),*) $(-> $rtype)? {
-                    $($code)*
+                {
+                    unsafe extern "C" fn f($($param: $ptype),*) $(-> $rtype)? {
+                        $($code)*
+                    }
+                    f
                 }
-                f
             }
-        }
 
-    };
-    ( || $(-> $rtype:ty)? { $($code:tt)* } ) => {
-        {
+        };
+        ( || $(-> $rtype:ty)? { $($code:tt)* } ) => {
             {
-                unsafe extern "C" fn f() $(-> $rtype)? {
-                    $($code)*
+                {
+                    unsafe extern "C" fn f() $(-> $rtype)? {
+                        $($code)*
+                    }
+                    f
                 }
-                f
             }
-        }
-    };
-}
+        };
+    }
 
     /// Video extension table accessing an internal static value.
     pub(super) static VIDEXT_TABLE: VideoExtensionFunctions = VideoExtensionFunctions {

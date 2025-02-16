@@ -18,6 +18,7 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
         <property name="hexpand">true</property>
         <property name="valign">fill</property>
         <property name="vexpand">false</property>
+        <property name="placeholder-text">Search...</property>
       </object>
     </child>
     <child>

@@ -3,6 +3,7 @@ use syn::parse_macro_input;
 
 mod derive_typed_action_group;
 mod forward_wrapper;
+mod glib_callback;
 
 /// Forwards methods from the inner class of a subtype.
 ///
@@ -41,9 +42,17 @@ pub fn forward_wrapper(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn derive_typed_action_group(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as syn::DeriveInput);
 
-    let gen: TokenStream = match derive_typed_action_group::generate(item) {
+    match derive_typed_action_group::generate(item) {
         Ok(gen) => gen.into(),
-        Err(err) => return err.into_compile_error().into(),
-    };
-    gen
+        Err(err) => err.into_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn glib_callback(input: TokenStream) -> TokenStream {
+    let closure = parse_macro_input!(input as syn::ExprClosure);
+    match glib_callback::generate(closure) {
+        Ok(gen) => gen.into(),
+        Err(err) => err.into_compile_error().into(),
+    }
 }

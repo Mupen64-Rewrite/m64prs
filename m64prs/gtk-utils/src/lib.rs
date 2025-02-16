@@ -1,9 +1,10 @@
 pub mod actions;
+pub mod macro_utils;
 pub mod error;
 pub mod menu;
 pub mod t_option;
 
-pub use m64prs_gtk_macros::forward_wrapper;
+pub use m64prs_gtk_macros::{forward_wrapper, glib_callback};
 
 #[macro_export]
 macro_rules! glib_enum_display {

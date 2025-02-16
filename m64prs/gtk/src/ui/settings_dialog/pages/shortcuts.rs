@@ -1,10 +1,14 @@
 use crate::ui::settings_dialog::SettingsPage;
 mod inner {
-    use std::{ffi::{CStr, CString}, sync::LazyLock};
+    use std::{
+        ffi::{CStr, CString},
+        sync::LazyLock,
+    };
 
-    use glib::types::StaticTypeExt;
-    use gtk::subclass::prelude::*;
+    use glib::{object::{CastNone, ObjectExt}, types::{StaticType, StaticTypeExt}};
+    use gtk::{subclass::prelude::*, prelude::*};
     use m64prs_core::Core;
+    use m64prs_gtk_utils::glib_callback;
     use tr::tr;
 
     use crate::{
@@ -58,7 +62,13 @@ mod inner {
         type Interfaces = (SettingsPage,);
 
         fn new() -> Self {
-            let filter = gtk::StringFilter::new(None::<gtk::Expression>);
+            let filter = gtk::StringFilter::new(Some(gtk::PropertyExpression::new(
+                AccelModel::static_type(),
+                None::<gtk::Expression>,
+                "name",
+            )));
+            filter.set_ignore_case(true);
+            filter.set_match_mode(gtk::StringFilterMatchMode::Substring);
 
             let rows = gio::ListStore::new::<AccelModel>();
             let rows_filt = gtk::FilterListModel::new(Some(rows.clone()), Some(filter.clone()));
@@ -86,18 +96,33 @@ mod inner {
     // #[glib::derived_properties]
     impl ObjectImpl for ShortcutsPage {
         fn constructed(&self) {
-            static ROW_TEMPLATE: LazyLock<glib::Bytes> = LazyLock::new(|| {
-                glib::Bytes::from_static(include_bytes!("shortcuts_row.ui"))
-            });
+            static ROW_TEMPLATE: LazyLock<glib::Bytes> =
+                LazyLock::new(|| glib::Bytes::from_static(include_bytes!("shortcuts_row.ui")));
 
-            // populate rows
+            // setup row display
+            let scope = gtk::BuilderRustScope::new();
+            scope.add_callback("click_handler", glib_callback!(|
+                this: &gtk::ListItem, n_press: i32, x: f64, y: f64, _: gtk::GestureClick
+            | {
+                if n_press == 2 {
+                    println!("double click: {}", this.item().and_downcast::<AccelModel>().unwrap().name())
+                }
+            }));
+            let row_factory =
+                gtk::BuilderListItemFactory::from_bytes(Some(&scope), &ROW_TEMPLATE);
+            self.lv_settings.set_factory(Some(&row_factory));
+
+            // populate model
             for (name, action) in &*ACTION_TABLE {
                 self.rows.append(&AccelModel::new(&name, action));
             }
             self.lv_settings.set_model(Some(&self.rows_sel));
-            
-            let row_factory = gtk::BuilderListItemFactory::from_bytes(None::<&gtk::BuilderScope>, &ROW_TEMPLATE);
-            self.lv_settings.set_factory(Some(&row_factory));
+
+            // bind filter
+            self.en_search.bind_property("text", &self.filter, "search")
+                .sync_create()
+                .build();
+
         }
     }
     impl WidgetImpl for ShortcutsPage {}
@@ -111,7 +136,7 @@ mod inner {
                 .cfg_open_mut(CFG_SECTION_KEY)
                 .expect("Failed to open config section");
 
-            
+            // TODO
         }
 
         async fn save_page(&self, _state: &mut CoreReadyState) {}
@@ -124,10 +149,10 @@ mod inner {
             .expect("Failed to open config section");
         for (_, action) in &*ACTION_TABLE {
             let action_cstr = CString::new(action.as_bytes()).unwrap();
-            sect.set_default(&action_cstr, c"", c"action help (auto-generated)").unwrap();
+            sect.set_default(&action_cstr, c"", c"action help (auto-generated)")
+                .unwrap();
         }
     }
-    
 }
 
 glib::wrapper! {

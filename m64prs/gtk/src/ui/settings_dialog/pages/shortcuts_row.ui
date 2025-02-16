@@ -33,6 +33,12 @@ https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
             </binding>
           </object>
         </child>
+        <child>
+          <object class="GtkGestureClick">
+            <property name="button">1</property>
+            <signal name="pressed" handler="click_handler" swapped="True" />
+          </object>
+        </child>
       </object>
     </property>
   </template>
