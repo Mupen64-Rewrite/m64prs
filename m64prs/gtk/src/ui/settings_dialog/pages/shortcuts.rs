@@ -5,8 +5,12 @@ mod inner {
         sync::LazyLock,
     };
 
-    use glib::{object::{CastNone, ObjectExt}, types::{StaticType, StaticTypeExt}};
-    use gtk::{subclass::prelude::*, prelude::*};
+    use glib::{
+        object::{CastNone, ObjectExt},
+        types::{StaticType, StaticTypeExt},
+        translate::IntoGlib
+    };
+    use gtk::{prelude::*, subclass::prelude::*};
     use m64prs_core::Core;
     use m64prs_gtk_utils::glib_callback;
     use tr::tr;
@@ -16,6 +20,7 @@ mod inner {
         ui::{
             core::CoreReadyState,
             settings_dialog::{parts::AccelModel, settings_page::SettingsPageImpl, SettingsPage},
+            AccelInputDialog,
         },
     };
 
@@ -96,21 +101,8 @@ mod inner {
     // #[glib::derived_properties]
     impl ObjectImpl for ShortcutsPage {
         fn constructed(&self) {
-            static ROW_TEMPLATE: LazyLock<glib::Bytes> =
-                LazyLock::new(|| glib::Bytes::from_static(include_bytes!("shortcuts_row.ui")));
-
-            // setup row display
-            let scope = gtk::BuilderRustScope::new();
-            scope.add_callback("click_handler", glib_callback!(|
-                this: &gtk::ListItem, n_press: i32, x: f64, y: f64, _: gtk::GestureClick
-            | {
-                if n_press == 2 {
-                    println!("double click: {}", this.item().and_downcast::<AccelModel>().unwrap().name())
-                }
-            }));
-            let row_factory =
-                gtk::BuilderListItemFactory::from_bytes(Some(&scope), &ROW_TEMPLATE);
-            self.lv_settings.set_factory(Some(&row_factory));
+            self.lv_settings
+                .set_factory(Some(&init_row_factory(&*self.obj())));
 
             // populate model
             for (name, action) in &*ACTION_TABLE {
@@ -119,10 +111,10 @@ mod inner {
             self.lv_settings.set_model(Some(&self.rows_sel));
 
             // bind filter
-            self.en_search.bind_property("text", &self.filter, "search")
+            self.en_search
+                .bind_property("text", &self.filter, "search")
                 .sync_create()
                 .build();
-
         }
     }
     impl WidgetImpl for ShortcutsPage {}
@@ -152,6 +144,42 @@ mod inner {
             sect.set_default(&action_cstr, c"", c"action help (auto-generated)")
                 .unwrap();
         }
+    }
+
+    fn init_row_factory(page: &super::ShortcutsPage) -> gtk::ListItemFactory {
+        static ROW_TEMPLATE: LazyLock<glib::Bytes> =
+            LazyLock::new(|| glib::Bytes::from_static(include_bytes!("shortcuts_row.ui")));
+
+        let page_ref = page.downgrade();
+
+        let scope = gtk::BuilderRustScope::new();
+        scope.add_callback("click_handler", {
+            let page_ref = page_ref.clone();
+            glib_callback!(move |this: &gtk::ListItem,
+                            n_press: i32,
+                            _x: f64,
+                            _y: f64,
+                            _: gtk::GestureClick| {
+                let page = page_ref.upgrade().unwrap();
+                if n_press == 2 {
+                    let this = this.clone();
+                    glib::spawn_future_local(async move {
+                        println!("yeet");
+                        let window = page.root().and_downcast::<gtk::Window>().unwrap();
+                        let dialog = AccelInputDialog::new();
+                        let (key, modifiers) = match dialog.prompt(Some(&window)).await {
+                            Some(result) => result,
+                            None => return
+                        };
+                        let model = this.item().and_downcast::<AccelModel>().unwrap();
+                        model.set_key(key);
+                        model.set_modifiers(modifiers);
+                    });
+                }
+            })
+        });
+        let row_factory = gtk::BuilderListItemFactory::from_bytes(Some(&scope), &ROW_TEMPLATE);
+        row_factory.upcast()
     }
 }
 

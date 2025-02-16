@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+I'd like to use Blueprint but it's missing this feature.
+https://gitlab.gnome.org/jwestman/blueprint-compiler/-/issues/185
+-->
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="M64PRS_AccelInputDialogWindow" parent="GtkWindow">
+    <property name="width-request">200</property>
+    <property name="height-request">150</property>
+    <property name="modal">true</property>
+    <property name="resizable">false</property>
+    <property name="title">SHORTCUT</property>
+    <child>
+      <object class="GtkBox">
+        <property name="halign">fill</property>
+        <property name="valign">center</property>
+        <property name="hexpand">true</property>
+        <property name="vexpand">true</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">5</property>
+        <property name="margin-top">5</property>
+        <property name="margin-bottom">5</property>
+        <property name="margin-start">5</property>
+        <property name="margin-end">5</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="halign">fill</property>
+            <property name="valign">fill</property>
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <property name="label" context="accel_input_dialog">Current shortcut</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+                <property name="css-classes">title</property>
+                <binding name="label">
+                  <closure function="get_label" type="gchararray">
+                    <lookup name="key" type="M64PRS_AccelInputDialogWindow">
+                      <constant>M64PRS_AccelInputDialogWindow</constant>
+                    </lookup>
+                    <lookup name="modifiers" type="M64PRS_AccelInputDialogWindow">
+                      <constant>M64PRS_AccelInputDialogWindow</constant>
+                    </lookup>
+                  </closure>
+                </binding>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="height-request">30</property>
+            <property name="label" translatable="yes" context="accel_input_dialog">Unbind</property>
+            <property name="focusable">false</property>
+            <signal name="clicked" handler="unbind_clicked" swapped="True" />
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="height-request">30</property>
+            <property name="label" translatable="yes">Cancel</property>
+            <property name="focusable">false</property>
+            <signal name="clicked" handler="cancel_clicked" swapped="True" />
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkEventControllerKey">
+        <property name="propagation-phase">capture</property>
+        <signal name="key-pressed" handler="key_down" swapped="True" />
+        <signal name="key-released" handler="key_up" swapped="True" />
+      </object>
+    </child>
+  </template>
+</interface>

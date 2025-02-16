@@ -89,7 +89,7 @@ mod inner {
 glib::wrapper! {
     pub struct PluginSelect(ObjectSubclass<inner::PluginSelect>)
         @extends
-            gtk::Frame,
+            gtk::Box,
             gtk::Widget,
         @implements
             gtk::Accessible,

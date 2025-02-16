@@ -1,6 +1,7 @@
 use gio::ApplicationFlags;
 use gtk::prelude::*;
 
+mod accel_input_dialog;
 mod core;
 mod main_window;
 mod movie_dialog;
@@ -9,6 +10,7 @@ mod settings_dialog;
 use main_window::MainWindow;
 use movie_dialog::MovieDialog;
 use settings_dialog::SettingsDialog;
+use accel_input_dialog::AccelInputDialog;
 
 const APP_ID: &str = "io.github.jgcodes.m64prs";
 
