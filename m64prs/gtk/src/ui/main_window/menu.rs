@@ -1,5 +1,6 @@
-use std::{error::Error, ffi::CString, io, path::Path};
+use std::{cell::RefCell, error::Error, ffi::CString, io, path::Path};
 
+use futures::channel::oneshot;
 use gtk::prelude::*;
 use m64prs_core::{
     error::PluginLoadError,
@@ -446,7 +447,17 @@ async fn settings_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     settings.set_transient_for(Some(main_window));
     settings.set_modal(true);
 
+    let (hide_tx, hide_rx) = oneshot::channel::<()>();
+    let hide_tx = RefCell::new(Some(hide_tx));
+
+    let handler_id = settings.connect_hide(move |_| {
+        let _ = hide_tx.take().unwrap().send(());
+    });
     settings.present();
+    hide_rx.await.unwrap();
+    settings.disconnect(handler_id);
+    
+    // reload shortcuts
 
     Ok(())
 }

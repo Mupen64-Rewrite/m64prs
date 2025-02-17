@@ -18,11 +18,10 @@ mod inner {
     use tr::tr;
 
     use crate::{
-        controls,
+        controls::AccelInputDialog,
         ui::{
             core::CoreReadyState,
             settings_dialog::{parts::AccelModel, settings_page::SettingsPageImpl, SettingsPage},
-            AccelInputDialog,
         },
     };
 
@@ -190,7 +189,6 @@ mod inner {
                 if n_press == 2 {
                     let this = this.clone();
                     glib::spawn_future_local(async move {
-                        println!("yeet");
                         let window = page.root().and_downcast::<gtk::Window>().unwrap();
                         let dialog = AccelInputDialog::new();
                         let (key, modifiers) = match dialog.prompt(Some(&window)).await {
@@ -199,22 +197,31 @@ mod inner {
                         };
 
                         let model = this.item().and_downcast::<AccelModel>().unwrap();
-                        model.set_key(0);
-                        model.set_modifiers(gdk::ModifierType::empty());
 
                         if key == 0 {
+                            model.set_key(0);
+                            model.set_modifiers(gdk::ModifierType::empty());
                             return;
                         }
 
-                        let found_conflict = page
+                        let prev_key = model.key();
+                        let prev_modifiers = model.modifiers();
+
+
+                        model.set_key(0);
+                        model.set_modifiers(gdk::ModifierType::empty());
+
+                        let conflict = page
                             .imp()
                             .rows
                             .iter::<AccelModel>()
                             .map(|res| res.unwrap())
-                            .any(|node| node.key() == key && node.modifiers() == modifiers);
+                            .find(|node| node.key() == key && node.modifiers() == modifiers);
 
-                        if found_conflict {
-                            // error dialog? Potential override?
+                        if conflict.is_some() {
+                            // error dialog? potential override?
+                            model.set_key(prev_key);
+                            model.set_modifiers(prev_modifiers);
                             return;
                         }
 
