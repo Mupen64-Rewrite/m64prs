@@ -41,8 +41,8 @@ pub fn load_menu() -> gio::MenuModel {
                 item(&tr!("main_act" => "Reset ROM"), "app.emu.reset_rom"),
             ]),
             section(None, [
-                item(&tr!("main_act" => "Save State"), "app.emu.save_state"),
-                item(&tr!("main_act" => "Load State"), "app.emu.load_state"),
+                item(&tr!("main_act" => "Save State"), "app.emu.save_slot"),
+                item(&tr!("main_act" => "Load State"), "app.emu.load_slot"),
                 submenu(Some(&tr!("main_act" => "Current Slot")), {
                     (1u8..=9u8).map(|i| item_p(&i.to_string(), "app.emu.set_save_slot", i))
                 }),
@@ -133,7 +133,7 @@ impl AppActions {
                 })
             };
             ($act:ident, async @$handler:path) => {
-                c!($act, async $handler, "Operation failed!");
+                c!($act, async @$handler, "Operation failed!");
             };
             ($act:ident, async $handler:path, $msg:expr) => {
                 self.$act.connect_activate({
@@ -201,13 +201,13 @@ impl AppActions {
         c!(close_rom, async close_rom_impl);
         c!(settings, async settings_impl);
 
-        c!(toggle_pause, toggle_pause_impl);
-        c!(frame_advance, frame_advance_impl);
-        c!(reset_rom, reset_rom_impl);
+        c!(toggle_pause, async toggle_pause_impl);
+        c!(frame_advance, async frame_advance_impl);
+        c!(reset_rom, async reset_rom_impl);
 
         c!(save_slot, async save_slot_impl);
         c!(load_slot, async load_slot_impl);
-        c!(set_save_slot, @set_save_slot_impl);
+        c!(set_save_slot, async @set_save_slot_impl);
         c!(save_file, async save_file_impl);
         c!(load_file, async load_file_impl);
 
@@ -215,7 +215,7 @@ impl AppActions {
         c!(load_movie, async load_movie_impl);
         c!(save_movie, async save_movie_impl);
         c!(close_movie, async close_movie_impl);
-        c!(toggle_read_only, toggle_read_only_impl);
+        c!(toggle_read_only, async toggle_read_only_impl);
     }
 
     fn bind_states(&self, main_window: &MainWindow) {
@@ -343,9 +343,9 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // query core for plugin paths
     let (graphics_plugin_path, audio_plugin_path, input_plugin_path, rsp_plugin_path) = {
-        let core = main_window.borrow_core();
+        let core = main_window.borrow_core().await;
         let sect = core.cfg_open(c"M64PRS-Plugins").unwrap();
-        
+
         let (graphics_val, audio_val, input_val, rsp_val) = (
             sect.get_cast::<CString>(c"Graphics").unwrap(),
             sect.get_cast::<CString>(c"Audio").unwrap(),
@@ -354,10 +354,18 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
         );
 
         (
-            INSTALL_DIRS.plugin_dir.join(graphics_val.to_string_lossy().as_ref()),
-            INSTALL_DIRS.plugin_dir.join(audio_val.to_string_lossy().as_ref()),
-            INSTALL_DIRS.plugin_dir.join(input_val.to_string_lossy().as_ref()),
-            INSTALL_DIRS.plugin_dir.join(rsp_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS
+                .plugin_dir
+                .join(graphics_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS
+                .plugin_dir
+                .join(audio_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS
+                .plugin_dir
+                .join(input_val.to_string_lossy().as_ref()),
+            INSTALL_DIRS
+                .plugin_dir
+                .join(rsp_val.to_string_lossy().as_ref()),
         )
     };
 
@@ -387,7 +395,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // stop the core if it's not stopped
     'stop_core: {
-        let mut core = main_window.borrow_core();
+        let mut core = main_window.borrow_core().await;
         let running = match core.take() {
             CoreState::Running(running_state) => running_state,
             state => {
@@ -402,7 +410,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // start the core
     {
-        let mut core = main_window.borrow_core();
+        let mut core = main_window.borrow_core().await;
 
         let ready = match core.take() {
             CoreState::Ready(ready_state) => ready_state,
@@ -425,7 +433,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 }
 
 async fn close_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let mut core = main_window.borrow_core();
+    let mut core = main_window.borrow_core().await;
 
     let running = match core.take() {
         CoreState::Running(running_state) => running_state,
@@ -456,33 +464,36 @@ async fn settings_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     settings.present();
     hide_rx.await.unwrap();
     settings.disconnect(handler_id);
-    
+
     // reload shortcuts
 
     Ok(())
 }
 
-fn toggle_pause_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+async fn toggle_pause_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .toggle_pause()?;
     Ok(())
 }
 
-fn frame_advance_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+async fn frame_advance_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .frame_advance()?;
     Ok(())
 }
 
-fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+async fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .reset(false)?;
@@ -493,6 +504,7 @@ async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     let _guard = SaveOpGuard::new(main_window);
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .save_slot()
@@ -504,6 +516,7 @@ async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     let _guard = SaveOpGuard::new(main_window);
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .load_slot()
@@ -512,9 +525,10 @@ async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 }
 
 // TODO: switch out String param for u8 once blueprint supports it.
-fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn Error>> {
+async fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn Error>> {
     main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .set_save_slot(slot)?;
@@ -539,6 +553,7 @@ async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
         let _guard = SaveOpGuard::new(main_window);
         main_window
             .borrow_core()
+            .await
             .borrow_running()
             .expect("Core should be running")
             .save_file(path)
@@ -566,6 +581,7 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
         let _guard = SaveOpGuard::new(main_window);
         main_window
             .borrow_core()
+            .await
             .borrow_running()
             .expect("Core should be running")
             .load_file(path)
@@ -582,7 +598,7 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     };
 
     {
-        let mut core_ref = main_window.borrow_core();
+        let mut core_ref = main_window.borrow_core().await;
         let core = core_ref.borrow_running().expect("Core should be running");
 
         let rom_header = core.rom_header();
@@ -637,7 +653,7 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
     let movie = M64File::read_from_async(reader).await?;
 
     {
-        let mut core_ref = main_window.borrow_core();
+        let mut core_ref = main_window.borrow_core().await;
         let core = core_ref.borrow_running().expect("Core should be running");
         let vcr_state = VcrState::with_m64(movie_file.path().unwrap(), movie, true);
         core.set_read_only(true);
@@ -650,6 +666,7 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let exported = main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .export_vcr()
@@ -677,6 +694,7 @@ async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let vcr_state = main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .unset_vcr_state()
@@ -707,9 +725,10 @@ async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-fn toggle_read_only_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
+async fn toggle_read_only_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _ = main_window
         .borrow_core()
+        .await
         .borrow_running()
         .expect("Core should be running")
         .toggle_read_only();
