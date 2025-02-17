@@ -343,7 +343,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // query core for plugin paths
     let (graphics_plugin_path, audio_plugin_path, input_plugin_path, rsp_plugin_path) = {
-        let core = main_window.borrow_core().await;
+        let core = main_window.borrow_core_mut().await;
         let sect = core.cfg_open(c"M64PRS-Plugins").unwrap();
 
         let (graphics_val, audio_val, input_val, rsp_val) = (
@@ -395,7 +395,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // stop the core if it's not stopped
     'stop_core: {
-        let mut core = main_window.borrow_core().await;
+        let mut core = main_window.borrow_core_mut().await;
         let running = match core.take() {
             CoreState::Running(running_state) => running_state,
             state => {
@@ -410,7 +410,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 
     // start the core
     {
-        let mut core = main_window.borrow_core().await;
+        let mut core = main_window.borrow_core_mut().await;
 
         let ready = match core.take() {
             CoreState::Ready(ready_state) => ready_state,
@@ -433,7 +433,7 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
 }
 
 async fn close_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let mut core = main_window.borrow_core().await;
+    let mut core = main_window.borrow_core_mut().await;
 
     let running = match core.take() {
         CoreState::Running(running_state) => running_state,
@@ -503,9 +503,9 @@ async fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _guard = SaveOpGuard::new(main_window);
     main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .save_slot()
         .await?;
@@ -515,9 +515,9 @@ async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _guard = SaveOpGuard::new(main_window);
     main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .load_slot()
         .await?;
@@ -527,9 +527,9 @@ async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 // TODO: switch out String param for u8 once blueprint supports it.
 async fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn Error>> {
     main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .set_save_slot(slot)?;
     Ok(())
@@ -552,9 +552,9 @@ async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     {
         let _guard = SaveOpGuard::new(main_window);
         main_window
-            .borrow_core()
+            .borrow_core_mut()
             .await
-            .borrow_running()
+            .borrow_running_mut()
             .expect("Core should be running")
             .save_file(path)
             .await?;
@@ -580,9 +580,9 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     {
         let _guard = SaveOpGuard::new(main_window);
         main_window
-            .borrow_core()
+            .borrow_core_mut()
             .await
-            .borrow_running()
+            .borrow_running_mut()
             .expect("Core should be running")
             .load_file(path)
             .await?;
@@ -598,8 +598,8 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     };
 
     {
-        let mut core_ref = main_window.borrow_core().await;
-        let core = core_ref.borrow_running().expect("Core should be running");
+        let mut core_ref = main_window.borrow_core_mut().await;
+        let core = core_ref.borrow_running_mut().expect("Core should be running");
 
         let rom_header = core.rom_header();
         header.rom_cc = rom_header.Country_code as u16;
@@ -653,8 +653,8 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
     let movie = M64File::read_from_async(reader).await?;
 
     {
-        let mut core_ref = main_window.borrow_core().await;
-        let core = core_ref.borrow_running().expect("Core should be running");
+        let mut core_ref = main_window.borrow_core_mut().await;
+        let core = core_ref.borrow_running_mut().expect("Core should be running");
         let vcr_state = VcrState::with_m64(movie_file.path().unwrap(), movie, true);
         core.set_read_only(true);
         core.set_vcr_state(vcr_state, false).await?;
@@ -665,9 +665,9 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let exported = main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .export_vcr()
         .await;
@@ -693,9 +693,9 @@ async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 
 async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let vcr_state = main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .unset_vcr_state()
         .await;
@@ -727,9 +727,9 @@ async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>
 
 async fn toggle_read_only_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _ = main_window
-        .borrow_core()
+        .borrow_core_mut()
         .await
-        .borrow_running()
+        .borrow_running_mut()
         .expect("Core should be running")
         .toggle_read_only();
     Ok(())

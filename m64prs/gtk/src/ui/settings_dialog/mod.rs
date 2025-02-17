@@ -31,7 +31,7 @@ mod inner {
 
         async fn load_pages(&self) {
             let main_window = self.main_window();
-            let mut core = main_window.borrow_core().await;
+            let mut core = main_window.borrow_core_mut().await;
             let core_ready = core.borrow_ready().expect("Core should not be running");
 
             for page in &self.tabs_nb.pages() {
@@ -44,7 +44,7 @@ mod inner {
         }
         async fn save_pages(&self) {
             let main_window = self.main_window();
-            let mut core = main_window.borrow_core().await;
+            let mut core = main_window.borrow_core_mut().await;
             let core_ready = core.borrow_ready().expect("Core should not be running");
 
             for page in &self.tabs_nb.pages() {

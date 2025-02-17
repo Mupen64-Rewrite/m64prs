@@ -100,7 +100,14 @@ impl CoreState {
         }
     }
 
-    pub(super) fn borrow_running(&mut self) -> Option<&mut CoreRunningState> {
+    pub(super) fn borrow_running_mut(&mut self) -> Option<&mut CoreRunningState> {
+        match self {
+            CoreState::Running(running_state) => Some(running_state),
+            _ => None,
+        }
+    }
+
+    pub(super) fn borrow_running(&self) -> Option<&CoreRunningState> {
         match self {
             CoreState::Running(running_state) => Some(running_state),
             _ => None,
@@ -284,7 +291,7 @@ impl CoreRunningState {
         )
     }
 
-    pub(super) fn toggle_pause(&mut self) -> Result<(), M64PError> {
+    pub(super) fn toggle_pause(&self) -> Result<(), M64PError> {
         match self.core.emu_state() {
             EmuState::Running => self.core.request_pause(),
             EmuState::Paused => self.core.request_resume(),
@@ -292,19 +299,19 @@ impl CoreRunningState {
         }
     }
 
-    pub(super) fn frame_advance(&mut self) -> Result<(), M64PError> {
+    pub(super) fn frame_advance(&self) -> Result<(), M64PError> {
         self.core.request_advance_frame()
     }
 
-    pub(super) fn reset(&mut self, hard: bool) -> Result<(), M64PError> {
+    pub(super) fn reset(&self, hard: bool) -> Result<(), M64PError> {
         self.core.reset(hard)
     }
 
-    pub(super) async fn save_slot(&mut self) -> Result<(), SavestateError> {
+    pub(super) async fn save_slot(&self) -> Result<(), SavestateError> {
         self.core.save_slot().await
     }
 
-    pub(super) async fn load_slot(&mut self) -> Result<(), SavestateError> {
+    pub(super) async fn load_slot(&self) -> Result<(), SavestateError> {
         self.core.load_slot().await?;
         if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
             vcr_state.set_read_only(self.vcr_read_only);
@@ -312,7 +319,7 @@ impl CoreRunningState {
         Ok(())
     }
 
-    pub(super) fn set_save_slot(&mut self, slot: u8) -> Result<(), M64PError> {
+    pub(super) fn set_save_slot(&self, slot: u8) -> Result<(), M64PError> {
         self.core.set_state_slot(slot)
     }
 
@@ -326,7 +333,7 @@ impl CoreRunningState {
     }
 
     pub(super) async fn load_file<P: AsRef<Path>>(
-        &mut self,
+        &self,
         path: P,
     ) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await?;
@@ -336,7 +343,7 @@ impl CoreRunningState {
         Ok(())
     }
 
-    pub(super) fn forward_key_down(&mut self, key_code: u32, r#mod: gdk::ModifierType) {
+    pub(super) fn forward_key_down(&self, key_code: u32, r#mod: gdk::ModifierType) {
         if let Some(window) = self.main_window_ref.upgrade() {
             let display = window.surface().unwrap().display();
 
@@ -347,7 +354,7 @@ impl CoreRunningState {
         }
     }
 
-    pub(super) fn forward_key_up(&mut self, key_code: u32, r#mod: gdk::ModifierType) {
+    pub(super) fn forward_key_up(&self, key_code: u32, r#mod: gdk::ModifierType) {
         if let Some(window) = self.main_window_ref.upgrade() {
             let display = window.surface().unwrap().display();
 

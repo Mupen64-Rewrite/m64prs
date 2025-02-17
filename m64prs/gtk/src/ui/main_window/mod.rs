@@ -13,6 +13,7 @@ mod inner {
     };
 
     use futures::lock::{Mutex, MutexGuard};
+    use futures_locks::{RwLock, RwLockReadGuard, RwLockWriteGuard};
     use glib::{
         subclass::{
             object::ObjectImpl,
@@ -85,7 +86,7 @@ mod inner {
 
         // private variables
         actions: AppActions,
-        core: Mutex<CoreState>,
+        core: RwLock<CoreState>,
     }
 
     #[m64prs_gtk_utils::forward_wrapper(super::MainWindow, vis = pub(in crate::ui))]
@@ -124,8 +125,12 @@ mod inner {
             }
         }
 
-        pub(super) async fn borrow_core<'a>(&'a self) -> MutexGuard<'a, CoreState> {
-            self.core.lock().await
+        pub(super) async fn borrow_core_mut(&self) -> RwLockWriteGuard<CoreState> {
+            self.core.write().await
+        }
+
+        pub(super) async fn borrow_core(&self) -> RwLockReadGuard<CoreState> {
+            self.core.read().await
         }
 
         pub(super) fn comp_new_view(&self, attrs: NativeViewAttributes) -> Box<dyn NativeView> {
@@ -169,9 +174,9 @@ mod inner {
         fn key_down(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) -> glib::Propagation {
             let this = self.obj().clone();
             glib::spawn_future_local(async move {
-                let mut core_state = this.borrow_core().await;
+                let mut core_state = this.borrow_core_mut().await;
 
-                if let Some(running) = core_state.borrow_running() {
+                if let Some(running) = core_state.borrow_running_mut() {
                     running.forward_key_down(keycode, modifiers);
                 }
             });
@@ -181,9 +186,9 @@ mod inner {
         #[template_callback]
         async fn key_up(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) {
             let this = self.obj().clone();
-            let mut core_state = this.borrow_core().await;
+            let mut core_state = this.borrow_core_mut().await;
 
-            if let Some(running) = core_state.borrow_running() {
+            if let Some(running) = core_state.borrow_running_mut() {
                 running.forward_key_up(keycode, modifiers);
             }
         }
@@ -219,7 +224,7 @@ mod inner {
                         gio::spawn_blocking(move || CoreReadyState::new(self_weak_ref))
                             .await
                             .expect("failed to init core");
-                    *this.borrow_core().await = ready_state.into();
+                    *this.borrow_core_mut().await = ready_state.into();
                 });
             }
         }
@@ -253,7 +258,7 @@ mod inner {
                     if value == MainEmuState::Stopped {
                         let self_ref = self.obj().clone();
                         glib::spawn_future_local(async move {
-                            let mut core = self_ref.borrow_core().await;
+                            let mut core = self_ref.borrow_core_mut().await;
                             match core.take() {
                                 CoreState::Running(core_running_state) => {
                                     *core = CoreState::Ready(core_running_state.stop_rom().await.0);

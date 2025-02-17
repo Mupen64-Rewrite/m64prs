@@ -27,6 +27,7 @@ env_logger = { workspace = true }
 log = { workspace = true }
 
 futures = { workspace = true }
+futures-locks = { workspace = true }
 
 glutin = { workspace = true }
 raw-window-handle = { workspace = true }
