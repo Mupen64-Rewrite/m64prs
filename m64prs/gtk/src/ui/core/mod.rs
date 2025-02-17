@@ -1,10 +1,5 @@
 use std::{
-    borrow::Borrow,
-    error::Error,
-    ffi::CStr,
-    fs,
-    path::{Path, PathBuf},
-    sync::Arc,
+    borrow::Borrow, cell::Cell, error::Error, ffi::CStr, fs, path::{Path, PathBuf}, sync::Arc
 };
 
 use futures::{executor::block_on, lock::Mutex};
@@ -51,7 +46,7 @@ pub struct CoreReadyState {
 pub struct CoreRunningState {
     core: RunningCore,
     main_window_ref: SendWeakRef<MainWindow>,
-    vcr_read_only: bool,
+    vcr_read_only: Cell<bool>,
     vcr_state: Arc<Mutex<Option<VcrState>>>,
 }
 
@@ -253,7 +248,7 @@ impl CoreReadyState {
         Ok(CoreRunningState {
             core,
             main_window_ref,
-            vcr_read_only: false,
+            vcr_read_only: Cell::new(false),
             vcr_state,
         })
     }
@@ -314,7 +309,7 @@ impl CoreRunningState {
     pub(super) async fn load_slot(&self) -> Result<(), SavestateError> {
         self.core.load_slot().await?;
         if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
-            vcr_state.set_read_only(self.vcr_read_only);
+            vcr_state.set_read_only(self.vcr_read_only.get());
         }
         Ok(())
     }
@@ -338,7 +333,7 @@ impl CoreRunningState {
     ) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await?;
         if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
-            vcr_state.set_read_only(self.vcr_read_only);
+            vcr_state.set_read_only(self.vcr_read_only.get());
         }
         Ok(())
     }
@@ -373,11 +368,11 @@ impl CoreRunningState {
     }
 
     pub(super) async fn set_vcr_state(
-        &mut self,
+        &self,
         mut vcr_state: VcrState,
         new: bool,
     ) -> Result<(), Box<dyn Error>> {
-        vcr_state.set_read_only(self.vcr_read_only);
+        vcr_state.set_read_only(self.vcr_read_only.get());
         vcr_state.reset(&self.core, new).await?;
         {
             let mut self_vcr_state = self.vcr_state.lock().await;
@@ -398,13 +393,13 @@ impl CoreRunningState {
         vcr_state.as_ref().map(|state| state.export())
     }
 
-    pub(super) fn set_read_only(&mut self, value: bool) {
-        self.vcr_read_only = value;
+    pub(super) fn set_read_only(&self, value: bool) {
+        self.vcr_read_only.set(value);
         self.notify_main_window(move |main_window| main_window.set_vcr_read_only(value));
     }
 
-    pub(super) fn toggle_read_only(&mut self) {
-        self.set_read_only(!self.vcr_read_only);
+    pub(super) fn toggle_read_only(&self) {
+        self.set_read_only(!self.vcr_read_only.get());
     }
 
     pub(super) fn rom_header(&self) -> RomHeader {

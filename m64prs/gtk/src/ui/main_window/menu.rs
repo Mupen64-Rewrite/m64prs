@@ -598,8 +598,8 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     };
 
     {
-        let mut core_ref = main_window.borrow_core_mut().await;
-        let core = core_ref.borrow_running_mut().expect("Core should be running");
+        let core_ref = main_window.borrow_core().await;
+        let core = core_ref.borrow_running().expect("Core should be running");
 
         let rom_header = core.rom_header();
         header.rom_cc = rom_header.Country_code as u16;
@@ -632,7 +632,6 @@ async fn new_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 
         let vcr_state = VcrState::new(path, header, false);
         core.set_read_only(false);
-        println!("setting VCR state");
         core.set_vcr_state(vcr_state, true).await?;
     };
 
@@ -653,8 +652,8 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
     let movie = M64File::read_from_async(reader).await?;
 
     {
-        let mut core_ref = main_window.borrow_core_mut().await;
-        let core = core_ref.borrow_running_mut().expect("Core should be running");
+        let core_ref = main_window.borrow_core().await;
+        let core = core_ref.borrow_running().expect("Core should be running");
         let vcr_state = VcrState::with_m64(movie_file.path().unwrap(), movie, true);
         core.set_read_only(true);
         core.set_vcr_state(vcr_state, false).await?;
