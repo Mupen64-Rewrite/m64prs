@@ -171,7 +171,7 @@ impl CoreReadyState {
         }
 
         // Apply the default config.
-        settings_dialog::default_config(&mut core);
+        settings_dialog::init_config(&mut core);
 
         {
             let main_window_ref = main_window_ref.clone();

@@ -1,3 +1,9 @@
+use std::ffi::CString;
+
+use glib::{object::CastNone, GString};
+use gtk::prelude::*;
+use m64prs_core::{ConfigSectionMut, Core};
+
 use crate::ui::settings_dialog::SettingsPage;
 mod inner {
     use std::{
@@ -25,7 +31,8 @@ mod inner {
         },
     };
 
-    static ACTION_TABLE: LazyLock<[(String, &'static str); 15]> = LazyLock::new(|| {
+    pub(super) const CFG_SECTION_KEY: &CStr = c"M64PRS-Shortcuts";
+    pub(super) static ACTION_TABLE: LazyLock<[(String, &'static str); 15]> = LazyLock::new(|| {
         [
             (tr!("main_act" => "Open ROM"), "app.file.open_rom"),
             (tr!("main_act" => "Close ROM"), "app.file.close_rom"),
@@ -121,8 +128,6 @@ mod inner {
     impl WidgetImpl for ShortcutsPage {}
     impl BoxImpl for ShortcutsPage {}
 
-    const CFG_SECTION_KEY: &CStr = c"M64PRS-Shortcuts";
-
     impl SettingsPageImpl for ShortcutsPage {
         async fn load_page(&self, state: &mut CoreReadyState) {
             let sect = state
@@ -156,18 +161,7 @@ mod inner {
                 sect.set(&action_cstr, value_gstr.to_cstr_until_nul())
                     .unwrap();
             }
-        }
-    }
-
-    /// Set the default config for this page.
-    pub(in super::super) fn default_config(core: &mut Core) {
-        let mut sect = core
-            .cfg_open_mut(CFG_SECTION_KEY)
-            .expect("Failed to open config section");
-        for (_, action) in &*ACTION_TABLE {
-            let action_cstr = CString::new(action.as_bytes()).unwrap();
-            sect.set_default(&action_cstr, c"", c"action help (auto-generated)")
-                .unwrap();
+            super::load_shortcuts(&mut sect);
         }
     }
 
@@ -206,7 +200,6 @@ mod inner {
 
                         let prev_key = model.key();
                         let prev_modifiers = model.modifiers();
-
 
                         model.set_key(0);
                         model.set_modifiers(gdk::ModifierType::empty());
@@ -248,4 +241,35 @@ glib::wrapper! {
             SettingsPage;
 }
 
-pub(super) use inner::default_config;
+fn load_shortcuts(sect: &mut ConfigSectionMut<'_>) {
+    let app = gio::Application::default()
+        .and_downcast::<gtk::Application>()
+        .unwrap();
+    for (_, action) in &*inner::ACTION_TABLE {
+        let action_cstr = CString::new(*action).unwrap();
+        let value_gstr: GString = sect
+            .get_cast::<CString>(&action_cstr)
+            .unwrap()
+            .try_into()
+            .unwrap();
+
+        if value_gstr.is_empty() {
+            app.set_accels_for_action(action, &[]);
+        } else {
+            app.set_accels_for_action(action, &[value_gstr.as_str()]);
+        }
+    }
+}
+
+/// Set the default config for this page.
+pub(super) fn init_config(core: &mut Core) {
+    let mut sect = core
+        .cfg_open_mut(inner::CFG_SECTION_KEY)
+        .expect("Failed to open config section");
+    for (_, action) in &*inner::ACTION_TABLE {
+        let action_cstr = CString::new(*action).unwrap();
+        sect.set_default(&action_cstr, c"", c"action help (auto-generated)")
+            .unwrap();
+    }
+    load_shortcuts(&mut sect);
+}

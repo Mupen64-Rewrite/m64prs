@@ -16,8 +16,8 @@ pub(super) fn ensure_types() {
     ShortcutsPage::ensure_type();
 }
 
-/// Sets the default config for all settings pages.
-pub fn default_config(core: &mut Core) {
-    plugins::default_config(core);
-    shortcuts::default_config(core);
+/// Performs setup on the initial configuration values.
+pub fn init_config(core: &mut Core) {
+    plugins::init_config(core);
+    shortcuts::init_config(core);
 }

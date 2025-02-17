@@ -141,4 +141,4 @@ impl SettingsDialog {
     }
 }
 
-pub use pages::default_config;
+pub use pages::init_config;

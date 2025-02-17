@@ -273,7 +273,7 @@ glib::wrapper! {
 }
 
 /// Set the default config for this page.
-pub(super) fn default_config(core: &mut Core) {
+pub(super) fn init_config(core: &mut Core) {
     let mut sect = core.cfg_open_mut(c"M64PRS-Plugins").unwrap();
     sect.set_default(
         c"Graphics",
