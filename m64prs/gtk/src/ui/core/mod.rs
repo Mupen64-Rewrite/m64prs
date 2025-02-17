@@ -382,13 +382,13 @@ impl CoreRunningState {
         Ok(())
     }
 
-    pub(super) async fn unset_vcr_state(&mut self) -> Option<VcrState> {
+    pub(super) async fn unset_vcr_state(&self) -> Option<VcrState> {
         let result = self.vcr_state.lock().await.take();
         self.notify_main_window(|main_window| main_window.set_vcr_active(false));
         result
     }
 
-    pub(super) async fn export_vcr(&mut self) -> Option<(PathBuf, M64File)> {
+    pub(super) async fn export_vcr(&self) -> Option<(PathBuf, M64File)> {
         let vcr_state = self.vcr_state.lock().await;
         vcr_state.as_ref().map(|state| state.export())
     }

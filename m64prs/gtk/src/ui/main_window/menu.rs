@@ -664,9 +664,9 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let exported = main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .export_vcr()
         .await;
@@ -692,9 +692,9 @@ async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 
 async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let vcr_state = main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .unset_vcr_state()
         .await;
