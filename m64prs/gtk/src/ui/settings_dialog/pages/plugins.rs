@@ -4,8 +4,6 @@ use m64prs_core::Core;
 
 use crate::{ui::settings_dialog::SettingsPage, utils::paths::add_lib_ext};
 
-mod utils;
-
 mod inner {
     use core::str;
     use std::{
