@@ -1,5 +1,7 @@
 use gtk::{prelude::*, subclass::prelude::*};
 
+use glib::translate::{FromGlib, IntoGlib};
+
 mod inner {
     use glib::translate::FromGlib;
 
@@ -73,6 +75,28 @@ impl AccelModel {
                 &mut [("name", name.to_value()), ("action", action.to_value())],
             )
             .unsafe_cast()
+        }
+    }
+
+    pub fn set_accel(&self, accel: Option<(gdk::Key, gdk::ModifierType)>) {
+        match accel {
+            Some((key, modifiers)) => {
+                self.set_key(key.into_glib());
+                self.set_modifiers(modifiers);
+            },
+            None => {
+                self.set_key(0);
+                self.set_modifiers(gdk::ModifierType::empty());
+            },
+        }
+    }
+
+    pub fn get_accel(&self) -> Option<(gdk::Key, gdk::ModifierType)> {
+        if self.key() == 0 {
+            None
+        }
+        else {
+            Some((unsafe {gdk::Key::from_glib(self.key())}, self.modifiers()))
         }
     }
 }

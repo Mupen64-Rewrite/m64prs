@@ -1,14 +1,16 @@
 use crate::ui::settings_dialog::SettingsPage;
 mod inner {
     use std::{
+        borrow::Cow,
         ffi::{CStr, CString},
         sync::LazyLock,
     };
 
     use glib::{
         object::{CastNone, ObjectExt},
+        translate::IntoGlib,
         types::{StaticType, StaticTypeExt},
-        translate::IntoGlib
+        GString,
     };
     use gtk::{prelude::*, subclass::prelude::*};
     use m64prs_core::Core;
@@ -128,10 +130,34 @@ mod inner {
                 .cfg_open_mut(CFG_SECTION_KEY)
                 .expect("Failed to open config section");
 
-            // TODO
+            for model in self.rows.iter::<AccelModel>().map(|res| res.unwrap()) {
+                let action = model.action();
+                let action_cstr = CString::new(&*action).unwrap();
+                let value_cstr = sect.get_cast::<CString>(&action_cstr).unwrap();
+                let value = value_cstr.to_string_lossy();
+
+                model.set_accel(
+                    (!value.is_empty()).then(|| gtk::accelerator_parse(&*value).unwrap()),
+                );
+            }
         }
 
-        async fn save_page(&self, _state: &mut CoreReadyState) {}
+        async fn save_page(&self, state: &mut CoreReadyState) {
+            let mut sect = state
+                .cfg_open_mut(CFG_SECTION_KEY)
+                .expect("Failed to open config section");
+
+            for model in self.rows.iter::<AccelModel>().map(|res| res.unwrap()) {
+                let action = model.action();
+                let action_cstr = CString::new(&*action).unwrap();
+                let value_gstr = match model.get_accel() {
+                    Some((key, modifiers)) => Cow::Owned(gtk::accelerator_name(key, modifiers)),
+                    None => Cow::Borrowed(glib::gstr!("")),
+                };
+                sect.set(&action_cstr, value_gstr.to_cstr_until_nul())
+                    .unwrap();
+            }
+        }
     }
 
     /// Set the default config for this page.
@@ -156,10 +182,10 @@ mod inner {
         scope.add_callback("click_handler", {
             let page_ref = page_ref.clone();
             glib_callback!(move |this: &gtk::ListItem,
-                            n_press: i32,
-                            _x: f64,
-                            _y: f64,
-                            _: gtk::GestureClick| {
+                                 n_press: i32,
+                                 _x: f64,
+                                 _y: f64,
+                                 _: gtk::GestureClick| {
                 let page = page_ref.upgrade().unwrap();
                 if n_press == 2 {
                     let this = this.clone();
@@ -169,9 +195,29 @@ mod inner {
                         let dialog = AccelInputDialog::new();
                         let (key, modifiers) = match dialog.prompt(Some(&window)).await {
                             Some(result) => result,
-                            None => return
+                            None => return,
                         };
+
                         let model = this.item().and_downcast::<AccelModel>().unwrap();
+                        model.set_key(0);
+                        model.set_modifiers(gdk::ModifierType::empty());
+
+                        if key == 0 {
+                            return;
+                        }
+
+                        let found_conflict = page
+                            .imp()
+                            .rows
+                            .iter::<AccelModel>()
+                            .map(|res| res.unwrap())
+                            .any(|node| node.key() == key && node.modifiers() == modifiers);
+
+                        if found_conflict {
+                            // error dialog? Potential override?
+                            return;
+                        }
+
                         model.set_key(key);
                         model.set_modifiers(modifiers);
                     });
