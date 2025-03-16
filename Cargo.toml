@@ -19,7 +19,6 @@ default-members = ["m64prs/gtk", "tasinput/bridge", "tasinput/ui"]
 
 [workspace.package]
 license = "GPL-3.0-or-later"
-license-file = "LICENSE.md"
 
 [workspace.dependencies]
 

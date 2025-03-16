@@ -5,7 +5,6 @@ description = "UI host process for TASInput."
 edition = "2021"
 
 license.workspace = true
-license-file.workspace = true
 
 
 [dependencies]
