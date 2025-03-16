@@ -404,6 +404,8 @@ async fn open_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
             }
         };
 
+        main_window.set_saving_state(false);
+
         let (ready, _) = running.stop_rom().await;
         *core = CoreState::Ready(ready);
     }
@@ -503,9 +505,9 @@ async fn reset_rom_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _guard = SaveOpGuard::new(main_window);
     main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .save_slot()
         .await?;
@@ -515,9 +517,9 @@ async fn save_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _guard = SaveOpGuard::new(main_window);
     main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .load_slot()
         .await?;
@@ -527,9 +529,9 @@ async fn load_slot_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
 // TODO: switch out String param for u8 once blueprint supports it.
 async fn set_save_slot_impl(main_window: &MainWindow, slot: u8) -> Result<(), Box<dyn Error>> {
     main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .set_save_slot(slot)?;
     Ok(())
@@ -552,9 +554,9 @@ async fn save_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     {
         let _guard = SaveOpGuard::new(main_window);
         main_window
-            .borrow_core_mut()
+            .borrow_core()
             .await
-            .borrow_running_mut()
+            .borrow_running()
             .expect("Core should be running")
             .save_file(path)
             .await?;
@@ -580,9 +582,9 @@ async fn load_file_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> 
     {
         let _guard = SaveOpGuard::new(main_window);
         main_window
-            .borrow_core_mut()
+            .borrow_core()
             .await
-            .borrow_running_mut()
+            .borrow_running()
             .expect("Core should be running")
             .load_file(path)
             .await?;
@@ -663,24 +665,18 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 }
 
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let exported = main_window
+    let core_state = main_window
         .borrow_core()
-        .await
-        .borrow_running()
-        .expect("Core should be running")
-        .export_vcr()
         .await;
+    let running_state = core_state
+        .borrow_running()
+        .expect("Core should be running");
+    let exported = running_state.export_vcr().await;
 
     if let Some((path, data)) = exported {
         gio::spawn_blocking(move || -> Result<(), io::Error> {
-            let out_file = gio::File::for_path(&path);
-            let out_iostream = out_file
-                .open_readwrite(None::<&gio::Cancellable>)
-                .map_err(|err| err.try_into_io_error().unwrap())?;
-            let mut out_ostream = out_iostream.output_stream().into_write();
-
-            data.write_into(&mut out_ostream)?;
-
+            let mut file = std::fs::File::create(&path)?;
+            data.write_into(&mut file)?;
             Ok(())
         })
         .await
@@ -706,14 +702,8 @@ async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>
         // then await that instead.
         let (path, data) = vcr_state.export();
         gio::spawn_blocking(move || -> Result<(), io::Error> {
-            let out_file = gio::File::for_path(&path);
-            let mut out_stream = out_file
-                .open_readwrite(None::<&gio::Cancellable>)
-                .map_err(|err| err.try_into_io_error().unwrap())?
-                .output_stream()
-                .into_write();
-
-            data.write_into(&mut out_stream)?;
+            let mut file = std::fs::File::create(&path)?;
+            data.write_into(&mut file)?;
 
             Ok(())
         })
@@ -726,9 +716,9 @@ async fn close_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>
 
 async fn toggle_read_only_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
     let _ = main_window
-        .borrow_core_mut()
+        .borrow_core()
         .await
-        .borrow_running_mut()
+        .borrow_running()
         .expect("Core should be running")
         .toggle_read_only();
     Ok(())

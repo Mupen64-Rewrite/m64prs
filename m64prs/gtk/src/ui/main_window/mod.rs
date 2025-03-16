@@ -174,9 +174,9 @@ mod inner {
         fn key_down(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) -> glib::Propagation {
             let this = self.obj().clone();
             glib::spawn_future_local(async move {
-                let mut core_state = this.borrow_core_mut().await;
+                let core_state = this.borrow_core().await;
 
-                if let Some(running) = core_state.borrow_running_mut() {
+                if let Some(running) = core_state.borrow_running() {
                     running.forward_key_down(keycode, modifiers);
                 }
             });
@@ -186,9 +186,9 @@ mod inner {
         #[template_callback]
         async fn key_up(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) {
             let this = self.obj().clone();
-            let mut core_state = this.borrow_core_mut().await;
+            let core_state = this.borrow_core().await;
 
-            if let Some(running) = core_state.borrow_running_mut() {
+            if let Some(running) = core_state.borrow_running() {
                 running.forward_key_up(keycode, modifiers);
             }
         }

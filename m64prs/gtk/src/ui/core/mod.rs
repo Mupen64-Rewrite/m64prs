@@ -226,7 +226,7 @@ impl CoreReadyState {
             }
         };
 
-        // Load the ma
+        // Load the main window
         let main_window_ref = self.main_window_ref;
         let vcr_state = Arc::new(Mutex::new(None));
 
@@ -242,6 +242,12 @@ impl CoreReadyState {
         };
         core.set_save_handler(save_handler)
             .expect("should be able to set save handler");
+
+        let frame_handler = CoreFrameHandler {
+            vcr_state: Arc::clone(&vcr_state),
+        };
+        core.set_frame_handler(frame_handler)
+            .expect("should be able to set frame handler");
 
         let core = RunningCore::execute(core);
 
@@ -263,7 +269,7 @@ impl CoreReadyState {
 }
 
 impl CoreRunningState {
-    pub(super) async fn stop_rom(mut self) -> (CoreReadyState, Option<M64PError>) {
+    pub(super) async fn stop_rom(self) -> (CoreReadyState, Option<M64PError>) {
         let _ = self.unset_vcr_state().await;
         let (mut core, error) = gio::spawn_blocking(|| self.core.stop()).await.unwrap();
 
@@ -276,6 +282,8 @@ impl CoreRunningState {
             .expect("should be able to clear input handler");
         core.clear_save_handler()
             .expect("should be able to clear save handler");
+        core.clear_frame_handler()
+            .expect("should be able to clear frame handler");
 
         (
             CoreReadyState {
@@ -319,7 +327,7 @@ impl CoreRunningState {
     }
 
     pub(super) async fn save_file<P: AsRef<Path>>(
-        &mut self,
+        &self,
         path: P,
     ) -> Result<(), SavestateError> {
         self.core
@@ -389,7 +397,9 @@ impl CoreRunningState {
     }
 
     pub(super) async fn export_vcr(&self) -> Option<(PathBuf, M64File)> {
+        println!("yeet!");
         let vcr_state = self.vcr_state.lock().await;
+        println!("locked");
         vcr_state.as_ref().map(|state| state.export())
     }
 

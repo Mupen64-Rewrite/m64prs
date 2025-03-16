@@ -1,8 +1,13 @@
-use std::{error::Error, ffi::c_int, fs, io, path::PathBuf};
+use std::{
+    error::Error,
+    ffi::{c_int, OsStr},
+    fs, io,
+    path::PathBuf,
+};
 
 use freeze::MovieFreeze;
 use m64prs_core::{error::M64PError, save::SavestateFormat, Core};
-use m64prs_sys::Buttons;
+use m64prs_sys::{Buttons, EmuState};
 use movie::{M64File, M64Header, StartType};
 
 pub mod freeze;
@@ -76,13 +81,33 @@ impl VcrState {
             }
             StartType::FROM_SNAPSHOT => match new {
                 false => {
+                    self.first_poll = true;
+                    let file_stem = self
+                        .path
+                        .file_name()
+                        .and_then(OsStr::to_str)
+                        .and_then(|name_str| name_str.find('.').map(|pos| &name_str[..pos]))
+                        .ok_or(io::Error::new(
+                            io::ErrorKind::InvalidInput,
+                            ".m64 filenames should not start with `.`",
+                        ))?;
+
                     let st_path = fs::read_dir(self.path.parent().unwrap())?
                         .filter_map(|entry| {
                             let entry = entry.unwrap();
-                            entry
-                                .file_type()
-                                .is_ok_and(|ty| ty.is_file())
-                                .then(|| entry.path())
+                            if !entry.file_type().is_ok_and(|ty| ty.is_file()) {
+                                return None;
+                            }
+
+                            if !(Some(&*entry.file_name())
+                                .and_then(OsStr::to_str)
+                                .and_then(|name_str| name_str.find('.').map(|pos| &name_str[..pos]))
+                                .is_some_and(|stem| stem == file_stem))
+                            {
+                                return None;
+                            }
+
+                            Some(entry.path())
                         })
                         .next()
                         .ok_or_else(|| {
@@ -91,10 +116,12 @@ impl VcrState {
                                 "No .st file found for .m64 movie",
                             )
                         })?;
-
+                    
                     core.load_file(st_path).await?;
+
                 }
                 true => {
+                    self.first_poll = true;
                     let st_path = self.path.with_extension("st");
                     core.save_file(st_path, SavestateFormat::Mupen64Plus)
                         .await?;

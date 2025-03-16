@@ -161,6 +161,7 @@ mod inner {
                 sect.set(&action_cstr, value_gstr.to_cstr_until_nul())
                     .unwrap();
             }
+            sect.save().unwrap();
             super::load_shortcuts(&mut sect);
         }
     }

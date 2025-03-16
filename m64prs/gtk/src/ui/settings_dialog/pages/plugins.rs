@@ -254,6 +254,8 @@ mod inner {
                 &self.dd_input_plugins,
             );
             Self::save_value_one(&self.rsp_plugins, &mut sect, CFG_RSP, &self.dd_rsp_plugins);
+
+            sect.save().unwrap();
         }
     }
 }
