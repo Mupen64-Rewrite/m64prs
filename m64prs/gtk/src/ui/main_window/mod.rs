@@ -6,13 +6,8 @@ pub mod enums;
 mod menu;
 
 mod inner {
-    use std::{
-        cell::{Cell, RefCell, RefMut},
-        error::Error,
-        path::PathBuf,
-    };
+    use std::{cell::Cell, error::Error, path::PathBuf};
 
-    use futures::lock::{Mutex, MutexGuard};
     use futures_locks::{RwLock, RwLockReadGuard, RwLockWriteGuard};
     use glib::{
         subclass::{
@@ -171,7 +166,13 @@ mod inner {
     #[gtk::template_callbacks]
     impl MainWindow {
         #[template_callback]
-        fn key_down(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) -> glib::Propagation {
+        fn key_down(
+            &self,
+            _keyval: gdk::Key,
+            keycode: u32,
+            modifiers: gdk::ModifierType,
+            _: gtk::EventControllerKey,
+        ) -> glib::Propagation {
             let this = self.obj().clone();
             glib::spawn_future_local(async move {
                 let core_state = this.borrow_core().await;
@@ -181,10 +182,15 @@ mod inner {
                 }
             });
             glib::Propagation::Stop
-
         }
         #[template_callback]
-        async fn key_up(&self, _keyval: gdk::Key, keycode: u32, modifiers: gdk::ModifierType, _: gtk::EventControllerKey) {
+        async fn key_up(
+            &self,
+            _keyval: gdk::Key,
+            keycode: u32,
+            modifiers: gdk::ModifierType,
+            _: gtk::EventControllerKey,
+        ) {
             let this = self.obj().clone();
             let core_state = this.borrow_core().await;
 

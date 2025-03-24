@@ -14,12 +14,10 @@ mod inner {
 
     use glib::{
         object::{CastNone, ObjectExt},
-        translate::IntoGlib,
         types::{StaticType, StaticTypeExt},
-        GString,
     };
     use gtk::{prelude::*, subclass::prelude::*};
-    use m64prs_core::Core;
+
     use m64prs_gtk_utils::glib_callback;
     use tr::tr;
 

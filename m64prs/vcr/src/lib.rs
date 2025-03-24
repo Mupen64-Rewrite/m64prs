@@ -116,9 +116,8 @@ impl VcrState {
                                 "No .st file found for .m64 movie",
                             )
                         })?;
-                    
-                    core.load_file(st_path).await?;
 
+                    core.load_file(st_path).await?;
                 }
                 true => {
                     self.first_poll = true;

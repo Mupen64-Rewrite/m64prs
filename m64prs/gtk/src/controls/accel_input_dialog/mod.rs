@@ -2,7 +2,6 @@ mod window;
 
 mod inner {
 
-    use glib::translate::FromGlib;
     use gtk::prelude::*;
     use gtk::subclass::prelude::*;
 

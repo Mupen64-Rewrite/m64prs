@@ -8,7 +8,6 @@ pub const WIN32_DEPS_DIR: &str = concat!(
     "mupen64plus-win32-deps"
 );
 
-
 pub fn link_sdl_win32() {
     let win32_deps_dir = PathBuf::from(WIN32_DEPS_DIR);
 

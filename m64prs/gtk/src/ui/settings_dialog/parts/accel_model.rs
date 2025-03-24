@@ -83,20 +83,19 @@ impl AccelModel {
             Some((key, modifiers)) => {
                 self.set_key(key.into_glib());
                 self.set_modifiers(modifiers);
-            },
+            }
             None => {
                 self.set_key(0);
                 self.set_modifiers(gdk::ModifierType::empty());
-            },
+            }
         }
     }
 
     pub fn get_accel(&self) -> Option<(gdk::Key, gdk::ModifierType)> {
         if self.key() == 0 {
             None
-        }
-        else {
-            Some((unsafe {gdk::Key::from_glib(self.key())}, self.modifiers()))
+        } else {
+            Some((unsafe { gdk::Key::from_glib(self.key()) }, self.modifiers()))
         }
     }
 }

@@ -7,10 +7,7 @@ use m64prs_core::{
     plugin::{PluginSet, PluginType},
     Plugin,
 };
-use m64prs_gtk_utils::{
-    actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup},
-    error::GlibErrorExt,
-};
+use m64prs_gtk_utils::actions::{BaseAction, StateAction, StateParamAction, TypedActionGroup};
 use m64prs_vcr::{movie::M64File, VcrState};
 use tr::tr;
 
@@ -665,12 +662,8 @@ async fn load_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>>
 }
 
 async fn save_movie_impl(main_window: &MainWindow) -> Result<(), Box<dyn Error>> {
-    let core_state = main_window
-        .borrow_core()
-        .await;
-    let running_state = core_state
-        .borrow_running()
-        .expect("Core should be running");
+    let core_state = main_window.borrow_core().await;
+    let running_state = core_state.borrow_running().expect("Core should be running");
     let exported = running_state.export_vcr().await;
 
     if let Some((path, data)) = exported {

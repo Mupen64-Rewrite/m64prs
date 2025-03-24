@@ -2,10 +2,7 @@ mod inner {
     use std::cell::{Cell, RefCell};
 
     use futures::channel::oneshot;
-    use glib::{
-        translate::{FromGlib, IntoGlib},
-        GString,
-    };
+    use glib::translate::{FromGlib, IntoGlib};
     use gtk::{prelude::*, subclass::prelude::*};
 
     #[derive(gtk::CompositeTemplate, glib::Properties)]
@@ -58,17 +55,17 @@ mod inner {
             match keyval {
                 gdk::Key::Alt_L | gdk::Key::Alt_R => {
                     real_mods |= gdk::ModifierType::ALT_MASK;
-                },
+                }
                 gdk::Key::Control_L | gdk::Key::Control_R => {
                     real_mods |= gdk::ModifierType::CONTROL_MASK;
-                },
+                }
                 gdk::Key::Shift_L | gdk::Key::Shift_R => {
                     real_mods |= gdk::ModifierType::SHIFT_MASK;
-                },
+                }
                 gdk::Key::Meta_L | gdk::Key::Meta_R => {
                     real_mods |= gdk::ModifierType::META_MASK;
-                },
-                _ => ()
+                }
+                _ => (),
             }
 
             self.obj().set_modifiers(real_mods);
@@ -107,25 +104,23 @@ mod inner {
             mods: gdk::ModifierType,
             _: gtk::EventControllerKey,
         ) {
-
             let mut real_mods = mods;
             match keyval {
                 gdk::Key::Alt_L | gdk::Key::Alt_R => {
                     real_mods &= !gdk::ModifierType::ALT_MASK;
-                },
+                }
                 gdk::Key::Control_L | gdk::Key::Control_R => {
                     real_mods &= !gdk::ModifierType::CONTROL_MASK;
-                },
+                }
                 gdk::Key::Shift_L | gdk::Key::Shift_R => {
                     real_mods &= !gdk::ModifierType::SHIFT_MASK;
-                },
+                }
                 gdk::Key::Meta_L | gdk::Key::Meta_R => {
                     real_mods &= !gdk::ModifierType::META_MASK;
-                },
-                _ => ()
+                }
+                _ => (),
             }
             self.obj().set_modifiers(real_mods);
-
 
             if !matches!(
                 keyval,

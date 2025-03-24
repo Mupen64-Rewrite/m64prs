@@ -326,9 +326,11 @@ impl NativeCompositor for WindowsCompositor {
                     .expect("set_view_bounds requires a valid key");
                 unsafe {
                     self.root_visual.RemoveVisual(&view.visual).unwrap();
-                    self.root_visual.AddVisual(&view.visual, true, &ref_view.visual).unwrap();
+                    self.root_visual
+                        .AddVisual(&view.visual, true, &ref_view.visual)
+                        .unwrap();
                 }
-            },
+            }
             super::StackOrder::StackBelow(ref_view_key) => {
                 let ref_view = self
                     .views
@@ -336,9 +338,11 @@ impl NativeCompositor for WindowsCompositor {
                     .expect("set_view_bounds requires a valid key");
                 unsafe {
                     self.root_visual.RemoveVisual(&view.visual).unwrap();
-                    self.root_visual.AddVisual(&view.visual, false, &ref_view.visual).unwrap();
+                    self.root_visual
+                        .AddVisual(&view.visual, false, &ref_view.visual)
+                        .unwrap();
                 }
-            },
+            }
         }
     }
 

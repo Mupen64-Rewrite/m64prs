@@ -371,9 +371,7 @@ impl ConfigSectionMut<'_> {
     where
         D: ConfigSettable,
     {
-        core_fn(unsafe {
-            D::set(&value, &self.core.api.config, self.handle, param)
-        })
+        core_fn(unsafe { D::set(&value, &self.core.api.config, self.handle, param) })
     }
 
     /// Sets or unsets the help text of a parameter.

@@ -1,5 +1,11 @@
 use std::{
-    borrow::Borrow, cell::Cell, error::Error, ffi::CStr, fs, path::{Path, PathBuf}, sync::Arc
+    borrow::Borrow,
+    cell::Cell,
+    error::Error,
+    ffi::CStr,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use futures::{executor::block_on, lock::Mutex};
@@ -326,19 +332,13 @@ impl CoreRunningState {
         self.core.set_state_slot(slot)
     }
 
-    pub(super) async fn save_file<P: AsRef<Path>>(
-        &self,
-        path: P,
-    ) -> Result<(), SavestateError> {
+    pub(super) async fn save_file<P: AsRef<Path>>(&self, path: P) -> Result<(), SavestateError> {
         self.core
             .save_file(path.as_ref(), SavestateFormat::Mupen64Plus)
             .await
     }
 
-    pub(super) async fn load_file<P: AsRef<Path>>(
-        &self,
-        path: P,
-    ) -> Result<(), SavestateError> {
+    pub(super) async fn load_file<P: AsRef<Path>>(&self, path: P) -> Result<(), SavestateError> {
         self.core.load_file(path.as_ref()).await?;
         if let Some(vcr_state) = &mut *self.vcr_state.lock().await {
             vcr_state.set_read_only(self.vcr_read_only.get());
